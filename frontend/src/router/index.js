@@ -8,37 +8,89 @@
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
-import HomeView      from '../views/HomeView.vue'
-import LoginView     from '../views/LoginView.vue'
-import RegisterView  from '../views/RegisterView.vue'
-import DashboardView from '../views/DashboardView.vue'
-import AdminView     from '../views/AdminView.vue'
-import StatusView    from '../views/StatusView.vue'
+import HomeView from '../views/HomeView.vue'
 import { useAuthStore } from '../stores/auth'
+
+const LoginView = () => import('../views/LoginView.vue')
+const RegisterView = () => import('../views/RegisterView.vue')
+const DashboardView = () => import('../views/DashboardView.vue')
+const AdminView = () => import('../views/AdminView.vue')
+const StatusView = () => import('../views/StatusView.vue')
+const GymsView = () => import('../views/GymsView.vue')
+const PlansView = () => import('../views/PlansView.vue')
+const ForGymsView = () => import('../views/ForGymsView.vue')
+const LegalView = () => import('../views/LegalView.vue')
 
 const routes = [
   {
     path: '/',
     name: 'home',
     component: HomeView,
+    meta: { title: 'GymTrack | Entrená y gestioná en un solo lugar' },
+  },
+  {
+    path: '/gimnasios',
+    name: 'gyms',
+    component: GymsView,
+    meta: { title: 'Explorar gimnasios | GymTrack' },
+  },
+  {
+    path: '/planes',
+    name: 'plans',
+    component: PlansView,
+    meta: { title: 'Planes | GymTrack' },
+  },
+  {
+    path: '/para-gimnasios',
+    name: 'for-gyms',
+    component: ForGymsView,
+    meta: { title: 'Para gimnasios | GymTrack' },
+  },
+  {
+    path: '/privacidad',
+    name: 'privacy',
+    component: LegalView,
+    props: { kind: 'privacy' },
+    meta: { title: 'Privacidad | GymTrack' },
+  },
+  {
+    path: '/terminos',
+    name: 'terms',
+    component: LegalView,
+    props: { kind: 'terms' },
+    meta: { title: 'Términos | GymTrack' },
+  },
+  {
+    path: '/accesibilidad',
+    name: 'accessibility',
+    component: LegalView,
+    props: { kind: 'accessibility' },
+    meta: { title: 'Accesibilidad | GymTrack' },
+  },
+  {
+    path: '/contacto',
+    name: 'contact',
+    component: LegalView,
+    props: { kind: 'contact' },
+    meta: { title: 'Contacto | GymTrack' },
   },
   {
     path: '/login',
     name: 'login',
     component: LoginView,
-    meta: { soloPublico: true },
+    meta: { soloPublico: true, title: 'Ingresar | GymTrack' },
   },
   {
     path: '/registro',
     name: 'registro',
     component: RegisterView,
-    meta: { soloPublico: true },
+    meta: { soloPublico: true, title: 'Crear cuenta | GymTrack' },
   },
   {
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardView,
-    meta: { requiereAuth: true },
+    meta: { requiereAuth: true, title: 'Mi panel | GymTrack' },
   },
   {
     path: '/403',
@@ -49,12 +101,13 @@ const routes = [
       title: 'No tenés permiso para entrar acá',
       message: 'Volvé a tu panel o iniciá sesión con una cuenta autorizada.',
     },
+    meta: { title: 'Acceso denegado | GymTrack' },
   },
   {
     path: '/admin',
     name: 'admin',
     component: AdminView,
-    meta: { requiereAuth: true, roles: [2] },
+    meta: { requiereAuth: true, roles: [2], title: 'Administración | GymTrack' },
   },
   {
     path: '/:pathMatch(.*)*',
@@ -65,12 +118,18 @@ const routes = [
       title: 'Esta página no existe',
       message: 'Revisá la dirección o volvé al inicio de GymTrack.',
     },
+    meta: { title: 'Página no encontrada | GymTrack' },
   },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(to, from, savedPosition) {
+    if (savedPosition) return savedPosition
+    if (to.hash) return { el: to.hash, behavior: 'smooth' }
+    return { top: 0 }
+  },
 })
 
 // ── Guard global ──────────────────────────────────────────────
@@ -99,6 +158,10 @@ router.beforeEach(async (to) => {
   if (to.meta.soloPublico && authStore.estaAutenticado) {
     return { name: 'dashboard' }
   }
+})
+
+router.afterEach((to) => {
+  document.title = to.meta.title || 'GymTrack'
 })
 
 export default router

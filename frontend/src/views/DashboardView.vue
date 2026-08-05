@@ -328,6 +328,8 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { classes, gyms, monthlyRevenue } from '../data/demoData'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -460,20 +462,20 @@ async function handleLogout() {
 }
 
 function initDashboardMap() {
-  if (window.L && dashboardMapEl.value) {
+  if (dashboardMapEl.value) {
     if (dashboardMapEl.value._leaflet_id) return
-    const map = window.L.map(dashboardMapEl.value, {
+    const map = L.map(dashboardMapEl.value, {
       zoomControl: false,
       attributionControl: true,
       dragging: true,
       scrollWheelZoom: false,
     }).setView([-32.85, -55.2], 7)
 
-    window.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map)
-    gyms.forEach((gym) => window.L.marker([gym.lat, gym.lng]).addTo(map).bindPopup(`${gym.name} · ${gym.city}`))
+    gyms.forEach((gym) => L.marker([gym.lat, gym.lng]).addTo(map).bindPopup(`${gym.name} · ${gym.city}`))
     dashboardMapStatus.value = 'OpenStreetMap activo'
     setTimeout(() => map.invalidateSize(), 120)
   }
@@ -523,7 +525,7 @@ watch(activeNav, async () => {
   height: 2px;
   background: var(--text);
   transform: translate(-50%, -50%);
-  transition: all 0.3s ease;
+  transition: transform 0.3s ease;
 }
 
 .mobile-menu-toggle span:nth-child(1) {
@@ -580,7 +582,7 @@ watch(activeNav, async () => {
   text-align: left;
   cursor: pointer;
   font-size: clamp(0.85rem, 1vw, 1rem);
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .sidebar button span {

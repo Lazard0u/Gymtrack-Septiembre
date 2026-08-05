@@ -556,7 +556,7 @@ function formatFecha(f) {
   border-radius: 8px;
   padding: 14px;
   background: rgba(5, 9, 14, 0.64);
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
 }
 
 .member-item:hover {
@@ -622,7 +622,7 @@ function formatFecha(f) {
   font-weight: 800;
   font-size: 0.9rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
   white-space: nowrap;
   min-height: 44px;
   display: flex;

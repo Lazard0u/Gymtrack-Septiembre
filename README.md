@@ -105,6 +105,26 @@ docker compose config --quiet
 docker compose run --rm frontend npm run build
 ```
 
+## Verificación de la Fase 2
+
+```bash
+# Componentes, formularios y overlays
+docker compose exec -T frontend npm run test:run
+
+# Build productivo
+docker compose exec -T frontend npm run build
+
+# Responsive, teclado, consola y accesibilidad en el contenedor oficial
+docker volume create gymtrack_playwright_modules
+docker run --rm --ipc=host \
+  -v "$PWD/frontend:/app" \
+  -v gymtrack_playwright_modules:/app/node_modules \
+  -w /app mcr.microsoft.com/playwright:v1.62.1-noble \
+  sh -lc 'npm ci --silent && npm run test:e2e'
+```
+
+Las capturas de referencia para 360, 390, 768, 1024, 1440 y 1920 px se guardan en `frontend/artifacts/phase2/`.
+
 ---
 
 *GymTrack · Proyecto Final · Tecnología Web Aplicada · 2026*

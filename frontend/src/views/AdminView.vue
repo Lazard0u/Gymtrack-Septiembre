@@ -514,7 +514,7 @@ onMounted(async () => {
   color: #F0FDF4;
   border-radius: 8px;
   text-decoration: none;
-  transition: all 0.3s;
+  transition: border-color 0.3s, color 0.3s;
 }
 .admin-actions .btn-outline:hover {
   border-color: #0077ff;

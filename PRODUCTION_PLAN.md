@@ -705,6 +705,16 @@ Las prioridades usadas son: **Bloqueante**, **Alta**, **Media** y **Mejora poste
 - Pruebas: snapshots/component tests, axe, teclado, contraste, zoom 200%, viewport matrix, ausencia de overflow, Lighthouse como señal no única.
 - Criterios de aceptación: sin scroll horizontal; ninguna sección cortada/superpuesta; navegación y diálogo operables por teclado; CTA con destinos diferentes y reales; first paint legible incluso sin animación; estados completos.
 
+#### Estado de ejecución de la Fase 2 — 5 de agosto de 2026
+
+**Implementado:** sistema de tokens semánticos y estilos base; Manrope autohospedada; librería única de iconos Tabler; componentes reutilizables para botones, campos, tarjetas, badges, alertas, diálogos, drawer, toast, skeleton, vacío, error, spinner y encabezado; portada pública reestructurada; navegación responsive; footer con destinos reales; rutas `/gimnasios`, `/planes`, `/para-gimnasios`, `/privacidad`, `/terminos`, `/accesibilidad` y `/contacto`; Leaflet cargado como dependencia local y mapa/lista unificados con panel contraíble en escritorio y bottom sheet de tres posiciones en móvil; imágenes WebP locales; títulos por ruta y carga diferida de vistas secundarias.
+
+**Integridad de producto:** la portada dejó de consumir `demoData.js`; no publica gimnasios, precios, distancias, planes ni métricas inventadas. Cuando el endpoint público todavía no existe, muestra un estado vacío explícito. El dashboard demostrativo heredado continúa aislado y rotulado hasta las fases 4–7. La cuenta administrativa se conserva con hash seguro; esta fase no modifica el mecanismo de autenticación ni implementa recuperación, roles nuevos o lógica completa de geolocalización.
+
+**Verificado:** build productivo; pruebas unitarias de estados, formularios y overlays; foco atrapado, cierre con `Escape` y restauración de foco; navegación móvil; auditoría axe sin violaciones serias o críticas; contraste AA de acciones y marca; capturas y ausencia de desbordamiento horizontal a 360, 390, 768, 1024, 1440 y 1920 px. Swiper y las cargas CDN de Google Fonts/Leaflet fueron retiradas. La documentación de producto, dirección por superficie y sistema visual queda versionada junto al código.
+
+**Pendiente por diseño de fases siguientes:** datos reales y marcadores del catálogo (Fase 5); geolocalización, distancias, filtros y sincronización marcador-tarjeta (Fase 8); autenticación ampliada y roles socio/empleado/dueño/admin general (Fase 3). No se adelantaron esos contratos.
+
 ### Fase 3. Autenticación, recuperación y roles
 
 **Objetivo:** identidad segura y modelo de permisos requerido.
