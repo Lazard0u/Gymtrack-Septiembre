@@ -28,10 +28,13 @@ if ($origenPeticion !== '' && hash_equals($origenPermitido, $origenPeticion)) {
     header("Access-Control-Allow-Origin: {$origenPermitido}");
     header('Vary: Origin');
 }
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
+header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
 header('Content-Type: application/json; charset=UTF-8');
 
 set_exception_handler(function (Throwable $error) use ($entorno): void {
@@ -69,8 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // En lugar de hacer require_once en cada archivo, registramos
 // una función que carga automáticamente la clase que se necesite.
 spl_autoload_register(function (string $clase) {
-    // Buscamos en config/, controllers/, models/ y middleware/
-    $carpetas = ['config', 'controllers', 'models', 'middleware'];
+    $carpetas = ['config', 'controllers', 'models', 'middleware', 'services'];
 
     foreach ($carpetas as $carpeta) {
         $ruta = __DIR__ . "/{$carpeta}/{$clase}.php";

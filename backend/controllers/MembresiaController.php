@@ -25,13 +25,14 @@ class MembresiaController
      */
     public function mia(): void
     {
-        AuthMiddleware::verificarSesion();
+        AuthMiddleware::verificarPermiso('memberships.read');
         $usuarioId = AuthMiddleware::obtenerUsuarioId();
+        $gimnasioId = AuthMiddleware::obtenerGimnasioContextoId();
 
         // Actualizar vencidas antes de devolver el estado
-        $this->membresiaModel->actualizarVencidas(AuthMiddleware::obtenerDemoDatasetId());
+        $this->membresiaModel->actualizarVencidas(AuthMiddleware::obtenerDemoDatasetId(), $gimnasioId);
 
-        $membresia = $this->membresiaModel->obtenerPorUsuario($usuarioId);
+        $membresia = $this->membresiaModel->obtenerPorUsuario($usuarioId, $gimnasioId);
 
         if (!$membresia) {
             $this->responder(200, [
@@ -61,9 +62,9 @@ class MembresiaController
      */
     public function activar(): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarPermiso('memberships.write');
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         $datos = json_decode(file_get_contents('php://input'), true);
 
@@ -89,11 +90,17 @@ class MembresiaController
             return;
         }
 
-        $membresiaId = $this->membresiaModel->activar(
-            (int) $datos['usuario_id'],
-            $datos['plan'],
-            (float) $datos['precio']
-        );
+        try {
+            $membresiaId = $this->membresiaModel->activar(
+                (int) $datos['usuario_id'],
+                $datos['plan'],
+                (float) $datos['precio'],
+                $gimnasioId
+            );
+        } catch (DomainException $e) {
+            $this->responder(404, ['error' => true, 'mensaje' => $e->getMessage()]);
+            return;
+        }
 
         // Generar notificación para el socio
         $this->generarNotificacion(
@@ -114,9 +121,9 @@ class MembresiaController
      */
     public function suspender(): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarPermiso('memberships.write');
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         $datos = json_decode(file_get_contents('php://input'), true);
 
@@ -125,7 +132,7 @@ class MembresiaController
             return;
         }
 
-        $ok = $this->membresiaModel->suspender((int) $datos['usuario_id']);
+        $ok = $this->membresiaModel->suspender((int) $datos['usuario_id'], $gimnasioId);
 
         if ($ok) {
             $this->generarNotificacion(
@@ -143,12 +150,12 @@ class MembresiaController
      */
     public function todas(): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarPermiso('memberships.read');
 
         $datasetId = AuthMiddleware::obtenerDemoDatasetId();
-        $this->membresiaModel->actualizarVencidas($datasetId);
-        $membresias = $this->membresiaModel->listarTodas($datasetId);
+        $gimnasioId = AuthMiddleware::obtenerGimnasioContextoId();
+        $this->membresiaModel->actualizarVencidas($datasetId, $gimnasioId);
+        $membresias = $this->membresiaModel->listarTodas($datasetId, $gimnasioId);
         $this->responder(200, ['error' => false, 'membresias' => $membresias]);
     }
 

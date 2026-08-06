@@ -10,6 +10,7 @@ frontend/.env.local
 # ── PHP / Backend ────────────────────────────────────────────
 backend/vendor/
 backend/.env
+backend/storage/*.log
 
 # ── Docker ───────────────────────────────────────────────────
 .env

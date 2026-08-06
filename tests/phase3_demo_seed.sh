@@ -62,8 +62,8 @@ assert_equal '5:4:5:3:1:1' "$counts" 'Idempotencia del dataset'
 hashes="$(query 'SELECT COUNT(*) FROM usuarios WHERE is_demo=1 AND LEFT(password_hash, 4) = CHAR(36, 50, 121, 36);')"
 assert_equal '4' "$hashes" 'Hash bcrypt de usuarios demo'
 
-permission_matrix="$(query "SELECT GROUP_CONCAT(CONCAT(rol_id, ':', total) ORDER BY rol_id) FROM (SELECT rol_id, COUNT(*) AS total FROM rol_permisos GROUP BY rol_id) AS permission_counts;")"
-assert_equal '1:2,2:5,3:2,4:3' "$permission_matrix" 'Matriz mínima de permisos'
+permission_matrix="$(query "SET NAMES utf8mb4; SELECT GROUP_CONCAT(CONCAT(nombre, ':', total) ORDER BY nombre SEPARATOR ',') FROM (SELECT r.nombre, COUNT(*) AS total FROM rol_permisos rp JOIN roles r ON r.id=rp.rol_id GROUP BY r.nombre) AS permission_counts;")"
+assert_equal 'admin_general:18,dueño:18,empleado:11,socio:8' "$permission_matrix" 'Matriz de capacidades'
 
 public_catalog="$(curl -fsS "$API_BASE_URL/public/gimnasios")"
 assert_equal '5' "$(printf '%s' "$public_catalog" | jq -r '.gimnasios | length')" 'Catálogo público demo'
@@ -75,31 +75,34 @@ verify_login() {
   expected_contexts="$3"
   expected_admin="$4"
   payload="$(jq -nc --arg email "$email" --arg password "$DEMO_USER_PASSWORD" '{email:$email,password:$password}')"
-  response="$(curl -fsS -H 'Content-Type: application/json' --data "$payload" "$API_BASE_URL/auth/login")"
-  token="$(printf '%s' "$response" | jq -r '.token // empty')"
-  role="$(printf '%s' "$response" | jq -r '.usuario.rol_id // empty')"
+  cookie_file="$(mktemp /tmp/gymtrack-demo-cookie.XXXXXX)"
+  response="$(curl -fsS -c "$cookie_file" -H 'Content-Type: application/json' --data "$payload" "$API_BASE_URL/auth/login")"
+  role="$(printf '%s' "$response" | jq -r '.usuario.role // empty')"
+  csrf="$(printf '%s' "$response" | jq -r '.csrf_token // empty')"
   contexts="$(printf '%s' "$response" | jq -r '.usuario.gimnasios | length')"
   is_demo="$(printf '%s' "$response" | jq -r '.usuario.is_demo')"
   assert_equal "$expected_role" "$role" "Rol de $email"
   assert_equal "$expected_contexts" "$contexts" "Contextos de $email"
   assert_equal 'true' "$is_demo" "Indicador demo de $email"
-  admin_status="$(curl -sS -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" "$API_BASE_URL/admin/socios")"
+  assert_equal 'false' "$(printf '%s' "$response" | jq -r 'has("token")')" "Token no expuesto de $email"
+  admin_status="$(curl -sS -o /dev/null -w '%{http_code}' -b "$cookie_file" "$API_BASE_URL/admin/socios")"
   assert_equal "$expected_admin" "$admin_status" "Permiso administrativo de $email"
   if [ "$expected_admin" = '200' ]; then
-    admin_socios="$(curl -fsS -H "Authorization: Bearer $token" "$API_BASE_URL/admin/socios")"
+    admin_socios="$(curl -fsS -b "$cookie_file" "$API_BASE_URL/admin/socios")"
     assert_equal '1' "$(printf '%s' "$admin_socios" | jq -r '.socios | length')" 'Aislamiento de socios demo'
     assert_equal 'socio.demo@gymtrack.local' "$(printf '%s' "$admin_socios" | jq -r '.socios[0].email')" 'Dataset del panel demo'
     socio_id="$(printf '%s' "$admin_socios" | jq -r '.socios[0].id')"
-    mutation_status="$(curl -sS -o /dev/null -w '%{http_code}' -X PUT -H 'Content-Type: application/json' -H "Authorization: Bearer $token" --data '{"activo":false}' "$API_BASE_URL/admin/socios/$socio_id/estado")"
+    mutation_status="$(curl -sS -o /dev/null -w '%{http_code}' -X PUT -b "$cookie_file" -H 'Content-Type: application/json' -H "X-CSRF-Token: $csrf" --data '{"activo":false}' "$API_BASE_URL/admin/socios/$socio_id/estado")"
     assert_equal '409' "$mutation_status" 'Panel demo de solo lectura'
   fi
-  curl -fsS -X POST -H 'Content-Type: application/json' -H "Authorization: Bearer $token" --data '{}' "$API_BASE_URL/auth/logout" >/dev/null
+  curl -fsS -X POST -b "$cookie_file" -H 'Content-Type: application/json' -H "X-CSRF-Token: $csrf" --data '{}' "$API_BASE_URL/auth/logout" >/dev/null
+  rm -f "$cookie_file"
 }
 
-verify_login 'socio.demo@gymtrack.local' 1 2 403
-verify_login 'empleado.demo@gymtrack.local' 3 1 403
-verify_login 'dueno.demo@gymtrack.local' 4 2 403
-verify_login 'admin.demo@gymtrack.local' 2 0 200
+verify_login 'socio.demo@gymtrack.local' socio 2 403
+verify_login 'empleado.demo@gymtrack.local' empleado 1 403
+verify_login 'dueno.demo@gymtrack.local' dueño 2 403
+verify_login 'admin.demo@gymtrack.local' admin_general 5 200
 
 seed_command --remove
 assert_equal '0' "$(query "SELECT COUNT(*) FROM demo_datasets WHERE nombre='$DEMO_DATASET_NAME';")" 'Eliminación del dataset'

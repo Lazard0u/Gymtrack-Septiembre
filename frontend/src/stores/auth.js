@@ -1,123 +1,102 @@
-/**
- * GymTrack · stores/auth.js
- * -------------------------------------------------
- * Store de Pinia que maneja todo el estado de autenticación.
- *
- * Flujo de sesión:
- *  1. login()    → POST /api/auth/login   → guarda usuario + token (session_id PHP)
- *  2. registro() → POST /api/auth/registro → redirige al login
- *  3. logout()   → POST /api/auth/logout  → destruye sesión en servidor y en cliente
- *  4. cargarPerfil() → GET /api/perfil    → rehidrata el usuario al recargar la página
- */
-
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 import { api } from '../services/api'
 
 export const useAuthStore = defineStore('auth', () => {
-  // ── Estado ──────────────────────────────────────────────
-  const user  = ref(null)
-  const token = ref(localStorage.getItem('token') || null)
+  const user = ref(null)
+  const initialized = ref(false)
+  const sessionState = ref('unknown')
 
-  // ── Getters ─────────────────────────────────────────────
-  const estaAutenticado = computed(() => !!token.value)
-  const esAdmin         = computed(() => user.value?.rol_id === 2)
-  const esEmpleado      = computed(() => user.value?.rol_id === 3)
-  const esDueno         = computed(() => user.value?.rol_id === 4)
+  const estaAutenticado = computed(() => user.value !== null)
+  const esAdmin = computed(() => user.value?.role === 'admin_general')
+  const esEmpleado = computed(() => user.value?.role === 'empleado')
+  const esDueno = computed(() => user.value?.role === 'dueño')
+  const correoVerificado = computed(() => Boolean(user.value?.email_verified))
+  const permisos = computed(() => user.value?.permissions || [])
 
-  // ── Acciones ────────────────────────────────────────────
+  function applySession(data) {
+    user.value = data.usuario
+    initialized.value = true
+    sessionState.value = 'active'
+  }
 
-  /**
-   * Inicia sesión con email y contraseña.
-   * El backend devuelve un token que es el PHP session_id.
-   * @throws {Error} si las credenciales son incorrectas
-   */
   async function login(email, password) {
-    const { ok, data } = await api.post('/auth/login', { email, password })
-
-    if (!ok || data.error) {
-      throw new Error(data.mensaje || 'Error al iniciar sesión.')
-    }
-
-    user.value  = data.usuario
-    token.value = data.token
-    localStorage.setItem('token', data.token)
-
-    return data
+    const response = await api.post('/auth/login', { email, password })
+    if (!response.ok || response.data.error) throw apiError(response)
+    applySession(response.data)
+    return response.data
   }
 
-  /**
-   * Registra un nuevo socio.
-   * @throws {Error} si el email ya existe o los datos son inválidos
-   */
-  async function registro(nombre, email, password, turnstileToken = '') {
-    const { ok, data } = await api.post('/auth/registro', {
-      nombre,
-      email,
-      password,
-      turnstileToken,
-    })
-
-    if (!ok || data.error) {
-      throw new Error(data.mensaje || 'Error al crear la cuenta.')
-    }
-
-    return data
+  async function registro(payload, owner = false) {
+    const response = await api.post(owner ? '/auth/registro-dueno' : '/auth/registro', payload)
+    if (!response.ok || response.data.error) throw apiError(response)
+    return response.data
   }
 
-  /**
-   * Cierra la sesión tanto en el servidor PHP como en el cliente.
-   */
-  async function logout() {
-    try {
-      // Destruimos la sesión en el servidor (importante para seguridad)
-      await api.postAuth('/auth/logout', {})
-    } finally {
-      // Siempre limpiamos el estado local, aunque el servidor falle
-      user.value  = null
-      token.value = null
-      localStorage.removeItem('token')
-    }
-  }
-
-  function limpiarSesionLocal() {
-    user.value = null
-    token.value = null
-    localStorage.removeItem('token')
-  }
-
-  /**
-   * Carga el perfil del usuario autenticado desde el servidor.
-   * Se llama al montar el Dashboard para rehidratar el usuario
-   * si la página fue recargada (Pinia pierde el estado en memoria).
-   */
-  async function cargarPerfil() {
-    if (!token.value) return false
-
-    const { ok, status, data } = await api.get('/perfil')
-    if (ok && !data.error) {
-      user.value = data.usuario
+  async function bootstrap(force = false) {
+    if (initialized.value && !force) return estaAutenticado.value
+    const response = await api.get('/me')
+    initialized.value = true
+    if (response.ok && !response.data.error) {
+      applySession(response.data)
       return true
     }
-
-    if (status === 401 || status === 403) limpiarSesionLocal()
+    user.value = null
+    api.clearCsrf()
+    sessionState.value = response.status === 401 ? 'expired' : 'anonymous'
     return false
   }
 
-  return {
-    // Estado
-    user,
-    token,
-    // Getters
-    estaAutenticado,
-    esAdmin,
-    esEmpleado,
-    esDueno,
-    // Acciones
-    login,
-    registro,
-    logout,
-    cargarPerfil,
-    limpiarSesionLocal,
+  async function probe() {
+    if (initialized.value) return estaAutenticado.value
+    const response = await api.get('/auth/session')
+    if (response.ok && response.data?.authenticated) {
+      applySession(response.data)
+      return true
+    }
+    initialized.value = true
+    user.value = null
+    sessionState.value = 'anonymous'
+    return false
   }
+
+  async function logout() {
+    try { await api.post('/auth/logout', {}) } finally { limpiarSesionLocal('anonymous') }
+  }
+
+  async function logoutAll() {
+    try { await api.post('/auth/logout-all', {}) } finally { limpiarSesionLocal('anonymous') }
+  }
+
+  async function cambiarGimnasio(gymId) {
+    const response = await api.post('/me/gym-context', { gym_id: gymId })
+    if (!response.ok || response.data.error) throw apiError(response)
+    applySession(response.data)
+  }
+
+  async function limpiarGimnasio() {
+    const response = await api.delete('/me/gym-context')
+    if (!response.ok || response.data.error) throw apiError(response)
+    applySession(response.data)
+  }
+
+  function tienePermiso(permission) { return permisos.value.includes(permission) }
+
+  function limpiarSesionLocal(state = 'expired') {
+    user.value = null
+    initialized.value = true
+    sessionState.value = state
+    api.clearCsrf()
+  }
+
+  function apiError(response) {
+    const error = new Error(response.data?.mensaje || 'No se pudo completar la operación.')
+    error.status = response.status
+    error.fields = response.data?.fields || {}
+    error.code = response.data?.codigo || null
+    return error
+  }
+
+  return { user, initialized, sessionState, estaAutenticado, esAdmin, esEmpleado, esDueno, correoVerificado, permisos,
+    login, registro, bootstrap, probe, cargarPerfil: () => bootstrap(true), logout, logoutAll, cambiarGimnasio, limpiarGimnasio, tienePermiso, limpiarSesionLocal }
 })

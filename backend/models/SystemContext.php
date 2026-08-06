@@ -18,6 +18,10 @@ final class SystemContext
         return [
             'demo_data_active' => $datasetActivo !== null,
             'demo_dataset_name' => $datasetActivo['nombre'] ?? null,
+            'turnstile_enabled' => filter_var(getenv('TURNSTILE_ENABLED') ?: 'false', FILTER_VALIDATE_BOOL),
+            'turnstile_site_key' => filter_var(getenv('TURNSTILE_ENABLED') ?: 'false', FILTER_VALIDATE_BOOL)
+                ? (getenv('TURNSTILE_SITE_KEY') ?: null)
+                : null,
             'features' => [
                 'whatsapp' => $this->flag('FEATURE_WHATSAPP'),
                 'google_calendar_sync' => $this->flag('FEATURE_GOOGLE_CALENDAR_SYNC'),

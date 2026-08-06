@@ -1,10 +1,12 @@
 <script setup>
 import { onMounted } from 'vue'
 import DemoDataNotice from './components/system/DemoDataNotice.vue'
+import { useAuthStore } from './stores/auth'
 import { useSystemStore } from './stores/system'
 
 const system = useSystemStore()
-onMounted(() => system.load())
+const auth = useAuthStore()
+onMounted(() => Promise.all([system.load(), auth.probe()]))
 </script>
 
 <template>

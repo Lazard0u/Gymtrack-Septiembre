@@ -28,8 +28,8 @@ class ClasesController
      */
     public function listar(): void
     {
-        AuthMiddleware::verificarSesion();
-        $clases = $this->claseModel->listarActivas(AuthMiddleware::obtenerDemoDatasetId());
+        AuthMiddleware::verificarPermiso('classes.read');
+        $clases = $this->claseModel->listarActivas(AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
         $this->responder(200, ['error' => false, 'clases' => $clases]);
     }
 
@@ -38,9 +38,8 @@ class ClasesController
      */
     public function todas(): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2); // Solo admin
-        $clases = $this->claseModel->listarTodas(AuthMiddleware::obtenerDemoDatasetId());
+        AuthMiddleware::verificarPermiso('classes.read');
+        $clases = $this->claseModel->listarTodas(AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
         $this->responder(200, ['error' => false, 'clases' => $clases]);
     }
 
@@ -49,8 +48,8 @@ class ClasesController
      */
     public function ver(int $id): void
     {
-        AuthMiddleware::verificarSesion();
-        $clase = $this->claseModel->buscarPorId($id, AuthMiddleware::obtenerDemoDatasetId());
+        AuthMiddleware::verificarPermiso('classes.read');
+        $clase = $this->claseModel->buscarPorId($id, AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
         if (!$clase) {
             $this->responder(404, ['error' => true, 'mensaje' => 'Clase no encontrada.']);
             return;
@@ -63,9 +62,9 @@ class ClasesController
      */
     public function crear(): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarPermiso('classes.write');
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         if (!is_array($datos)) {
@@ -85,14 +84,20 @@ class ClasesController
             return;
         }
 
-        $id = $this->claseModel->crear(
-            htmlspecialchars(trim($datos['nombre']), ENT_QUOTES, 'UTF-8'),
-            (int) $datos['instructor_id'],
-            $datos['dia_semana'],
-            $datos['hora_inicio'],
-            $datos['hora_fin'],
-            (int) $datos['cupo_maximo']
-        );
+        try {
+            $id = $this->claseModel->crear(
+                htmlspecialchars(trim($datos['nombre']), ENT_QUOTES, 'UTF-8'),
+                (int) $datos['instructor_id'],
+                $datos['dia_semana'],
+                $datos['hora_inicio'],
+                $datos['hora_fin'],
+                (int) $datos['cupo_maximo'],
+                $gimnasioId
+            );
+        } catch (DomainException $e) {
+            $this->responder(404, ['error' => true, 'mensaje' => $e->getMessage()]);
+            return;
+        }
 
         $this->responder(201, [
             'error'   => false,
@@ -106,9 +111,9 @@ class ClasesController
      */
     public function actualizar(int $id): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarPermiso('classes.write');
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         if (!is_array($datos)) {
@@ -136,7 +141,8 @@ class ClasesController
             $datos['hora_inicio'] ?? '',
             $datos['hora_fin'] ?? '',
             (int) ($datos['cupo_maximo'] ?? 0),
-            (int) ($datos['activa'] ?? 1)
+            (int) ($datos['activa'] ?? 1),
+            $gimnasioId
         );
 
         if ($ok) {
@@ -151,11 +157,11 @@ class ClasesController
      */
     public function eliminar(int $id): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarPermiso('classes.write');
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
-        $ok = $this->claseModel->eliminar($id);
+        $ok = $this->claseModel->eliminar($id, $gimnasioId);
         if ($ok) {
             $this->responder(200, ['error' => false, 'mensaje' => 'Clase eliminada correctamente.']);
         } else {
@@ -168,10 +174,9 @@ class ClasesController
      */
     public function stats(): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarPermiso('classes.read');
 
-        $stats = $this->claseModel->estadisticas(AuthMiddleware::obtenerDemoDatasetId());
+        $stats = $this->claseModel->estadisticas(AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
         $this->responder(200, ['error' => false, 'estadisticas' => $stats]);
     }
 

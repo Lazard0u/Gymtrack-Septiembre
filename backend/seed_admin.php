@@ -22,26 +22,34 @@ try {
         exit(1);
     }
 
-    $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE email = ? LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE email_normalizado = ? LIMIT 1');
     $stmt->execute([$email]);
     $usuarioId = $stmt->fetchColumn();
 
     $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+    $roleStmt = $pdo->prepare('SELECT id FROM roles WHERE nombre = ? LIMIT 1');
+    $roleStmt->execute(['admin_general']);
+    $roleId = $roleStmt->fetchColumn();
+    if (!$roleId) {
+        throw new RuntimeException('El rol admin_general no está configurado.');
+    }
     if ($usuarioId) {
         $stmt = $pdo->prepare(
-            'UPDATE usuarios SET nombre = ?, password_hash = ?, rol_id = 2, activo = 1 WHERE id = ?'
+            'UPDATE usuarios SET nombre = ?, email_normalizado = ?, email_verificado_en = COALESCE(email_verificado_en, NOW()),
+             password_hash = ?, debe_cambiar_password = 0, rol_id = ?, activo = 1 WHERE id = ?'
         );
-        $stmt->execute([$nombre, $passwordHash, (int) $usuarioId]);
+        $stmt->execute([$nombre, $email, $passwordHash, (int) $roleId, (int) $usuarioId]);
+        $pdo->prepare('UPDATE user_sessions SET revocada_en=COALESCE(revocada_en,NOW()), motivo_revocacion="credential_rotation" WHERE usuario_id=?')->execute([(int)$usuarioId]);
     } else {
         $stmt = $pdo->prepare(
-            'INSERT INTO usuarios (nombre, email, password_hash, telefono, rol_id, activo)
-             VALUES (?, ?, ?, NULL, 2, 1)'
+            'INSERT INTO usuarios (nombre, apellido, email, email_normalizado, email_verificado_en, password_hash, telefono, rol_id, activo)
+             VALUES (?, "", ?, ?, NOW(), ?, NULL, ?, 1)'
         );
-        $stmt->execute([$nombre, $email, $passwordHash]);
+        $stmt->execute([$nombre, $email, $email, $passwordHash, (int) $roleId]);
     }
 
     echo "Cuenta administradora creada o actualizada correctamente.\n";
-} catch (PDOException $e) {
+} catch (Throwable $e) {
     fwrite(STDERR, "No se pudo crear la cuenta administradora.\n");
     exit(1);
 }

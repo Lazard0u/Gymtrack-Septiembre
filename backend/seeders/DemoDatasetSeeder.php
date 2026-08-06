@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 final class DemoDatasetSeeder
 {
-    private const MIGRATION = '002_phase3_roles_demo_context';
-    private const VERSION = '1.0.0';
+    private const MIGRATION = '003_phase3_identity_security';
+    private const VERSION = '1.1.0';
 
     private PDO $pdo;
     private string $datasetName;
@@ -50,11 +50,11 @@ final class DemoDatasetSeeder
                 $userIds[$user['email']] = $this->upsertUser($datasetId, $user, $password);
             }
 
-            $this->upsertGymRole($datasetId, $userIds['socio.demo@gymtrack.local'], $gymIds['gymtrack-centro'], 1);
-            $this->upsertGymRole($datasetId, $userIds['socio.demo@gymtrack.local'], $gymIds['titan-training'], 1);
-            $this->upsertGymRole($datasetId, $userIds['empleado.demo@gymtrack.local'], $gymIds['gymtrack-centro'], 3);
-            $this->upsertGymRole($datasetId, $userIds['dueno.demo@gymtrack.local'], $gymIds['gymtrack-centro'], 4);
-            $this->upsertGymRole($datasetId, $userIds['dueno.demo@gymtrack.local'], $gymIds['arena-functional-gym'], 4);
+            $this->upsertGymRole($datasetId, $userIds['socio.demo@gymtrack.local'], $gymIds['gymtrack-centro'], 'socio');
+            $this->upsertGymRole($datasetId, $userIds['socio.demo@gymtrack.local'], $gymIds['titan-training'], 'socio');
+            $this->upsertGymRole($datasetId, $userIds['empleado.demo@gymtrack.local'], $gymIds['gymtrack-centro'], 'empleado');
+            $this->upsertGymRole($datasetId, $userIds['dueno.demo@gymtrack.local'], $gymIds['gymtrack-centro'], 'dueño');
+            $this->upsertGymRole($datasetId, $userIds['dueno.demo@gymtrack.local'], $gymIds['arena-functional-gym'], 'dueño');
 
             $classIds = [];
             foreach ($this->classes() as $class) {
@@ -149,7 +149,7 @@ final class DemoDatasetSeeder
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM schema_migrations WHERE version = ?');
         $stmt->execute([self::MIGRATION]);
         if ((int) $stmt->fetchColumn() !== 1) {
-            throw new RuntimeException('Falta aplicar database/migrations/002_phase3_roles_demo_context.sql.');
+            throw new RuntimeException('Falta aplicar database/migrations/003_phase3_identity_security.sql.');
         }
     }
 
@@ -266,22 +266,23 @@ final class DemoDatasetSeeder
         $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
         if ($existing) {
             $stmt = $this->pdo->prepare(
-                'UPDATE usuarios SET nombre = ?, password_hash = ?, telefono = ?, rol_id = ?, activo = 1,
+                'UPDATE usuarios SET nombre = ?, apellido = ?, email_normalizado = ?, password_hash = ?, telefono = ?, rol_id = ?, activo = 1,
+                 email_verificado_en = COALESCE(email_verificado_en, NOW()), debe_cambiar_password = 0,
                  is_demo = 1, demo_dataset_id = ? WHERE id = ?'
             );
-            $stmt->execute([$user['nombre'], $hash, $user['telefono'], $user['rol_id'], $datasetId, (int) $existing['id']]);
+            $stmt->execute([$user['nombre'], $user['apellido'], $user['email'], $hash, $user['telefono'], $this->roleId($user['rol']), $datasetId, (int) $existing['id']]);
             return (int) $existing['id'];
         }
 
         $stmt = $this->pdo->prepare(
-            'INSERT INTO usuarios (nombre, email, password_hash, telefono, rol_id, activo, is_demo, demo_dataset_id)
-             VALUES (?, ?, ?, ?, ?, 1, 1, ?)'
+            'INSERT INTO usuarios (nombre, apellido, email, email_normalizado, email_verificado_en, password_hash, telefono, rol_id, activo, is_demo, demo_dataset_id)
+             VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, 1, 1, ?)'
         );
-        $stmt->execute([$user['nombre'], $user['email'], $hash, $user['telefono'], $user['rol_id'], $datasetId]);
+        $stmt->execute([$user['nombre'], $user['apellido'], $user['email'], $user['email'], $hash, $user['telefono'], $this->roleId($user['rol']), $datasetId]);
         return (int) $this->pdo->lastInsertId();
     }
 
-    private function upsertGymRole(int $datasetId, int $userId, int $gymId, int $roleId): void
+    private function upsertGymRole(int $datasetId, int $userId, int $gymId, string $role): void
     {
         $stmt = $this->pdo->prepare(
             'INSERT INTO usuario_gimnasio_roles
@@ -289,7 +290,7 @@ final class DemoDatasetSeeder
              VALUES (?, ?, ?, 1, 1, ?)
              ON DUPLICATE KEY UPDATE activo = 1, is_demo = 1, demo_dataset_id = VALUES(demo_dataset_id)'
         );
-        $stmt->execute([$userId, $gymId, $roleId, $datasetId]);
+        $stmt->execute([$userId, $gymId, $this->roleId($role), $datasetId]);
     }
 
     private function upsertClass(int $datasetId, int $gymId, int $instructorId, array $class): int
@@ -458,11 +459,22 @@ final class DemoDatasetSeeder
     private function users(): array
     {
         return [
-            ['nombre' => 'Socio Demo', 'email' => 'socio.demo@gymtrack.local', 'telefono' => '+598 000 100 01', 'rol_id' => 1],
-            ['nombre' => 'Empleado Demo', 'email' => 'empleado.demo@gymtrack.local', 'telefono' => '+598 000 100 02', 'rol_id' => 3],
-            ['nombre' => 'Dueño Demo', 'email' => 'dueno.demo@gymtrack.local', 'telefono' => '+598 000 100 03', 'rol_id' => 4],
-            ['nombre' => 'Admin Demo', 'email' => 'admin.demo@gymtrack.local', 'telefono' => '+598 000 100 04', 'rol_id' => 2],
+            ['nombre' => 'Socio', 'apellido' => 'Demo', 'email' => 'socio.demo@gymtrack.local', 'telefono' => '+598 000 100 01', 'rol' => 'socio'],
+            ['nombre' => 'Empleado', 'apellido' => 'Demo', 'email' => 'empleado.demo@gymtrack.local', 'telefono' => '+598 000 100 02', 'rol' => 'empleado'],
+            ['nombre' => 'Dueño', 'apellido' => 'Demo', 'email' => 'dueno.demo@gymtrack.local', 'telefono' => '+598 000 100 03', 'rol' => 'dueño'],
+            ['nombre' => 'Admin', 'apellido' => 'Demo', 'email' => 'admin.demo@gymtrack.local', 'telefono' => '+598 000 100 04', 'rol' => 'admin_general'],
         ];
+    }
+
+    private function roleId(string $name): int
+    {
+        $stmt = $this->pdo->prepare('SELECT id FROM roles WHERE nombre = ? LIMIT 1');
+        $stmt->execute([$name]);
+        $id = $stmt->fetchColumn();
+        if ($id === false) {
+            throw new RuntimeException("Rol demo no configurado: {$name}.");
+        }
+        return (int) $id;
     }
 
     private function classes(): array

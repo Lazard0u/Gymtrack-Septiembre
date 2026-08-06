@@ -1,342 +1,113 @@
 <?php
-/**
- * GymTrack · AuthController.php (Controller)
- * ---------------------------------------------------------------
- * Controlador que maneja todo lo relacionado con la autenticación:
- * registro, login y logout.
- *
- * ¿Qué hace un Controller en el patrón MVC?
- *   Recibe la petición HTTP, valida los datos, llama al modelo
- *   para interactuar con la base de datos y devuelve la respuesta JSON.
- *   Es el "director de orquesta" entre la petición y los datos.
- *
- * Endpoints que maneja este controlador:
- *   POST /api/auth/registro  → registrar()
- *   POST /api/auth/login     → login()
- *   POST /api/auth/logout    → logout()
- */
 
-class AuthController
+declare(strict_types=1);
+
+final class AuthController
 {
-    private Usuario $usuarioModel;
+    private Usuario $users;
+    private PDO $pdo;
+    public function __construct(){ $this->users=new Usuario();$this->pdo=Database::conectar(); }
 
-    public function __construct()
-    {
-        // Instanciamos el modelo — él se encarga de hablar con la DB
-        $this->usuarioModel = new Usuario();
-    }
+    public function registrar(): void { $this->register(false); }
+    public function registrarDueno(): void { $this->register(true); }
 
-    // ─────────────────────────────────────────────────────────
-    // REGISTRO  →  POST /api/auth/registro
-    // Caso de uso CU-01 del documento de requerimientos
-    // ─────────────────────────────────────────────────────────
-
-    /**
-     * Registra un nuevo socio en el sistema.
-     *
-     * Flujo:
-     *  1. Leer y validar los datos del body JSON
-     *  2. Verificar que el email no esté registrado (RF-02)
-     *  3. Cifrar la contraseña con BCRYPT
-     *  4. Guardar el usuario en la base de datos
-     *  5. Devolver respuesta JSON con los datos del nuevo usuario
-     */
-    public function registrar(): void
-    {
-        // ── Leer el body JSON ─────────────────────────────────
-        // Vue envía los datos como JSON en el body de la petición POST.
-        // php://input es el stream de lectura del cuerpo HTTP.
-        $datos = json_decode(file_get_contents('php://input'), true);
-        if (!is_array($datos)) {
-            $this->responder(400, ['error' => true, 'mensaje' => 'El cuerpo de la petición no es válido.']);
-            return;
-        }
-
-        // ── Validación básica ─────────────────────────────────
-        // Verificamos que los campos obligatorios estén presentes
-        $camposRequeridos = ['nombre', 'email', 'password'];
-        foreach ($camposRequeridos as $campo) {
-            if (empty($datos[$campo])) {
-                $this->responder(400, [
-                    'error'   => true,
-                    'mensaje' => "El campo '{$campo}' es obligatorio."
-                ]);
-                return;
-            }
-        }
-
-        if (!$this->verificarTurnstile($datos['turnstileToken'] ?? '')) {
-            $this->responder(400, [
-                'error'   => true,
-                'mensaje' => 'No se pudo validar la verificación anti robot.'
-            ]);
-            return;
-        }
-
-        // Validamos que el email tenga formato correcto
-        if (!filter_var($datos['email'], FILTER_VALIDATE_EMAIL)) {
-            $this->responder(400, [
-                'error'   => true,
-                'mensaje' => 'El formato del correo electrónico no es válido.'
-            ]);
-            return;
-        }
-
-        // La contraseña debe tener al menos 8 caracteres (Manual de usuario)
-        if (strlen($datos['password']) < 8) {
-            $this->responder(400, [
-                'error'   => true,
-                'mensaje' => 'La contraseña debe tener al menos 8 caracteres.'
-            ]);
-            return;
-        }
-
-        // ── Verificar email único (RF-02) ─────────────────────
-        if ($this->usuarioModel->emailExiste($datos['email'])) {
-            // 409 Conflict: el recurso ya existe
-            $this->responder(409, [
-                'error'   => true,
-                'mensaje' => 'Ese correo ya está registrado.'
-            ]);
-            return;
-        }
-
-        // ── Cifrar contraseña con BCRYPT ──────────────────────
-        // password_hash() genera un hash unidireccional.
-        // El factor 'cost' => 12 define cuánto trabajo computacional
-        // requiere generar el hash — más alto = más seguro pero más lento.
-        // 12 es el estándar recomendado en 2026.
-        $passwordHash = password_hash(
-            $datos['password'],
-            PASSWORD_BCRYPT,
-            ['cost' => 12]
-        );
-
-        // ── Normalizar y validar el nombre antes de guardar ──────────
-        // El escape HTML corresponde a la capa de presentación, no a la DB.
-        $nombreSanitizado = trim($datos['nombre']);
-        if (mb_strlen($nombreSanitizado) < 2 || mb_strlen($nombreSanitizado) > 100) {
-            $this->responder(400, ['error' => true, 'mensaje' => 'El nombre debe tener entre 2 y 100 caracteres.']);
-            return;
-        }
-
-        // ── Guardar en la base de datos ───────────────────────
-        $telefonoOpcional = isset($datos['telefono']) ? trim($datos['telefono']) : null;
-
-        $nuevoId = $this->usuarioModel->crear(
-            $nombreSanitizado,
-            strtolower(trim($datos['email'])), // emails siempre en minúsculas
-            $passwordHash,
-            $telefonoOpcional
-        );
-
-        // ── Devolver respuesta exitosa ────────────────────────
-        // 201 Created: se creó un nuevo recurso en el servidor
-        $this->responder(201, [
-            'error'   => false,
-            'mensaje' => 'Cuenta creada exitosamente.',
-            'usuario' => [
-                'id'     => $nuevoId,
-                'nombre' => $nombreSanitizado,
-                'email'  => strtolower(trim($datos['email'])),
-                'rol_id' => 1 // socio
-            ]
-        ]);
-    }
-
-    // ─────────────────────────────────────────────────────────
-    // LOGIN  →  POST /api/auth/login
-    // Caso de uso CU-02 del documento de requerimientos
-    // ─────────────────────────────────────────────────────────
-
-    /**
-     * Inicia sesión de un usuario registrado.
-     *
-     * Flujo:
-     *  1. Leer email y contraseña del body JSON
-     *  2. Buscar el usuario por email en la DB
-     *  3. Verificar la contraseña con password_verify()
-     *  4. Regenerar el ID de sesión (prevenir session fixation)
-     *  5. Guardar los datos en $_SESSION
-     *  6. Devolver los datos del usuario al frontend
-     */
     public function login(): void
     {
-        $datos = json_decode(file_get_contents('php://input'), true);
-
-        if (!is_array($datos)) {
-            $this->responder(400, ['error' => true, 'mensaje' => 'El cuerpo de la petición no es válido.']);
-            return;
-        }
-
-        // ── Validación ────────────────────────────────────────
-        if (empty($datos['email']) || empty($datos['password'])) {
-            $this->responder(400, [
-                'error'   => true,
-                'mensaje' => 'Email y contraseña son obligatorios.'
-            ]);
-            return;
-        }
-
-        // ── Buscar usuario por email ──────────────────────────
-        $usuario = $this->usuarioModel->buscarPorEmail(
-            strtolower(trim($datos['email']))
-        );
-
-        // ── Verificar credenciales ────────────────────────────
-        // IMPORTANTE: devolvemos el MISMO mensaje de error si el email
-        // no existe O si la contraseña es incorrecta. Si dijéramos
-        // "email no encontrado", un atacante sabría qué emails están
-        // registrados. Esto se llama "enumeración de usuarios".
-        if (!$usuario || !$this->verificarPassword($datos['password'], $usuario['password_hash'])) {
-            $this->responder(401, [
-                'error'   => true,
-                'mensaje' => 'Credenciales incorrectas.'
-            ]);
-            return;
-        }
-
-        // Verificamos que la cuenta esté activa
-        if (!$usuario['activo']) {
-            $this->responder(403, [
-                'error'   => true,
-                'mensaje' => 'Tu cuenta está deshabilitada. Contactá al administrador.'
-            ]);
-            return;
-        }
-
-        // ── Iniciar sesión segura ─────────────────────────────
-        // session_start() activa el sistema de sesiones de PHP
-        $this->configurarCookieSesion();
-        session_start();
-
-        // session_regenerate_id(true) crea un nuevo ID de sesión
-        // y destruye el anterior. Esto previene el ataque "Session Fixation":
-        // un atacante no puede pre-setear un ID de sesión y esperar
-        // que la víctima lo use para autenticarse.
-        session_regenerate_id(true);
-
-        // Guardamos los datos del usuario en la sesión del servidor
-        $_SESSION['usuario_id'] = $usuario['id'];
-        $_SESSION['rol_id']     = $usuario['rol_id'];
-        $_SESSION['rol_nombre'] = $usuario['rol_nombre'];
-        $_SESSION['is_demo'] = (bool) $usuario['is_demo'];
-        $_SESSION['demo_dataset_id'] = $usuario['demo_dataset_id'] === null
-            ? null
-            : (int) $usuario['demo_dataset_id'];
-
-        // ── Respuesta al frontend ─────────────────────────────
-        // NUNCA enviamos el password_hash al frontend
-        $this->responder(200, [
-            'error'   => false,
-            'mensaje' => 'Sesión iniciada correctamente.',
-            'usuario' => [
-                'id'     => $usuario['id'],
-                'nombre' => $usuario['nombre'],
-                'email'  => $usuario['email'],
-                'rol_id' => $usuario['rol_id'],
-                'rol_nombre' => $usuario['rol_nombre'],
-                'is_demo' => (bool) $usuario['is_demo'],
-                'gimnasios' => $this->usuarioModel->contextosGimnasio((int) $usuario['id']),
-            ],
-            // El session_id se usa como token en las peticiones autenticadas
-            'token' => session_id()
-        ]);
+        $data=$this->body();$email=Security::normalizeEmail((string)($data['email']??''));$password=(string)($data['password']??'');
+        if(!filter_var($email,FILTER_VALIDATE_EMAIL)||$password===''){$this->respond(400,['error'=>true,'mensaje'=>'Correo electrónico y contraseña son obligatorios.']);return;}
+        $limit=new RateLimiter();$limit->ensureAllowed('login',$email);$user=$this->users->buscarPorEmail($email);
+        if(!$user||!password_verify($password,(string)$user['password_hash'])){$limit->fail('login',$email);SecurityLogger::record('auth.login','failed',is_array($user)?(int)$user['id']:null);usleep(random_int(80000,160000));$this->respond(401,['error'=>true,'mensaje'=>'Credenciales incorrectas.']);return;}
+        if(!(bool)$user['activo']){$limit->fail('login',$email);SecurityLogger::record('auth.login','disabled',(int)$user['id']);$this->respond(401,['error'=>true,'mensaje'=>'Credenciales incorrectas.']);return;}
+        $limit->clear('login',$email);
+        if(password_needs_rehash((string)$user['password_hash'],PASSWORD_BCRYPT,['cost'=>12])){$this->users->rehashPassword((int)$user['id'],password_hash($password,PASSWORD_BCRYPT,['cost'=>12]));}
+        $assignments=(new AuthorizationService())->gymAssignments((int)$user['id']);$gymId=$user['rol_nombre']===AuthorizationService::ADMIN?null:($assignments[0]['gimnasio_id']??null);
+        $session=(new SessionManager())->create($user,$gymId);SessionManager::configureCookie();session_start();
+        $payload=(new UserContextService())->payload((int)$user['id']);session_write_close();SecurityLogger::record('auth.login','success',(int)$user['id']);
+        $this->respond(200,['error'=>false,'mensaje'=>'Sesión iniciada correctamente.','usuario'=>$payload,'csrf_token'=>$session['csrf_token']]);
     }
 
-    // ─────────────────────────────────────────────────────────
-    // LOGOUT  →  POST /api/auth/logout
-    // ─────────────────────────────────────────────────────────
-
-    /**
-     * Cierra la sesión del usuario (RF-04).
-     *
-     * Destruir la sesión en el servidor es fundamental —
-     * no alcanza con que el frontend borre el token local.
-     */
     public function logout(): void
     {
-        $this->configurarCookieSesion();
-        AuthMiddleware::destruirSesionActual();
-
-        $this->responder(200, [
-            'error'   => false,
-            'mensaje' => 'Sesión cerrada correctamente.'
-        ]);
+        $manager=new SessionManager();
+        if($manager->start(false)){$userId=(int)($_SESSION['usuario_id']??0);$manager->verifyCsrf();$manager->destroy(true,'logout');SecurityLogger::record('auth.logout','success',$userId);}
+        $this->respond(200,['error'=>false,'mensaje'=>'Sesión cerrada correctamente.']);
     }
 
-    private function verificarPassword(string $password, string $hash): bool
+    public function resendEmail(): void
     {
-        return password_verify($password, $hash);
+        $data=$this->body();$email=Security::normalizeEmail((string)($data['email']??''));$message='Si la cuenta existe y aún necesita verificación, recibirás un enlace.';
+        if(!filter_var($email,FILTER_VALIDATE_EMAIL)){$this->respond(202,['error'=>false,'mensaje'=>$message]);return;}
+        $limit=new RateLimiter();$limit->ensureAllowed('email_resend',$email);$limit->fail('email_resend',$email);$user=$this->users->buscarPorEmail($email);
+        if($user&&$user['email_verificado_en']===null){$token=(new TokenService())->issueEmailVerification((int)$user['id']);$this->sendLink($email,'Verificá tu correo de GymTrack','/verificar-email?token='.rawurlencode($token));}
+        $this->respond(202,['error'=>false,'mensaje'=>$message]);
     }
-    private function verificarTurnstile(string $token): bool
+
+    public function verifyEmail(): void
     {
-        $habilitado = filter_var(getenv('TURNSTILE_ENABLED') ?: 'true', FILTER_VALIDATE_BOOL);
-        if (!$habilitado) {
-            return true;
-        }
-
-        $secret = getenv('TURNSTILE_SECRET_KEY') ?: '';
-        if ($secret === '' || $token === '') {
-            return false;
-        }
-
-        $payload = http_build_query([
-            'secret' => $secret,
-            'response' => $token,
-            'remoteip' => $_SERVER['REMOTE_ADDR'] ?? null,
-        ]);
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: application/x-www-form-urlencoded\r\n",
-                'content' => $payload,
-                'timeout' => 5,
-            ],
-        ]);
-
-        $respuesta = @file_get_contents('https://challenges.cloudflare.com/turnstile/v0/siteverify', false, $context);
-
-        if ($respuesta === false) {
-            return false;
-        }
-
-        $resultado = json_decode($respuesta, true);
-
-        return (bool)($resultado['success'] ?? false);
+        $data=$this->body();$token=(string)($data['token']??'');$userId=(new TokenService())->consume('email_verification_tokens',$token);
+        if($userId===null){$this->respond(400,['error'=>true,'mensaje'=>'El enlace de verificación no es válido o venció.']);return;}
+        $this->users->verifyEmail($userId);SecurityLogger::record('auth.email_verified','success',$userId);$this->respond(200,['error'=>false,'mensaje'=>'Correo verificado correctamente. Ya podés continuar.']);
     }
 
-    private function configurarCookieSesion(): void
+    public function forgotPassword(): void
     {
-        if (session_status() !== PHP_SESSION_NONE) {
-            return;
-        }
-
-        session_name(getenv('SESSION_NAME') ?: 'gymtrack_session');
-        session_set_cookie_params([
-            'lifetime' => 0,
-            'path' => '/',
-            'secure' => filter_var(getenv('SESSION_SECURE') ?: 'false', FILTER_VALIDATE_BOOL),
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
+        $data=$this->body();$email=Security::normalizeEmail((string)($data['email']??''));$message='Si la cuenta existe, recibirás instrucciones para restablecer la contraseña.';
+        if(!filter_var($email,FILTER_VALIDATE_EMAIL)){$this->respond(202,['error'=>false,'mensaje'=>$message]);return;}
+        $limit=new RateLimiter();$limit->ensureAllowed('password_forgot',$email);$limit->fail('password_forgot',$email);$user=$this->users->buscarPorEmail($email);
+        if($user&&(bool)$user['activo']){$token=(new TokenService())->issuePasswordReset((int)$user['id']);$this->sendLink($email,'Restablecé tu contraseña de GymTrack','/restablecer/'.rawurlencode($token));SecurityLogger::record('auth.password_forgot','accepted',(int)$user['id']);}
+        $this->respond(202,['error'=>false,'mensaje'=>$message]);
     }
-    // ─────────────────────────────────────────────────────────
-    // HELPER: responder con JSON
-    // ─────────────────────────────────────────────────────────
 
-    /**
-     * Método auxiliar que envía la respuesta JSON con el código HTTP correcto.
-     *
-     * Lo usamos en todos los controladores para no repetir código.
-     *
-     * @param int   $codigo  Código HTTP (200, 201, 400, 401, 409, 500...)
-     * @param array $datos   Los datos a serializar como JSON
-     */
-    private function responder(int $codigo, array $datos): void
+    public function resetPassword(): void
     {
-        http_response_code($codigo);
-        echo json_encode($datos, JSON_UNESCAPED_UNICODE);
+        $data=$this->body();$token=(string)($data['token']??'');$password=(string)($data['password']??'');$confirmation=(string)($data['password_confirmation']??'');
+        $subject=hash('sha256',$token);$limit=new RateLimiter();$limit->ensureAllowed('password_reset',$subject);
+        if($password!==$confirmation){$limit->fail('password_reset',$subject);$this->respond(422,['error'=>true,'mensaje'=>'Las contraseñas no coinciden.']);return;}
+        if($error=Security::passwordError($password)){$limit->fail('password_reset',$subject);$this->respond(422,['error'=>true,'mensaje'=>$error]);return;}
+        $userId=(new TokenService())->consume('password_reset_tokens',$token);
+        if($userId===null){$limit->fail('password_reset',$subject);$this->respond(400,['error'=>true,'mensaje'=>'El enlace no es válido o venció. Solicitá uno nuevo.']);return;}
+        $this->users->updatePassword($userId,password_hash($password,PASSWORD_BCRYPT,['cost'=>12]));(new SessionManager())->revokeAll($userId,null,'password_reset');$limit->clear('password_reset',$subject);SecurityLogger::record('auth.password_reset','success',$userId);
+        $this->respond(200,['error'=>false,'mensaje'=>'Contraseña actualizada. Iniciá sesión nuevamente.']);
     }
+
+    public function changePassword(): void
+    {
+        AuthMiddleware::verificarSesion();$data=$this->body();$userId=AuthMiddleware::obtenerUsuarioId();$user=$this->users->buscarPorEmail((string)$this->users->buscarPorId($userId)['email']);
+        $current=(string)($data['current_password']??'');$password=(string)($data['password']??'');$confirmation=(string)($data['password_confirmation']??'');
+        $limit=new RateLimiter();$subject=(string)$user['email_normalizado'];$limit->ensureAllowed('password_change',$subject);
+        if(!password_verify($current,(string)$user['password_hash'])){$limit->fail('password_change',$subject);$this->respond(422,['error'=>true,'mensaje'=>'La contraseña actual no es correcta.']);return;}
+        if($password!==$confirmation){$this->respond(422,['error'=>true,'mensaje'=>'Las contraseñas nuevas no coinciden.']);return;}
+        if($error=Security::passwordError($password,(string)$user['email'])){$this->respond(422,['error'=>true,'mensaje'=>$error]);return;}
+        $this->users->updatePassword($userId,password_hash($password,PASSWORD_BCRYPT,['cost'=>12]));$limit->clear('password_change',$subject);
+        if((bool)($data['logout_other_sessions']??true)){(new SessionManager())->revokeAll($userId,(string)($_SESSION['session_public_id']??''),'password_changed');}
+        SecurityLogger::record('auth.password_changed','success',$userId);$this->respond(200,['error'=>false,'mensaje'=>'Contraseña actualizada correctamente.']);
+    }
+
+    private function register(bool $owner): void
+    {
+        $data=$this->body();$email=Security::normalizeEmail((string)($data['email']??''));$limit=new RateLimiter();$limit->ensureAllowed($owner?'owner_register':'register',$email?:'invalid');
+        $first=trim((string)($data['nombre']??''));$last=trim((string)($data['apellido']??''));$password=(string)($data['password']??'');$confirmation=(string)($data['password_confirmation']??'');
+        if(!(new TurnstileService())->verify((string)($data['turnstileToken']??''))){$limit->fail($owner?'owner_register':'register',$email?:'invalid');$this->respond(400,['error'=>true,'mensaje'=>'No se pudo validar la verificación anti robot.']);return;}
+        $errors=[];if(mb_strlen($first)<2||mb_strlen($first)>100)$errors['nombre']='Ingresá un nombre de 2 a 100 caracteres.';if(mb_strlen($last)<2||mb_strlen($last)>100)$errors['apellido']='Ingresá un apellido de 2 a 100 caracteres.';if(!filter_var($email,FILTER_VALIDATE_EMAIL))$errors['email']='Ingresá un correo electrónico válido.';if($password!==$confirmation)$errors['password_confirmation']='Las contraseñas no coinciden.';if($error=Security::passwordError($password,$email))$errors['password']=$error;if(($data['terms_accepted']??false)!==true)$errors['terms_accepted']='Debés aceptar los términos.';if(($data['privacy_accepted']??false)!==true)$errors['privacy_accepted']='Debés aceptar la política de privacidad.';
+        if($owner&&mb_strlen(trim((string)($data['gym_name']??'')))<2)$errors['gym_name']='Ingresá el nombre del gimnasio.';
+        if($errors!==[]){$limit->fail($owner?'owner_register':'register',$email?:'invalid');$this->respond(422,['error'=>true,'mensaje'=>'Revisá los campos marcados.','fields'=>$errors]);return;}
+        if($this->users->emailExiste($email)){$limit->fail($owner?'owner_register':'register',$email);$this->respond(409,['error'=>true,'mensaje'=>'No se pudo crear la cuenta con esos datos.']);return;}
+        $this->pdo->beginTransaction();
+        try{$userId=$this->users->crear($first,$email,password_hash($password,PASSWORD_BCRYPT,['cost'=>12]),null,$last,true,true,($data['marketing_accepted']??false)===true?new DateTimeImmutable():null);
+            foreach(['terminos','privacidad'] as $type){$this->pdo->prepare('INSERT INTO user_consents(usuario_id,tipo,version_documento,aceptado_en,ip_hash) VALUES(?,?,?,NOW(),?)')->execute([$userId,$type,'2026-08-06',Security::ipHash()]);}
+            if(($data['marketing_accepted']??false)===true)$this->pdo->prepare('INSERT INTO user_consents(usuario_id,tipo,version_documento,aceptado_en,ip_hash) VALUES(?,"marketing",?,NOW(),?)')->execute([$userId,'2026-08-06',Security::ipHash()]);
+            if($owner)$this->pdo->prepare('INSERT INTO owner_registration_requests(usuario_id,gimnasio_nombre,mensaje) VALUES(?,?,?)')->execute([$userId,trim((string)$data['gym_name']),mb_substr(trim((string)($data['message']??'')),0,500)]);
+            $this->pdo->commit();$token=(new TokenService())->issueEmailVerification($userId);$mailSent=$this->sendLink($email,'Verificá tu correo de GymTrack','/verificar-email?token='.rawurlencode($token));$limit->clear($owner?'owner_register':'register',$email);SecurityLogger::record($owner?'auth.owner_requested':'auth.register','success',$userId);
+            if(!$mailSent){$this->respond(503,['error'=>true,'codigo'=>'verification_email_failed','mensaje'=>'La cuenta quedó creada, pero no pudimos enviar el correo. Intentá reenviarlo en unos minutos.','email'=>$email]);return;}
+            $this->respond(201,['error'=>false,'mensaje'=>$owner?'Solicitud recibida. Verificá tu correo; no se asignaron permisos de dueño.':'Cuenta creada. Revisá tu correo para verificarla.','email'=>$email]);
+        }catch(Throwable $error){if($this->pdo->inTransaction())$this->pdo->rollBack();throw$error;}
+    }
+
+    private function sendLink(string $email,string $subject,string $path): bool
+    {
+        $frontend=rtrim((string)(getenv('FRONTEND_URL')?:'http://localhost:5173'),'/');
+        try{(new MailService())->send($email,$subject,"Abrí este enlace para continuar:\n\n{$frontend}{$path}\n\nSi no solicitaste esta acción, ignorá el mensaje.");return true;}catch(Throwable $error){error_log('[GymTrack mail] '.$error->getMessage());return false;}
+    }
+    private function body(): array { $data=json_decode((string)file_get_contents('php://input'),true);return is_array($data)?$data:[]; }
+    private function respond(int $status,array $data): void { http_response_code($status);echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); }
 }

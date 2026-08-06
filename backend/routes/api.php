@@ -33,8 +33,22 @@ $metodo = $_SERVER['REQUEST_METHOD']; // GET, POST, PUT, DELETE
 $rutas = [
     // Autenticación — públicas (no requieren token)
     'POST /api/auth/registro' => ['AuthController', 'registrar'],
+    'POST /api/auth/registro-dueno' => ['AuthController', 'registrarDueno'],
     'POST /api/auth/login'    => ['AuthController', 'login'],
     'POST /api/auth/logout'   => ['AuthController', 'logout'],
+    'POST /api/auth/logout-all' => ['MeController', 'logoutAll'],
+    'POST /api/auth/email/resend' => ['AuthController', 'resendEmail'],
+    'POST /api/auth/email/verify' => ['AuthController', 'verifyEmail'],
+    'POST /api/auth/password/forgot' => ['AuthController', 'forgotPassword'],
+    'POST /api/auth/password/reset' => ['AuthController', 'resetPassword'],
+    'POST /api/auth/password/change' => ['AuthController', 'changePassword'],
+    'GET /api/auth/session' => ['MeController', 'probe'],
+
+    'GET /api/me' => ['MeController', 'show'],
+    'GET /api/me/sessions' => ['MeController', 'sessions'],
+    'DELETE /api/me/sessions/([a-fA-F0-9-]{36})' => ['MeController', 'revokeSession'],
+    'POST /api/me/gym-context' => ['MeController', 'switchGym'],
+    'DELETE /api/me/gym-context' => ['MeController', 'clearGym'],
 
     // Contexto público de aplicación y catálogo de solo lectura.
     'GET /api/system/context'    => ['SystemController', 'context'],

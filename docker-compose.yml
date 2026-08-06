@@ -16,6 +16,7 @@ services:
       - ./database/gymtrack_database.sql:/docker-entrypoint-initdb.d/000_bootstrap.sql:ro
       - ./database/migrations/001_phase1_integrity.sql:/docker-entrypoint-initdb.d/001_phase1_integrity.sql:ro
       - ./database/migrations/002_phase3_roles_demo_context.sql:/docker-entrypoint-initdb.d/002_phase3_roles_demo_context.sql:ro
+      - ./database/migrations/003_phase3_identity_security.sql:/docker-entrypoint-initdb.d/003_phase3_identity_security.sql:ro
       - db_data:/var/lib/mysql
     networks:
       - gymtrack_net
@@ -35,6 +36,7 @@ services:
     restart: unless-stopped
     environment:
       APP_ENV: ${APP_ENV:-development}
+      APP_KEY: ${APP_KEY:-gymtrack-local-development-key-not-for-production}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       DB_HOST: db
       DB_PORT: 3306
@@ -43,8 +45,15 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-gymtrack_pass}
       SESSION_NAME: ${SESSION_NAME:-gymtrack_session}
       SESSION_SECURE: ${SESSION_SECURE:-false}
+      SESSION_PATH: ${SESSION_PATH:-/}
+      SESSION_IDLE_SECONDS: ${SESSION_IDLE_SECONDS:-1800}
+      SESSION_ABSOLUTE_SECONDS: ${SESSION_ABSOLUTE_SECONDS:-28800}
       TURNSTILE_ENABLED: ${TURNSTILE_ENABLED:-false}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      TURNSTILE_SITE_KEY: ${TURNSTILE_SITE_KEY:-}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-log}
+      MAIL_FROM: ${MAIL_FROM:-no-reply@gymtrack.local}
+      MAIL_LOG_PATH: ${MAIL_LOG_PATH:-/tmp/gymtrack-mail/mail.log}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
       DEMO_DATASET_NAME: ${DEMO_DATASET_NAME:-gymtrack-presentation}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}
@@ -74,6 +83,9 @@ services:
       - frontend_node_modules:/app/node_modules
     ports:
       - "5173:5173"
+    environment:
+      VITE_TURNSTILE_ENABLED: ${VITE_TURNSTILE_ENABLED:-false}
+      VITE_TURNSTILE_SITE_KEY: ${VITE_TURNSTILE_SITE_KEY:-}
     command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
     depends_on:
       - backend

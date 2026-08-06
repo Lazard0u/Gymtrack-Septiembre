@@ -12,7 +12,7 @@ import brandMark from '../../assets/gymtrack-mark.svg'
 const router = useRouter()
 const auth = useAuthStore()
 const menuOpen = ref(false)
-const hasSession = computed(() => Boolean(auth.token))
+const hasSession = computed(() => auth.estaAutenticado)
 
 const links = [
   { label: 'Funciones', to: { name: 'home', hash: '#funciones' } },

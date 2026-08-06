@@ -56,7 +56,24 @@ Con eso tenés disponible:
 
 ---
 
-## Configuración y cuenta administrativa
+## Migraciones, identidad y cuenta administrativa
+
+En una base existente aplicá las migraciones en orden. La Fase 3 no se ejecuta
+automáticamente sobre volúmenes ya creados:
+
+```bash
+docker compose exec -T db sh -lc \
+  'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+  < database/migrations/002_phase3_roles_demo_context.sql
+docker compose exec -T db sh -lc \
+  'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+  < database/migrations/003_phase3_identity_security.sql
+```
+
+Antes de `003`, realizá un respaldo. El rollback controlado está en
+`database/migrations/003_phase3_identity_security.down.sql` y requiere una
+ventana de mantenimiento: elimina sesiones, tokens y auditoría de identidad
+creados por esa migración.
 
 Las credenciales se definen en `.env`, que no debe versionarse. El repositorio no incluye una contraseña administrativa conocida. Para crear o rotar la cuenta inicial:
 
@@ -67,9 +84,16 @@ docker compose exec \
   backend php seed_admin.php
 ```
 
+La sesión se transporta únicamente mediante una cookie HttpOnly. El frontend
+consulta `GET /api/me`; no guarda tokens de autenticación en `localStorage` ni
+acepta Bearer. Toda mutación autenticada debe incluir el `X-CSRF-Token` recibido
+al iniciar o recuperar la sesión. En producción, `APP_KEY`, HTTPS,
+`SESSION_SECURE=true`, Turnstile y un transporte de correo real son
+obligatorios.
+
 ## Modo demostración para presentaciones
 
-El modo demostración usa un seeder versionado (`v1.0.0`) y es opt-in: no se ejecuta al iniciar Docker ni durante una
+El modo demostración usa un seeder versionado (`v1.1.0`) y es opt-in: no se ejecuta al iniciar Docker ni durante una
 migración. Los cinco gimnasios y sus usuarios se guardan en MySQL, están
 marcados con `is_demo = true` y pertenecen al dataset indicado por
 `DEMO_DATASET_NAME`. La interfaz muestra la etiqueta discreta **Datos de
@@ -83,6 +107,9 @@ demostración** mientras el dataset está activo.
    docker compose exec -T db sh -lc \
      'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
      < database/migrations/002_phase3_roles_demo_context.sql
+   docker compose exec -T db sh -lc \
+     'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+     < database/migrations/003_phase3_identity_security.sql
    ```
 
 2. Definí en tu `.env` una contraseña local de al menos 12 caracteres. No la
@@ -156,9 +183,11 @@ protección por entorno y el etiquetado no sustituyen ese aislamiento.
 
 ### Funciones estables y beta
 
-En el alcance actual son estables el inicio de sesión, cierre de sesión,
-perfiles básicos, roles, permisos mínimos, contexto de gimnasio, lectura del
-catálogo desde MySQL, filtros y navegación/mapa de presentación. Los CRUD
+En el alcance actual son estables el registro de socio, solicitud de alta de
+dueño, inicio y cierre de sesión, validación de correo, recuperación y cambio de
+contraseña, revocación de sesiones, perfiles básicos, roles, permisos, contexto
+de gimnasio, lectura del catálogo desde MySQL, filtros y navegación/mapa de
+presentación. Los CRUD
 operativos, pagos y módulos de fases posteriores no se presentan como
 operaciones terminadas.
 
@@ -238,8 +267,18 @@ Las capturas de referencia para 360, 390, 768, 1024, 1440 y 1920 px se guardan e
 ## Verificación de la Fase 3
 
 ```bash
+# Contratos de esquema, roles y ausencia de autenticación heredada
+docker run --rm -v "$PWD:/app:ro" -w /app php:8.2-cli \
+  php tests/phase3_identity_contracts.php
+
+# Registro, correo, recuperación, tokens de un uso, sesiones y CSRF
+AUTH_TEST_PASSWORD='clave-temporal-segura' \
+AUTH_TEST_NEW_PASSWORD='otra-clave-temporal-segura' \
+sh tests/phase3_auth_flows.sh
+
 # Seeder, aislamiento, idempotencia, roles y login por API
 DEMO_USER_PASSWORD='la-clave-definida-en-tu-entorno' sh tests/phase3_demo_seed.sh
+DEMO_USER_PASSWORD='la-clave-definida-en-tu-entorno' sh tests/phase3_tenant_isolation.sh
 
 # Componentes y build
 docker compose exec -T frontend npm run test:run

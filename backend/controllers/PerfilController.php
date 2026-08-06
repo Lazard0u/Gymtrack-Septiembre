@@ -32,9 +32,8 @@ class PerfilController
      */
     public function ver(): void
     {
-        // El middleware verifica el token antes de llegar acá.
-        // Si no está autenticado, el middleware corta con 401.
-        AuthMiddleware::verificarSesion();
+        // La cookie HttpOnly y la sesión registrada en MySQL se validan acá.
+        AuthMiddleware::verificarPermiso('profile.read');
 
         // Obtenemos el ID del usuario de la sesión activa
         $id = AuthMiddleware::obtenerUsuarioId();
@@ -49,23 +48,7 @@ class PerfilController
             return;
         }
 
-        // Sanitizamos la salida antes de enviarla al frontend (anti-XSS)
-        $this->responder(200, [
-            'error'   => false,
-            'usuario' => [
-                'id'        => $usuario['id'],
-                'nombre'    => htmlspecialchars($usuario['nombre'], ENT_QUOTES, 'UTF-8'),
-                'email'     => $usuario['email'],
-                'telefono'  => $usuario['telefono']
-                    ? htmlspecialchars($usuario['telefono'], ENT_QUOTES, 'UTF-8')
-                    : null,
-                'rol_id'    => $usuario['rol_id'],
-                'rol_nombre' => $usuario['rol_nombre'],
-                'is_demo' => (bool) $usuario['is_demo'],
-                'gimnasios' => $this->usuarioModel->contextosGimnasio((int) $usuario['id']),
-                'creado_en' => $usuario['creado_en'],
-            ]
-        ]);
+        $this->responder(200, ['error' => false, 'usuario' => (new UserContextService())->payload($id)]);
     }
 
     // ─────────────────────────────────────────────────────────
@@ -78,7 +61,7 @@ class PerfilController
      */
     public function actualizar(): void
     {
-        AuthMiddleware::verificarSesion();
+        AuthMiddleware::verificarPermiso('profile.write');
 
         $id    = AuthMiddleware::obtenerUsuarioId();
         $datos = json_decode(file_get_contents('php://input'), true);

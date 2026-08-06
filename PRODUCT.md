@@ -21,7 +21,7 @@ GymTrack busca convertir la operación diaria de un gimnasio y la experiencia de
 
 ## Positioning
 
-La propuesta confirmada es una plataforma web para conectar descubrimiento, membresía, clases, reservas y operación del gimnasio dentro del mismo producto. El sistema multigimnasio definitivo todavía no está implementado y no debe presentarse como terminado.
+La propuesta confirmada es una plataforma web para conectar descubrimiento, membresía, clases, reservas y operación del gimnasio dentro del mismo producto. La identidad ya admite asociaciones y contexto mínimo multigimnasio con aislamiento desde PHP; el CRUD y el modelo operativo definitivo todavía no están implementados y no deben presentarse como terminados.
 
 ## Operating Context
 
@@ -36,7 +36,7 @@ La propuesta confirmada es una plataforma web para conectar descubrimiento, memb
 - Stack obligatorio: Vue 3, PHP, MySQL, Docker, Leaflet y OpenStreetMap.
 - No se reescribe el proyecto desde cero ni se cambia el stack.
 - La Fase 3 se limita a usuarios, roles, permisos y asociaciones mínimas con gimnasio; no anticipa el CRUD completo de la Fase 5.
-- No se implementan anticipadamente pagos, administración completa, calendario, WhatsApp, inteligencia artificial ni tenancy operativo definitivo.
+- No se implementan anticipadamente pagos, administración completa, calendario, WhatsApp, inteligencia artificial ni el CRUD operativo multigimnasio definitivo.
 - Los datos de demostración sólo existen en MySQL mediante un seeder versionado, idempotente y opt-in; llevan `is_demo`/`demo_dataset_id` y una etiqueta visible.
 - El seeder demo nunca se ejecuta automáticamente ni puede activarse en producción sin una autorización excepcional explícita.
 - Cuando falta un endpoint, la interfaz debe comunicar un estado vacío honesto.

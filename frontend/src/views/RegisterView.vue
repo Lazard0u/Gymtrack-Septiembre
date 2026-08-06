@@ -1,252 +1,46 @@
-<template>
-  <div class="auth-page">
-    <router-link to="/" class="brand">
-      <img class="brand-mark" src="../assets/gymtrack-mark.svg" alt="GymTrack" />
-      <span class="brand-word">Gym<span>Track</span></span>
-    </router-link>
-
-    <main class="auth-card">
-      <h1>Unite a GymTrack</h1>
-      <p class="muted">Registrate como socio y después buscá uno o varios gimnasios.</p>
-
-      <div v-if="error" class="alert error" role="alert" aria-live="assertive">{{ error }}</div>
-      <div v-if="exito" class="alert success" role="status" aria-live="polite">{{ exito }}</div>
-
-      <form @submit.prevent="submitRegister">
-        <label>
-          Nombre completo
-          <input v-model.trim="form.nombre" type="text" autocomplete="name" placeholder="Juan Pérez" required minlength="2" maxlength="100" :disabled="cargando" />
-        </label>
-        <label>
-          Correo electrónico
-          <input v-model.trim="form.email" type="email" autocomplete="email" placeholder="juan@correo.com" required maxlength="150" :disabled="cargando" />
-        </label>
-        <label>
-          Contraseña
-          <input v-model="form.password" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required minlength="8" maxlength="200" :disabled="cargando" />
-        </label>
-        <label>
-          Confirmar contraseña
-          <input v-model="form.confirmPassword" type="password" autocomplete="new-password" placeholder="Repetí tu contraseña" required minlength="8" maxlength="200" :disabled="cargando" />
-        </label>
-
-        <div class="turnstile-box">
-          <div ref="turnstileEl"></div>
-          <p v-if="turnstileDemo" class="captcha-note">
-            Turnstile en modo demo. Para produccion se configuran claves reales de Cloudflare.
-          </p>
-        </div>
-
-        <button type="submit" class="primary-btn" :disabled="cargando">
-          {{ cargando ? 'Creando cuenta...' : 'Crear cuenta' }}
-        </button>
-      </form>
-
-      <p class="auth-footer">
-        ¿Ya tenés cuenta?
-        <router-link to="/login">Iniciá sesión</router-link>
-      </p>
-    </main>
-  </div>
-</template>
-
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import AuthShell from '../components/auth/AuthShell.vue'
+import AppAlert from '../components/ui/AppAlert.vue'
+import AppButton from '../components/ui/AppButton.vue'
+import AppInput from '../components/ui/AppInput.vue'
 import { useAuthStore } from '../stores/auth'
+import { useSystemStore } from '../stores/system'
 
-const router = useRouter()
-const authStore = useAuthStore()
-const form = reactive({ nombre: '', email: '', password: '', confirmPassword: '' })
-const cargando = ref(false)
-const error = ref(null)
-const exito = ref(null)
-const turnstileEl = ref(null)
-const turnstileToken = ref('')
-const turnstileWidgetId = ref(null)
-let turnstilePollId = null
-let redirectTimerId = null
-const turnstileSiteKey = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'
-const turnstileDemo = computed(() => turnstileSiteKey === '1x00000000000000000000AA')
+const auth=useAuthStore();const system=useSystemStore();const loading=ref(false);const error=ref('');const success=ref('');const fields=ref({})
+const form=reactive({nombre:'',apellido:'',email:'',password:'',password_confirmation:'',terms_accepted:false,privacy_accepted:false,marketing_accepted:false})
+const turnstileEl=ref(null);const turnstileToken=ref('');let widgetId=null;let pollId=null
 
-function renderTurnstile() {
-  if (!window.turnstile || !turnstileEl.value || turnstileWidgetId.value !== null) return
-
-  turnstileWidgetId.value = window.turnstile.render(turnstileEl.value, {
-    sitekey: turnstileSiteKey,
-    theme: 'dark',
-    callback: (token) => {
-      turnstileToken.value = token
-    },
-    'expired-callback': () => {
-      turnstileToken.value = ''
-    },
-    'error-callback': () => {
-      turnstileToken.value = ''
-      error.value = 'No se pudo verificar el captcha. Intentá de nuevo.'
-    },
-  })
-}
-
-function resetTurnstile() {
-  turnstileToken.value = ''
-  if (window.turnstile && turnstileWidgetId.value !== null) {
-    window.turnstile.reset(turnstileWidgetId.value)
-  }
-}
-
-async function submitRegister() {
-  error.value = null
-  exito.value = null
-  if (form.password !== form.confirmPassword) {
-    error.value = 'Las contraseñas no coinciden.'
-    return
-  }
-  if (form.password.length < 8) {
-    error.value = 'La contraseña debe tener al menos 8 caracteres.'
-    return
-  }
-  if (!turnstileToken.value) {
-    error.value = 'Completá la verificación anti robot para crear la cuenta.'
-    return
-  }
-  cargando.value = true
-  try {
-    await authStore.registro(form.nombre, form.email, form.password, turnstileToken.value)
-    exito.value = 'Cuenta creada. Redirigiendo al inicio de sesion...'
-    redirectTimerId = window.setTimeout(() => router.push({ name: 'login' }), 1200)
-  } catch (e) {
-    error.value = e.message
-    resetTurnstile()
-  } finally {
-    cargando.value = false
-  }
-}
-
-onMounted(async () => {
-  await nextTick()
-  turnstilePollId = window.setInterval(() => {
-    renderTurnstile()
-    if (turnstileWidgetId.value !== null) {
-      window.clearInterval(turnstilePollId)
-      turnstilePollId = null
-    }
-  }, 250)
-})
-
-onBeforeUnmount(() => {
-  if (turnstilePollId !== null) window.clearInterval(turnstilePollId)
-  if (redirectTimerId !== null) window.clearTimeout(redirectTimerId)
-  if (window.turnstile && turnstileWidgetId.value !== null) {
-    window.turnstile.remove(turnstileWidgetId.value)
-  }
-})
+function renderTurnstile(){if(!system.turnstileEnabled||!window.turnstile||!turnstileEl.value||widgetId!==null)return;widgetId=window.turnstile.render(turnstileEl.value,{sitekey:system.turnstileSiteKey,theme:'dark',callback:(token)=>{turnstileToken.value=token},'expired-callback':()=>{turnstileToken.value=''},'error-callback':()=>{turnstileToken.value='';error.value='No se pudo completar la verificación anti robot.'}})}
+function resetTurnstile(){turnstileToken.value='';if(window.turnstile&&widgetId!==null)window.turnstile.reset(widgetId)}
+async function submit(){if(loading.value)return;error.value='';success.value='';fields.value={}
+  if(form.password!==form.password_confirmation){fields.value={password_confirmation:'Las contraseñas no coinciden.'};return}
+  if(system.turnstileEnabled&&!turnstileToken.value){error.value='Completá la verificación anti robot.';return}
+  loading.value=true;try{const data=await auth.registro({...form,turnstileToken:turnstileToken.value});success.value=data.mensaje}catch(failure){error.value=failure.message;fields.value=failure.fields||{};resetTurnstile()}finally{loading.value=false}}
+onMounted(async()=>{if(!system.loaded)await system.load();await nextTick();if(system.turnstileEnabled){pollId=window.setInterval(()=>{renderTurnstile();if(widgetId!==null){window.clearInterval(pollId);pollId=null}},250)}})
+onBeforeUnmount(()=>{if(pollId!==null)window.clearInterval(pollId);if(window.turnstile&&widgetId!==null)window.turnstile.remove(widgetId)})
 </script>
 
+<template>
+  <AuthShell>
+    <template #title>Creá tu cuenta</template><template #description>Registrate como socio. Después podrás vincularte con uno o más gimnasios.</template>
+    <AppAlert v-if="error" tone="danger" title="Revisá el registro"><p>{{ error }}</p></AppAlert>
+    <AppAlert v-if="success" tone="success" title="Cuenta creada"><p>{{ success }}</p><p><RouterLink :to="{name:'verify-email',query:{email:form.email}}">Continuar con la verificación</RouterLink></p></AppAlert>
+    <form v-if="!success" class="auth-form" novalidate @submit.prevent="submit">
+      <div class="name-grid"><AppInput v-model.trim="form.nombre" label="Nombre" name="given-name" autocomplete="given-name" minlength="2" maxlength="100" required :error="fields.nombre" :disabled="loading"/><AppInput v-model.trim="form.apellido" label="Apellido" name="family-name" autocomplete="family-name" minlength="2" maxlength="100" required :error="fields.apellido" :disabled="loading"/></div>
+      <AppInput v-model.trim="form.email" label="Correo electrónico" name="email" type="email" autocomplete="email" inputmode="email" maxlength="150" required :error="fields.email" :disabled="loading"/>
+      <AppInput v-model="form.password" label="Contraseña" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="200" hint="12 caracteres, con mayúscula, minúscula y número." required :error="fields.password" :disabled="loading"/>
+      <AppInput v-model="form.password_confirmation" label="Confirmar contraseña" name="password-confirmation" type="password" autocomplete="new-password" minlength="12" maxlength="200" required :error="fields.password_confirmation" :disabled="loading"/>
+      <label class="check"><input v-model="form.terms_accepted" type="checkbox" required :disabled="loading"/><span>Acepto los <RouterLink to="/terminos">términos de uso</RouterLink>.</span></label>
+      <label class="check"><input v-model="form.privacy_accepted" type="checkbox" required :disabled="loading"/><span>Acepto la <RouterLink to="/privacidad">política de privacidad</RouterLink>.</span></label>
+      <label class="check check--optional"><input v-model="form.marketing_accepted" type="checkbox" :disabled="loading"/><span>Quiero recibir novedades y promociones. Es opcional.</span></label>
+      <div v-if="system.turnstileEnabled" ref="turnstileEl" class="turnstile" aria-label="Verificación anti robot"></div>
+      <AppButton type="submit" block :loading="loading">Crear cuenta</AppButton>
+    </form>
+    <template #footer>¿Ya tenés cuenta? <RouterLink :to="{name:'login'}">Iniciá sesión</RouterLink><br/>¿Representás un gimnasio? <RouterLink :to="{name:'owner-register'}">Solicitá acceso</RouterLink></template>
+  </AuthShell>
+</template>
+
 <style scoped>
-.auth-page {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 24px;
-  background:
-    linear-gradient(90deg, rgba(2, 6, 23, 0.96), rgba(2, 6, 23, 0.68)),
-    url('https://images.unsplash.com/photo-1571902943202-507ec2618e8f?auto=format&fit=crop&w=1500&q=85') center/cover;
-}
-
-.brand {
-  position: fixed;
-  top: 24px;
-  left: 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
-}
-
-.auth-card {
-  width: min(460px, 100%);
-  border: 1px solid rgba(56, 189, 248, 0.28);
-  border-radius: 8px;
-  padding: 34px;
-  background: rgba(7, 17, 31, 0.9);
-  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.42);
-  backdrop-filter: blur(18px);
-}
-
-h1 {
-  margin: 8px 0 8px;
-  font-size: 2rem;
-}
-
-form {
-  display: grid;
-  gap: 14px;
-  margin-top: 22px;
-}
-
-label {
-  display: grid;
-  gap: 8px;
-  color: var(--text);
-  font-weight: 800;
-}
-
-input {
-  min-height: 46px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0 12px;
-  background: rgba(2, 6, 23, 0.72);
-  color: var(--text);
-}
-
-input:focus {
-  outline: none;
-  border-color: var(--blue-2);
-  box-shadow: 0 0 0 4px rgba(0, 119, 255, 0.16);
-}
-
-.primary-btn {
-  width: 100%;
-}
-
-.turnstile-box {
-  display: grid;
-  gap: 8px;
-  min-height: 72px;
-}
-
-.captcha-note {
-  color: var(--muted);
-  font-size: 0.78rem;
-  line-height: 1.4;
-}
-
-.alert {
-  margin-top: 18px;
-  border-radius: 8px;
-  padding: 12px;
-}
-
-.alert.error {
-  border: 1px solid rgba(239, 68, 68, 0.38);
-  background: rgba(239, 68, 68, 0.12);
-}
-
-.alert.success {
-  border: 1px solid rgba(34, 197, 94, 0.38);
-  background: rgba(34, 197, 94, 0.12);
-}
-
-.auth-footer {
-  margin-top: 18px;
-  color: var(--muted);
-}
-
-.auth-footer a {
-  color: var(--blue-2);
-  font-weight: 900;
-  text-decoration: none;
-}
+.auth-form{display:grid;gap:var(--space-4)}.name-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4)}.check{display:flex;align-items:flex-start;gap:var(--space-3);color:var(--text-secondary);font-size:.8rem;line-height:1.5}.check input{width:1.1rem;height:1.1rem;margin:.12rem 0 0;accent-color:var(--accent);flex:0 0 auto}.check a,.alert a{color:var(--status-info-strong);text-underline-offset:.2em}.check--optional{color:var(--text-tertiary)}.turnstile{min-height:4.1rem;overflow:hidden}@media(max-width:29.99rem){.name-grid{grid-template-columns:1fr}}
 </style>

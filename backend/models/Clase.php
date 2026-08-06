@@ -14,7 +14,7 @@ class Clase
         $this->pdo = Database::conectar();
     }
 
-    public function listarTodos(?int $demoDatasetId = null): array
+    public function listarTodos(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
         $sql =
             'SELECT c.id, c.nombre, c.instructor_id, u.nombre AS instructor_nombre,
@@ -28,6 +28,10 @@ class Clase
             $sql .= ' AND c.demo_dataset_id = ?';
             $params[] = $demoDatasetId;
         }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND c.gimnasio_id = ?';
+            $params[] = $gimnasioId;
+        }
         $sql .= ' ORDER BY FIELD(c.dia_semana, "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"), c.hora_inicio';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -35,12 +39,12 @@ class Clase
         return $stmt->fetchAll();
     }
 
-    public function listarTodas(?int $demoDatasetId = null): array
+    public function listarTodas(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
-        return $this->listarTodos($demoDatasetId);
+        return $this->listarTodos($demoDatasetId, $gimnasioId);
     }
 
-    public function listarActivas(?int $demoDatasetId = null): array
+    public function listarActivas(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
         $sql =
             'SELECT c.id, c.nombre, c.instructor_id, u.nombre AS instructor_nombre,
@@ -54,6 +58,10 @@ class Clase
             $sql .= ' AND c.demo_dataset_id = ?';
             $params[] = $demoDatasetId;
         }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND c.gimnasio_id = ?';
+            $params[] = $gimnasioId;
+        }
         $sql .= ' ORDER BY FIELD(c.dia_semana, "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"), c.hora_inicio';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -61,14 +69,21 @@ class Clase
         return $stmt->fetchAll();
     }
 
-    public function crear(string $nombre, int $instructorId, string $diaSemana, string $horaInicio, string $horaFin, int $cupoMaximo): int
+    public function crear(string $nombre, int $instructorId, string $diaSemana, string $horaInicio, string $horaFin, int $cupoMaximo, int $gimnasioId): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO clases (nombre, instructor_id, dia_semana, hora_inicio, hora_fin, cupo_maximo, cupos_disponibles)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO clases (nombre, instructor_id, gimnasio_id, dia_semana, hora_inicio, hora_fin, cupo_maximo, cupos_disponibles)
+             SELECT ?, ?, ?, ?, ?, ?, ?, ?
+             WHERE EXISTS (
+                 SELECT 1 FROM usuario_gimnasio_roles
+                 WHERE usuario_id = ? AND gimnasio_id = ? AND activo = 1
+             )'
         );
 
-        $stmt->execute([$nombre, $instructorId, $diaSemana, $horaInicio, $horaFin, $cupoMaximo, $cupoMaximo]);
+        $stmt->execute([$nombre, $instructorId, $gimnasioId, $diaSemana, $horaInicio, $horaFin, $cupoMaximo, $cupoMaximo, $instructorId, $gimnasioId]);
+        if ($stmt->rowCount() !== 1) {
+            throw new DomainException('El instructor no pertenece al gimnasio activo.');
+        }
 
         return (int) $this->pdo->lastInsertId();
     }
@@ -81,7 +96,8 @@ class Clase
         string $horaInicio,
         string $horaFin,
         int $cupoMaximo,
-        int $activa = 1
+        int $activa = 1,
+        ?int $gimnasioId = null
     ): bool
     {
         $stmt = $this->pdo->prepare(
@@ -89,10 +105,14 @@ class Clase
              SET nombre = ?, instructor_id = ?, dia_semana = ?, hora_inicio = ?, hora_fin = ?,
                  cupos_disponibles = GREATEST(0, ? - (cupo_maximo - cupos_disponibles)),
                  cupo_maximo = ?, activa = ?
-             WHERE id = ?'
+             WHERE id = ? AND (? IS NULL OR gimnasio_id = ?)
+               AND EXISTS (
+                   SELECT 1 FROM usuario_gimnasio_roles ugr
+                   WHERE ugr.usuario_id = ? AND ugr.gimnasio_id = clases.gimnasio_id AND ugr.activo = 1
+               )'
         );
 
-        return $stmt->execute([
+        $stmt->execute([
             $nombre,
             $instructorId,
             $diaSemana,
@@ -102,24 +122,31 @@ class Clase
             $cupoMaximo,
             $activa ? 1 : 0,
             $id,
+            $gimnasioId,
+            $gimnasioId,
+            $instructorId,
         ]);
+        if ($stmt->rowCount() === 1) return true;
+        return $this->existeEnGimnasio($id, $gimnasioId);
     }
 
-    public function cancelar(int $id): bool
+    public function cancelar(int $id, ?int $gimnasioId = null): bool
     {
         $stmt = $this->pdo->prepare(
-            'UPDATE clases SET activa = 0 WHERE id = ?'
+            'UPDATE clases SET activa = 0 WHERE id = ? AND (? IS NULL OR gimnasio_id = ?)'
         );
 
-        return $stmt->execute([$id]);
+        $stmt->execute([$id, $gimnasioId, $gimnasioId]);
+        if ($stmt->rowCount() === 1) return true;
+        return $this->existeEnGimnasio($id, $gimnasioId);
     }
 
-    public function eliminar(int $id): bool
+    public function eliminar(int $id, ?int $gimnasioId = null): bool
     {
-        return $this->cancelar($id);
+        return $this->cancelar($id, $gimnasioId);
     }
 
-    public function estadisticas(?int $demoDatasetId = null): array
+    public function estadisticas(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
         $sql =
             'SELECT
@@ -133,6 +160,10 @@ class Clase
         if ($demoDatasetId !== null) {
             $sql .= ' AND c.demo_dataset_id = ?';
             $params[] = $demoDatasetId;
+        }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND c.gimnasio_id = ?';
+            $params[] = $gimnasioId;
         }
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -152,7 +183,7 @@ class Clase
         ];
     }
 
-    public function buscarPorId(int $id, ?int $demoDatasetId = null): array|false
+    public function buscarPorId(int $id, ?int $demoDatasetId = null, ?int $gimnasioId = null): array|false
     {
         $sql =
             'SELECT id, nombre, instructor_id, dia_semana, hora_inicio, hora_fin, cupo_maximo, cupos_disponibles, activa
@@ -162,6 +193,10 @@ class Clase
             $sql .= ' AND demo_dataset_id = ?';
             $params[] = $demoDatasetId;
         }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND gimnasio_id = ?';
+            $params[] = $gimnasioId;
+        }
         $sql .= ' LIMIT 1';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -169,40 +204,49 @@ class Clase
         return $stmt->fetch();
     }
 
-    public function listarInscriptos(int $claseId): array
+    public function listarInscriptos(int $claseId, ?int $gimnasioId = null): array
     {
         $stmt = $this->pdo->prepare(
             'SELECT r.id AS reserva_id, u.id AS usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                     r.fecha_reserva, r.estado
              FROM reservas r
              JOIN usuarios u ON r.usuario_id = u.id
-             WHERE r.clase_id = ?
+             WHERE r.clase_id = ? AND (? IS NULL OR EXISTS (
+                 SELECT 1 FROM clases scope WHERE scope.id = r.clase_id AND scope.gimnasio_id = ?
+             ))
              ORDER BY r.fecha_reserva DESC'
         );
 
-        $stmt->execute([$claseId]);
+        $stmt->execute([$claseId, $gimnasioId, $gimnasioId]);
 
         return $stmt->fetchAll();
     }
 
-    public function contarClasesHoy(?int $demoDatasetId = null): int
+    public function contarClasesHoy(?int $demoDatasetId = null, ?int $gimnasioId = null): int
     {
         $dias = [1 => 'lunes', 2 => 'martes', 3 => 'miercoles', 4 => 'jueves', 5 => 'viernes', 6 => 'sabado', 7 => 'domingo'];
         $diaHoy = $dias[(int) date('N')];
 
-        $stmt = $this->pdo->prepare(
-            'SELECT COUNT(*) FROM clases WHERE dia_semana = ? AND activa = 1 AND is_demo = ?'
-        );
+        $sql = 'SELECT COUNT(*) FROM clases WHERE dia_semana = ? AND activa = 1 AND is_demo = ?';
         $params = [$diaHoy, $demoDatasetId === null ? 0 : 1];
         if ($demoDatasetId !== null) {
-            $stmt = $this->pdo->prepare(
-                'SELECT COUNT(*) FROM clases
-                 WHERE dia_semana = ? AND activa = 1 AND is_demo = 1 AND demo_dataset_id = ?'
-            );
+            $sql .= ' AND demo_dataset_id = ?';
             $params = [$diaHoy, $demoDatasetId];
         }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND gimnasio_id = ?';
+            $params[] = $gimnasioId;
+        }
+        $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
 
         return (int) $stmt->fetchColumn();
+    }
+
+    private function existeEnGimnasio(int $id, ?int $gimnasioId): bool
+    {
+        $stmt=$this->pdo->prepare('SELECT 1 FROM clases WHERE id=? AND (? IS NULL OR gimnasio_id=?) LIMIT 1');
+        $stmt->execute([$id,$gimnasioId,$gimnasioId]);
+        return (bool)$stmt->fetchColumn();
     }
 }

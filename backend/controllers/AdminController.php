@@ -24,7 +24,7 @@ class AdminController
     public function listarSocios(): void
     {
         $this->verificarAdmin();
-        $socios = $this->usuarioModel->listarSocios($this->demoDatasetId());
+        $socios = $this->usuarioModel->listarSocios($this->demoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
 
         $this->responder(200, [
             'error'  => false,
@@ -36,8 +36,8 @@ class AdminController
     {
         $this->verificarAdmin();
 
-        $socio = $this->usuarioModel->buscarPorIdEnDataset($id, $this->demoDatasetId());
-        if (!$socio || (int) $socio['rol_id'] !== 1) {
+        $socio = $this->usuarioModel->buscarPorIdEnDataset($id, $this->demoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
+        if (!$socio || $socio['rol_nombre'] !== AuthorizationService::SOCIO) {
             $this->responder(404, [
                 'error'   => true,
                 'mensaje' => 'No se encontró ese socio.'
@@ -45,7 +45,7 @@ class AdminController
             return;
         }
 
-        $membresias = $this->membresiaModel->listarPorUsuario($id);
+        $membresias = $this->membresiaModel->listarPorUsuario($id, AuthMiddleware::obtenerGimnasioContextoId());
 
         $this->responder(200, [
             'error'      => false,
@@ -87,7 +87,7 @@ class AdminController
     public function listarMembresias(): void
     {
         $this->verificarAdmin();
-        $membresias = $this->membresiaModel->listarTodos($this->demoDatasetId());
+        $membresias = $this->membresiaModel->listarTodos($this->demoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
 
         $this->responder(200, [
             'error'      => false,
@@ -99,6 +99,7 @@ class AdminController
     {
         $this->verificarAdmin();
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         $campos = ['usuario_id', 'plan', 'fecha_inicio', 'fecha_vencimiento', 'precio_pagado'];
@@ -130,13 +131,19 @@ class AdminController
             return;
         }
 
-        $id = $this->membresiaModel->crear(
-            (int) $datos['usuario_id'],
-            $datos['plan'],
-            $datos['fecha_inicio'],
-            $datos['fecha_vencimiento'],
-            (float) $datos['precio_pagado']
-        );
+        try {
+            $id = $this->membresiaModel->crear(
+                (int) $datos['usuario_id'],
+                $datos['plan'],
+                $datos['fecha_inicio'],
+                $datos['fecha_vencimiento'],
+                (float) $datos['precio_pagado'],
+                $gimnasioId
+            );
+        } catch (DomainException $e) {
+            $this->responder(404, ['error' => true, 'mensaje' => $e->getMessage()]);
+            return;
+        }
 
         $this->responder(201, [
             'error'      => false,
@@ -148,7 +155,7 @@ class AdminController
     public function listarMembresiasVencidas(): void
     {
         $this->verificarAdmin();
-        $membresias = $this->membresiaModel->listarVencidas($this->demoDatasetId());
+        $membresias = $this->membresiaModel->listarVencidas($this->demoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
 
         $this->responder(200, [
             'error'      => false,
@@ -159,7 +166,7 @@ class AdminController
     public function listarClases(): void
     {
         $this->verificarAdmin();
-        $clases = $this->claseModel->listarTodos($this->demoDatasetId());
+        $clases = $this->claseModel->listarTodos($this->demoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
 
         $this->responder(200, [
             'error'   => false,
@@ -171,6 +178,7 @@ class AdminController
     {
         $this->verificarAdmin();
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         $campos = ['nombre', 'instructor_id', 'dia_semana', 'hora_inicio', 'hora_fin', 'cupo_maximo'];
@@ -202,14 +210,20 @@ class AdminController
             return;
         }
 
-        $id = $this->claseModel->crear(
-            htmlspecialchars(trim($datos['nombre']), ENT_QUOTES, 'UTF-8'),
-            (int) $datos['instructor_id'],
-            $datos['dia_semana'],
-            $datos['hora_inicio'],
-            $datos['hora_fin'],
-            (int) $datos['cupo_maximo']
-        );
+        try {
+            $id = $this->claseModel->crear(
+                htmlspecialchars(trim($datos['nombre']), ENT_QUOTES, 'UTF-8'),
+                (int) $datos['instructor_id'],
+                $datos['dia_semana'],
+                $datos['hora_inicio'],
+                $datos['hora_fin'],
+                (int) $datos['cupo_maximo'],
+                $gimnasioId
+            );
+        } catch (DomainException $e) {
+            $this->responder(404, ['error' => true, 'mensaje' => $e->getMessage()]);
+            return;
+        }
 
         $this->responder(201, [
             'error'  => false,
@@ -222,6 +236,7 @@ class AdminController
     {
         $this->verificarAdmin();
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         $campos = ['nombre', 'instructor_id', 'dia_semana', 'hora_inicio', 'hora_fin', 'cupo_maximo'];
@@ -251,7 +266,9 @@ class AdminController
             $datos['dia_semana'],
             $datos['hora_inicio'],
             $datos['hora_fin'],
-            (int) $datos['cupo_maximo']
+            (int) $datos['cupo_maximo'],
+            1,
+            $gimnasioId
         );
 
         if ($resultado) {
@@ -271,8 +288,9 @@ class AdminController
     {
         $this->verificarAdmin();
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
-        $resultado = $this->claseModel->cancelar($id);
+        $resultado = $this->claseModel->cancelar($id, $gimnasioId);
 
         if ($resultado) {
             $this->responder(200, [
@@ -290,11 +308,12 @@ class AdminController
     public function listarInscriptosClase(int $claseId): void
     {
         $this->verificarAdmin();
-        if (!$this->claseModel->buscarPorId($claseId, $this->demoDatasetId())) {
+        $gimnasioId = AuthMiddleware::obtenerGimnasioContextoId();
+        if (!$this->claseModel->buscarPorId($claseId, $this->demoDatasetId(), $gimnasioId)) {
             $this->responder(404, ['error' => true, 'mensaje' => 'No se encontró esa clase en este dataset.']);
             return;
         }
-        $inscriptos = $this->claseModel->listarInscriptos($claseId);
+        $inscriptos = $this->claseModel->listarInscriptos($claseId, $gimnasioId);
 
         $this->responder(200, [
             'error'     => false,
@@ -319,7 +338,8 @@ class AdminController
         $reservas = $this->reservaModel->listarPorRango(
             $desde->format('Y-m-d 00:00:00'),
             $hasta->format('Y-m-d 23:59:59'),
-            $this->demoDatasetId()
+            $this->demoDatasetId(),
+            AuthMiddleware::obtenerGimnasioContextoId()
         );
 
         $this->responder(200, [
@@ -332,8 +352,9 @@ class AdminController
     {
         $this->verificarAdmin();
         AuthMiddleware::impedirMutacionDemo();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
-        $resultado = $this->reservaModel->cancelar($id);
+        $resultado = $this->reservaModel->cancelar($id, null, $gimnasioId);
 
         if ($resultado['ok']) {
             $this->responder(200, [
@@ -353,9 +374,10 @@ class AdminController
         $this->verificarAdmin();
 
         $datasetId = $this->demoDatasetId();
-        $sociosActivos = $this->usuarioModel->contarSociosActivos($datasetId);
-        $clasesHoy     = $this->claseModel->contarClasesHoy($datasetId);
-        $porVencer     = $this->membresiaModel->contarPorVencer(7, $datasetId);
+        $gimnasioId = AuthMiddleware::obtenerGimnasioContextoId();
+        $sociosActivos = $this->usuarioModel->contarSociosActivos($datasetId, $gimnasioId);
+        $clasesHoy     = $this->claseModel->contarClasesHoy($datasetId, $gimnasioId);
+        $porVencer     = $this->membresiaModel->contarPorVencer(7, $datasetId, $gimnasioId);
 
         $this->responder(200, [
             'error'   => false,
@@ -370,7 +392,7 @@ class AdminController
     private function verificarAdmin(): void
     {
         AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarRol(AuthorizationService::ADMIN);
     }
 
     private function demoDatasetId(): ?int

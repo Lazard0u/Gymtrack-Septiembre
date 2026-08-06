@@ -22,23 +22,28 @@ try {
         fwrite(STDERR, "Definí TEST_USER_EMAIL y TEST_USER_PASSWORD (mínimo 12 caracteres).\n");
         exit(1);
     }
-    $stmt = $pdo->prepare('SELECT COUNT(*) FROM usuarios WHERE email = ?');
+    $stmt = $pdo->prepare('SELECT id FROM usuarios WHERE email_normalizado = ?');
     $stmt->execute([$email]);
-
-    if ((int) $stmt->fetchColumn() > 0) {
-        echo "La cuenta de usuario ya existe.\n";
-        exit(0);
-    }
+    $existingId = $stmt->fetchColumn();
 
     $passwordHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-    $stmt = $pdo->prepare(
-        'INSERT INTO usuarios (nombre, email, password_hash, telefono, rol_id, activo)
-         VALUES (?, ?, ?, NULL, 1, 1)'
-    );
-    $stmt->execute(['Usuario Demo', $email, $passwordHash]);
+    $roleStmt = $pdo->prepare('SELECT id FROM roles WHERE nombre = "socio" LIMIT 1');
+    $roleStmt->execute();
+    $roleId = $roleStmt->fetchColumn();
+    if ($existingId) {
+        $stmt = $pdo->prepare('UPDATE usuarios SET password_hash=?,debe_cambiar_password=0,email_verificado_en=COALESCE(email_verificado_en,NOW()),rol_id=?,activo=1 WHERE id=?');
+        $stmt->execute([$passwordHash,(int)$roleId,(int)$existingId]);
+        $pdo->prepare('UPDATE user_sessions SET revocada_en=COALESCE(revocada_en,NOW()),motivo_revocacion="credential_rotation" WHERE usuario_id=?')->execute([(int)$existingId]);
+    } else {
+        $stmt = $pdo->prepare(
+            'INSERT INTO usuarios (nombre, apellido, email, email_normalizado, email_verificado_en, password_hash, telefono, rol_id, activo)
+             VALUES (?, ?, ?, ?, NOW(), ?, NULL, ?, 1)'
+        );
+        $stmt->execute(['Usuario', 'Prueba', $email, $email, $passwordHash, (int)$roleId]);
+    }
 
-    echo "Cuenta de prueba creada correctamente.\n";
-} catch (PDOException $e) {
+    echo "Cuenta de prueba creada o actualizada correctamente.\n";
+} catch (Throwable $e) {
     fwrite(STDERR, "No se pudo crear la cuenta de prueba.\n");
     exit(1);
 }

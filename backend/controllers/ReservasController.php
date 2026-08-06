@@ -30,8 +30,9 @@ class ReservasController
      */
     public function crear(): void
     {
-        AuthMiddleware::verificarSesion();
+        AuthMiddleware::verificarPermiso('reservations.write');
         $usuarioId = AuthMiddleware::obtenerUsuarioId();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         $datos = json_decode(file_get_contents('php://input'), true);
 
@@ -42,10 +43,10 @@ class ReservasController
 
         // Actualizar estados vencidos antes de verificar
         $datasetId = AuthMiddleware::obtenerDemoDatasetId();
-        $this->membresiaModel->actualizarVencidas($datasetId);
+        $this->membresiaModel->actualizarVencidas($datasetId, $gimnasioId);
 
         // Verificar membresía activa (RF-10)
-        if (!$this->membresiaModel->tieneMembresiaActiva($usuarioId)) {
+        if (!$this->membresiaModel->tieneMembresiaActiva($usuarioId, $gimnasioId)) {
             $this->responder(403, [
                 'error'   => true,
                 'mensaje' => 'Tu membresía está vencida o inactiva. Contactá a la administración para renovarla.',
@@ -54,7 +55,7 @@ class ReservasController
         }
 
         // Intentar la reserva con transacción atómica
-        $resultado = $this->reservaModel->reservar($usuarioId, (int) $datos['clase_id'], $datasetId);
+        $resultado = $this->reservaModel->reservar($usuarioId, (int) $datos['clase_id'], $datasetId, $gimnasioId);
 
         if ($resultado['ok']) {
             $this->responder(201, [
@@ -73,10 +74,11 @@ class ReservasController
      */
     public function cancelar(int $id): void
     {
-        AuthMiddleware::verificarSesion();
+        AuthMiddleware::verificarPermiso('reservations.write');
         $usuarioId = AuthMiddleware::obtenerUsuarioId();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
-        $resultado = $this->reservaModel->cancelar($id, $usuarioId);
+        $resultado = $this->reservaModel->cancelar($id, $usuarioId, $gimnasioId);
 
         if ($resultado['ok']) {
             $this->responder(200, ['error' => false, 'mensaje' => $resultado['mensaje']]);
@@ -91,10 +93,10 @@ class ReservasController
      */
     public function mias(): void
     {
-        AuthMiddleware::verificarSesion();
+        AuthMiddleware::verificarPermiso('reservations.read');
         $usuarioId = AuthMiddleware::obtenerUsuarioId();
 
-        $reservas = $this->reservaModel->listarPorUsuario($usuarioId);
+        $reservas = $this->reservaModel->listarPorUsuario($usuarioId, AuthMiddleware::obtenerGimnasioContextoId());
         $this->responder(200, ['error' => false, 'reservas' => $reservas]);
     }
 
@@ -104,11 +106,10 @@ class ReservasController
      */
     public function todas(): void
     {
-        AuthMiddleware::verificarSesion();
-        AuthMiddleware::verificarRol(2);
+        AuthMiddleware::verificarPermiso('reservations.read');
 
         $usuarioId = isset($_GET['usuario_id']) ? (int) $_GET['usuario_id'] : null;
-        $reservas  = $this->reservaModel->listarTodas($usuarioId, AuthMiddleware::obtenerDemoDatasetId());
+        $reservas  = $this->reservaModel->listarTodas($usuarioId, AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
 
         $this->responder(200, ['error' => false, 'reservas' => $reservas]);
     }

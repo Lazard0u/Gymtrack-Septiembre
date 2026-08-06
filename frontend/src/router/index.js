@@ -3,8 +3,7 @@
  * -------------------------------------------------
  * Rutas de la aplicación con guards de navegación.
  *
- * meta.requiereAuth  = true  → redirige a /login si no hay token
- * meta.soloPublico   = true  → redirige a /dashboard si ya está logueado
+ * La sesión se determina siempre con GET /api/me y una cookie HttpOnly.
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
@@ -13,6 +12,12 @@ import { useAuthStore } from '../stores/auth'
 
 const LoginView = () => import('../views/LoginView.vue')
 const RegisterView = () => import('../views/RegisterView.vue')
+const OwnerRegisterView = () => import('../views/OwnerRegisterView.vue')
+const ForgotPasswordView = () => import('../views/ForgotPasswordView.vue')
+const ResetPasswordView = () => import('../views/ResetPasswordView.vue')
+const VerifyEmailView = () => import('../views/VerifyEmailView.vue')
+const ChangePasswordView = () => import('../views/ChangePasswordView.vue')
+const SessionsView = () => import('../views/SessionsView.vue')
 const DashboardView = () => import('../views/DashboardView.vue')
 const AdminView = () => import('../views/AdminView.vue')
 const StatusView = () => import('../views/StatusView.vue')
@@ -78,19 +83,48 @@ const routes = [
     path: '/login',
     name: 'login',
     component: LoginView,
-    meta: { soloPublico: true, title: 'Ingresar | GymTrack' },
+    meta: { publicOnly: true, title: 'Ingresar | GymTrack' },
   },
   {
     path: '/registro',
     name: 'registro',
     component: RegisterView,
-    meta: { soloPublico: true, title: 'Crear cuenta | GymTrack' },
+    meta: { publicOnly: true, title: 'Crear cuenta | GymTrack' },
+  },
+  {
+    path: '/registro-gimnasio', name: 'owner-register', component: OwnerRegisterView,
+    meta: { publicOnly: true, title: 'Solicitar cuenta de gimnasio | GymTrack' },
+  },
+  {
+    path: '/recuperar', name: 'forgot-password', component: ForgotPasswordView,
+    meta: { publicOnly: true, title: 'Recuperar contraseña | GymTrack' },
+  },
+  {
+    path: '/restablecer/:token', name: 'reset-password', component: ResetPasswordView,
+    meta: { publicOnly: true, title: 'Restablecer contraseña | GymTrack' },
+  },
+  {
+    path: '/verificar-email', name: 'verify-email', component: VerifyEmailView,
+    meta: { allowAuthenticated: true, title: 'Verificar correo | GymTrack' },
+  },
+  {
+    path: '/cambiar-password', name: 'change-password', component: ChangePasswordView,
+    meta: { requiresAuth: true, title: 'Cambiar contraseña | GymTrack' },
+  },
+  {
+    path: '/sesiones', name: 'sessions', component: SessionsView,
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, title: 'Sesiones activas | GymTrack' },
   },
   {
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardView,
-    meta: { requiereAuth: true, title: 'Mi panel | GymTrack' },
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, title: 'Mi panel | GymTrack' },
+  },
+  {
+    path: '/sesion-expirada', name: 'session-expired', component: StatusView,
+    props: { code: '401', title: 'Tu sesión terminó', message: 'Iniciá sesión nuevamente para continuar de forma segura.' },
+    meta: { title: 'Sesión expirada | GymTrack' },
   },
   {
     path: '/403',
@@ -107,7 +141,7 @@ const routes = [
     path: '/admin',
     name: 'admin',
     component: AdminView,
-    meta: { requiereAuth: true, roles: [2], title: 'Administración | GymTrack' },
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['admin_general'], requiredPermission: 'members.read', title: 'Administración | GymTrack' },
   },
   {
     path: '/:pathMatch(.*)*',
@@ -135,30 +169,18 @@ const router = createRouter({
 // ── Guard global ──────────────────────────────────────────────
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
-  const token = authStore.token
-
-  // Ruta protegida sin sesión → mandamos al login
-  if (to.meta.requiereAuth && !token) {
-    return { name: 'login', query: { redirect: to.fullPath } }
-  }
-
-  if ((to.meta.requiereAuth || to.meta.soloPublico) && token && !authStore.user) {
-    await authStore.cargarPerfil()
-  }
-
-  if (to.meta.requiereAuth && !authStore.estaAutenticado) {
-    return { name: 'login', query: { redirect: to.fullPath } }
-  }
-
-  if (to.meta.roles && !to.meta.roles.includes(authStore.user?.rol_id)) {
-    return { name: 'forbidden' }
-  }
-
-  // Ruta pública (login/registro) con sesión activa → mandamos al dashboard
-  if (to.meta.soloPublico && authStore.estaAutenticado) {
-    return { name: 'dashboard' }
-  }
+  if (!authStore.initialized && (to.meta.requiresAuth || to.meta.publicOnly || to.meta.allowAuthenticated)) await authStore.bootstrap()
+  if (to.meta.requiresAuth && !authStore.estaAutenticado) return { name: 'login', query: { redirect: safeRedirect(to.fullPath) } }
+  if (authStore.estaAutenticado && authStore.user?.must_change_password && to.name !== 'change-password') return { name: 'change-password' }
+  if (to.meta.requiresVerifiedEmail && !authStore.correoVerificado) return { name: 'verify-email', query: { email: authStore.user?.email } }
+  if (to.meta.allowedRoles && !to.meta.allowedRoles.includes(authStore.user?.role)) return { name: 'forbidden' }
+  if (to.meta.requiredPermission && !authStore.tienePermiso(to.meta.requiredPermission)) return { name: 'forbidden' }
+  if (to.meta.publicOnly && authStore.estaAutenticado) return { name: 'dashboard' }
 })
+
+function safeRedirect(value) {
+  return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : '/dashboard'
+}
 
 router.afterEach((to) => {
   document.title = to.meta.title || 'GymTrack'

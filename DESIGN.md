@@ -197,6 +197,21 @@ La geometría es suavemente técnica: controles de 8 px, tarjetas de 12 px y cap
 
 ## Components
 
+### Identity surfaces
+
+- Login, registro, solicitud de dueño, recuperación, restablecimiento,
+  verificación y sesiones reutilizan `AuthShell`: una superficie interior
+  sobria, legible y sin métricas decorativas ni testimonios inventados.
+- El formulario conserva una sola acción primaria por paso. Loading bloquea el
+  doble envío; errores de campo, respuesta global, confirmación y reintento se
+  anuncian con componentes semánticos existentes.
+- En móvil el contenido ocupa el ancho disponible sin panel lateral obligatorio;
+  en escritorio el marco se centra y limita la longitud de lectura. No se usa
+  animación ambiental en flujos sensibles.
+- El selector de gimnasio comunica el contexto efectivo devuelto por PHP. La UI
+  puede ocultar destinos sin permiso, pero nunca sustituye la autorización del
+  backend.
+
 ### Buttons and links
 
 - `AppButton` y `AppLinkButton` comparten geometría: 44 px por defecto, 52 px grande y 36 px pequeño; padding horizontal de 20, 24 y 12 px respectivamente.

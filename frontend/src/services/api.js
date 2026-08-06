@@ -1,5 +1,11 @@
 import axios from 'axios'
 
+let csrfToken = ''
+
+export function setCsrfToken(value = '') {
+  csrfToken = typeof value === 'string' ? value : ''
+}
+
 const client = axios.create({
   baseURL: '/api',
   headers: { 'Content-Type': 'application/json' },
@@ -8,14 +14,17 @@ const client = axios.create({
 })
 
 client.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token')
-  if (token) config.headers.Authorization = `Bearer ${token}`
+  const method = (config.method || 'get').toLowerCase()
+  if (csrfToken && ['post', 'put', 'patch', 'delete'].includes(method)) {
+    config.headers['X-CSRF-Token'] = csrfToken
+  }
   return config
 })
 
 async function request(method, endpoint, body = null) {
   try {
     const response = await client.request({ method, url: endpoint, data: body })
+    if (response.data?.csrf_token) setCsrfToken(response.data.csrf_token)
     return { ok: true, status: response.status, data: response.data }
   } catch (error) {
     const response = error.response
@@ -38,8 +47,7 @@ export const api = {
   put: (endpoint, body) => request('PUT', endpoint, body),
   patch: (endpoint, body) => request('PATCH', endpoint, body),
   delete: (endpoint, body = null) => request('DELETE', endpoint, body),
-  postAuth: (endpoint, body) => request('POST', endpoint, body),
+  clearCsrf: () => setCsrfToken(''),
 }
 
-// Compatibilidad con las vistas que consumen Axios directamente.
 export default client

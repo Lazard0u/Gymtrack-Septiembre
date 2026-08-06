@@ -14,7 +14,7 @@ class Membresia
         $this->pdo = Database::conectar();
     }
 
-    public function listarTodos(?int $demoDatasetId = null): array
+    public function listarTodos(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
         $sql =
             'SELECT m.id, m.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
@@ -27,6 +27,10 @@ class Membresia
             $sql .= ' AND m.demo_dataset_id = ?';
             $params[] = $demoDatasetId;
         }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND m.gimnasio_id = ?';
+            $params[] = $gimnasioId;
+        }
         $sql .= ' ORDER BY m.fecha_vencimiento ASC, m.creado_en DESC';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -34,24 +38,31 @@ class Membresia
         return $stmt->fetchAll();
     }
 
-    public function listarTodas(?int $demoDatasetId = null): array
+    public function listarTodas(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
-        return $this->listarTodos($demoDatasetId);
+        return $this->listarTodos($demoDatasetId, $gimnasioId);
     }
 
-    public function crear(int $usuarioId, string $plan, string $fechaInicio, string $fechaVencimiento, float $precioPagado): int
+    public function crear(int $usuarioId, string $plan, string $fechaInicio, string $fechaVencimiento, float $precioPagado, int $gimnasioId): int
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO membresias (usuario_id, plan, fecha_inicio, fecha_vencimiento, precio_pagado)
-             VALUES (?, ?, ?, ?, ?)'
+            'INSERT INTO membresias (usuario_id, gimnasio_id, plan, fecha_inicio, fecha_vencimiento, precio_pagado)
+             SELECT ?, ?, ?, ?, ?, ?
+             WHERE EXISTS (
+                 SELECT 1 FROM usuario_gimnasio_roles
+                 WHERE usuario_id = ? AND gimnasio_id = ? AND activo = 1
+             )'
         );
 
-        $stmt->execute([$usuarioId, $plan, $fechaInicio, $fechaVencimiento, $precioPagado]);
+        $stmt->execute([$usuarioId, $gimnasioId, $plan, $fechaInicio, $fechaVencimiento, $precioPagado, $usuarioId, $gimnasioId]);
+        if ($stmt->rowCount() !== 1) {
+            throw new DomainException('El socio no pertenece al gimnasio activo.');
+        }
 
         return (int) $this->pdo->lastInsertId();
     }
 
-    public function listarVencidas(?int $demoDatasetId = null): array
+    public function listarVencidas(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
         $sql =
             'SELECT m.id, m.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
@@ -65,6 +76,10 @@ class Membresia
             $sql .= ' AND m.demo_dataset_id = ?';
             $params[] = $demoDatasetId;
         }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND m.gimnasio_id = ?';
+            $params[] = $gimnasioId;
+        }
         $sql .= ' ORDER BY m.fecha_vencimiento ASC';
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -72,7 +87,7 @@ class Membresia
         return $stmt->fetchAll();
     }
 
-    public function contarPorVencer(int $dias = 7, ?int $demoDatasetId = null): int
+    public function contarPorVencer(int $dias = 7, ?int $demoDatasetId = null, ?int $gimnasioId = null): int
     {
         $sql =
             'SELECT COUNT(DISTINCT m.usuario_id)
@@ -85,6 +100,10 @@ class Membresia
             $sql .= ' AND m.demo_dataset_id = ?';
             $params[] = $demoDatasetId;
         }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND m.gimnasio_id = ?';
+            $params[] = $gimnasioId;
+        }
         $stmt = $this->pdo->prepare($sql);
 
         $stmt->execute($params);
@@ -92,21 +111,21 @@ class Membresia
         return (int) $stmt->fetchColumn();
     }
 
-    public function listarPorUsuario(int $usuarioId): array
+    public function listarPorUsuario(int $usuarioId, ?int $gimnasioId = null): array
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, plan, fecha_inicio, fecha_vencimiento, estado, precio_pagado, creado_en
              FROM membresias
-             WHERE usuario_id = ?
+             WHERE usuario_id = ? AND (? IS NULL OR gimnasio_id = ?)
              ORDER BY fecha_vencimiento DESC'
         );
 
-        $stmt->execute([$usuarioId]);
+        $stmt->execute([$usuarioId, $gimnasioId, $gimnasioId]);
 
         return $stmt->fetchAll();
     }
 
-    public function actualizarVencidas(?int $demoDatasetId = null): int
+    public function actualizarVencidas(?int $demoDatasetId = null, ?int $gimnasioId = null): int
     {
         $sql =
             'UPDATE membresias
@@ -118,42 +137,48 @@ class Membresia
             $sql .= ' AND demo_dataset_id = ?';
             $params[] = $demoDatasetId;
         }
+        if ($gimnasioId !== null) {
+            $sql .= ' AND gimnasio_id = ?';
+            $params[] = $gimnasioId;
+        }
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
 
         return $stmt->rowCount();
     }
 
-    public function tieneMembresiaActiva(int $usuarioId): bool
+    public function tieneMembresiaActiva(int $usuarioId, ?int $gimnasioId = null): bool
     {
         $stmt = $this->pdo->prepare(
             'SELECT 1
              FROM membresias
              WHERE usuario_id = ? AND estado = "activa"
+               AND (? IS NULL OR gimnasio_id = ?)
                AND fecha_inicio <= CURRENT_DATE()
                AND fecha_vencimiento >= CURRENT_DATE()
              LIMIT 1'
         );
-        $stmt->execute([$usuarioId]);
+        $stmt->execute([$usuarioId, $gimnasioId, $gimnasioId]);
 
         return (bool) $stmt->fetchColumn();
     }
 
-    public function obtenerPorUsuario(int $usuarioId): array|false
+    public function obtenerPorUsuario(int $usuarioId, ?int $gimnasioId = null): array|false
     {
         $stmt = $this->pdo->prepare(
             'SELECT id, usuario_id, plan, fecha_inicio, fecha_vencimiento, estado, precio_pagado, creado_en
              FROM membresias
              WHERE usuario_id = ?
+               AND (? IS NULL OR gimnasio_id = ?)
              ORDER BY (estado = "activa") DESC, fecha_vencimiento DESC, id DESC
              LIMIT 1'
         );
-        $stmt->execute([$usuarioId]);
+        $stmt->execute([$usuarioId, $gimnasioId, $gimnasioId]);
 
         return $stmt->fetch();
     }
 
-    public function activar(int $usuarioId, string $plan, float $precio): int
+    public function activar(int $usuarioId, string $plan, float $precio, int $gimnasioId): int
     {
         $duraciones = ['mensual' => '+1 month', 'trimestral' => '+3 months', 'anual' => '+1 year'];
         if (!isset($duraciones[$plan])) {
@@ -168,18 +193,19 @@ class Membresia
             $plan,
             $inicio->format('Y-m-d'),
             $vencimiento->format('Y-m-d'),
-            $precio
+            $precio,
+            $gimnasioId
         );
     }
 
-    public function suspender(int $usuarioId): bool
+    public function suspender(int $usuarioId, int $gimnasioId): bool
     {
         $stmt = $this->pdo->prepare(
             'UPDATE membresias
              SET estado = "suspendida"
-             WHERE usuario_id = ? AND estado = "activa"'
+             WHERE usuario_id = ? AND gimnasio_id = ? AND estado = "activa"'
         );
-        $stmt->execute([$usuarioId]);
+        $stmt->execute([$usuarioId, $gimnasioId]);
 
         return $stmt->rowCount() > 0;
     }

@@ -10,7 +10,8 @@ backend/
 ├── config/
 │   └── Database.php            ← Conexión PDO a MySQL (Singleton)
 ├── controllers/
-│   ├── AuthController.php      ← Registro, login, logout
+│   ├── AuthController.php      ← Registro, login, correo y contraseñas
+│   ├── MeController.php        ← Perfil de sesión, contexto y revocación
 │   ├── PerfilController.php    ← Ver y actualizar perfil
 │   ├── PublicGymController.php ← Catálogo público de sólo lectura
 │   └── SystemController.php    ← Dataset activo y feature flags públicas
@@ -19,7 +20,8 @@ backend/
 │   ├── Gimnasio.php            ← Lectura pública mínima de gimnasios
 │   └── SystemContext.php       ← Estado seguro del entorno de presentación
 ├── middleware/
-│   └── AuthMiddleware.php      ← Verificación de sesión y roles
+│   └── AuthMiddleware.php      ← Sesión, CSRF, correo, permisos y tenant
+├── services/                   ← Sesión, tokens, correo, rate limit y autorización
 └── routes/
     └── api.php                 ← Tabla de rutas de la API
 ```
@@ -29,8 +31,19 @@ backend/
 | Método | Ruta | Acceso | Descripción |
 |--------|------|--------|-------------|
 | POST | `/api/auth/registro` | Público | Registrar nuevo socio |
+| POST | `/api/auth/registro-dueno` | Público | Solicitar alta de dueño |
 | POST | `/api/auth/login` | Público | Iniciar sesión |
-| POST | `/api/auth/logout` | Público | Cerrar sesión |
+| POST | `/api/auth/logout` | Sesión + CSRF | Cerrar sesión actual |
+| POST | `/api/auth/email/verify` | Público | Consumir token de verificación |
+| POST | `/api/auth/email/resend` | Público | Reenviar verificación sin enumerar cuentas |
+| POST | `/api/auth/password/forgot` | Público | Solicitar recuperación no enumerativa |
+| POST | `/api/auth/password/reset` | Público | Restablecer con token de un uso |
+| POST | `/api/auth/password/change` | Sesión + CSRF | Cambiar contraseña autenticada |
+| GET | `/api/auth/session` | Público | Consultar sesión sin generar 401 en navegación pública |
+| GET | `/api/me` | Sesión | Usuario, rol, capacidades y gimnasio activo |
+| GET | `/api/me/sessions` | Sesión verificada | Listar sesiones activas |
+| DELETE | `/api/me/sessions/{uuid}` | Sesión + CSRF | Revocar otra sesión |
+| POST/DELETE | `/api/me/gym-context` | Sesión + CSRF | Cambiar o limpiar contexto activo |
 | GET | `/api/perfil` | Autenticado | Ver perfil propio |
 | PUT | `/api/perfil` | Autenticado | Actualizar nombre y teléfono |
 | GET | `/api/public/gimnasios` | Público | Listar gimnasios publicados desde MySQL |
@@ -46,10 +59,14 @@ backend/
 ```json
 POST /api/auth/registro
 {
-  "nombre": "Leandro González",
-  "email": "leandro@gmail.com",
-  "password": "mipass123",
-  "telefono": "099123456"
+  "nombre": "Leandro",
+  "apellido": "González",
+  "email": "leandro@example.test",
+  "password": "una-clave-local-de-12-o-mas",
+  "password_confirmation": "una-clave-local-de-12-o-mas",
+  "terms_accepted": true,
+  "privacy_accepted": true,
+  "marketing_accepted": false
 }
 ```
 
@@ -57,27 +74,39 @@ POST /api/auth/registro
 ```json
 POST /api/auth/login
 {
-  "email": "leandro@gmail.com",
-  "password": "mipass123"
+  "email": "leandro@example.test",
+  "password": "una-clave-local-de-12-o-mas"
 }
 ```
-La respuesta incluye una cookie de sesión HttpOnly y, por compatibilidad transitoria, el identificador que puede enviarse como Bearer:
-```
-Authorization: Bearer <token>
-```
+La respuesta instala una cookie HttpOnly y devuelve el contexto de usuario y un
+token CSRF. No devuelve token de autenticación y no existe compatibilidad
+Bearer.
 
 ## Seguridad implementada
 - **BCRYPT** con factor de coste 12 para contraseñas
 - **PDO con prepared statements** en todas las consultas (anti SQL Injection)
-- Cookie HttpOnly con `SameSite=Lax`; `Secure` se activa por variable de entorno en HTTPS
-- **session_regenerate_id(true)** al hacer login (anti session fixation)
+- Cookie HttpOnly con `SameSite=Lax`; `Secure` es obligatorio en producción
+- Sesiones opacas persistidas en MySQL, rotación al cambiar de gimnasio y revocación individual/global
+- CSRF obligatorio para `POST`, `PUT`, `PATCH` y `DELETE` autenticados
 - Mismo mensaje de error para email inexistente y contraseña incorrecta (anti enumeración)
-- Contraseñas heredadas que no sean hashes reconocidos se desactivan mediante migración
+- Tokens aleatorios con sólo el hash SHA-256 almacenado, vencimiento y un único uso
+- Rate limiting persistente para login, registro, correo y recuperación
+- Capacidades por rol y filtro de gimnasio activo desde la sesión, no desde parámetros del cliente
+- Eventos de seguridad sin contraseñas, tokens ni secretos
 - Reservas protegidas por transacción, bloqueo de fila e índice único
 
 ## Configuración
 
-Copiá `.env.example` a `.env`, rotá los secretos y no los subas al repositorio. `TURNSTILE_ENABLED` sólo debe estar desactivado en desarrollo controlado.
+Copiá `.env.example` a `.env`, rotá los secretos y no los subas al repositorio.
+`APP_KEY`, `SESSION_*`, `TURNSTILE_*`, `MAIL_*` y `FRONTEND_URL` configuran
+identidad. `TURNSTILE_ENABLED=false` y `MAIL_TRANSPORT=log` sólo son válidos en
+desarrollo, demo o test; producción falla de forma cerrada si falta la
+protección o el transporte real.
+
+Los roles canónicos son `socio`, `empleado`, `dueño` y `admin_general`. Usá
+`php console.php roles:report`, `roles:ambiguous` y `roles:resolve` para auditar
+una migración sin depender de IDs rígidos. `auth:cleanup` elimina límites y
+tokens vencidos; debe programarse como tarea de mantenimiento.
 
 ## Dataset demo
 

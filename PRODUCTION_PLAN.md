@@ -731,15 +731,41 @@ Las prioridades usadas son: **Bloqueante**, **Alta**, **Media** y **Mejora poste
 - Pruebas: enumeración, token expirado/usado, CSRF, fijación de sesión, brute force, matriz de roles y acceso cruzado.
 - Criterios de aceptación: PHP deniega por defecto; frontend no decide autorización; correo verificado según política; reset invalida sesiones; las cuatro identidades sólo ven sus rutas y datos.
 
-#### Estado de ejecución parcial de la Fase 3 — 5 de agosto de 2026
+#### Estado de ejecución de la Fase 3 - 6 de agosto de 2026
 
-**Alcance aprobado para la presentación:** usuarios, roles, permisos y asociaciones mínimas con gimnasio. Se migraron los roles estables socio/administrador general/empleado/dueño, la matriz de permisos y la relación usuario–gimnasio. Login y perfil devuelven rol y contextos desde PHP; las cuentas existentes se conservan. El CRUD completo de gimnasios no fue implementado.
+**Identidad terminada:** la autenticación usa exclusivamente cookie HttpOnly y
+sesiones opacas registradas en MySQL; se eliminó el Bearer y cualquier autoridad
+en `localStorage`. Login, logout actual y global, registro de socio, solicitud
+de dueño, verificación de correo, reenvío, recuperación, cambio de contraseña y
+gestión de sesiones tienen contratos PHP y estados de interfaz completos. Los
+tokens son aleatorios, de un uso y sólo se persisten con hash; reset y cambio de
+contraseña revocan las demás sesiones.
+
+**Roles y autorización terminados para el alcance de esta fase:** los nombres
+canónicos son socio, empleado, dueño y admin general. PHP resuelve capacidades
+por nombre, aplica excepciones por asignación y deniega por defecto. El
+gimnasio activo se valida contra asociaciones de MySQL, se almacena en sesión y
+se rota junto al CSRF. Clases, reservas, membresías y socios se filtran por ese
+contexto cuando existe, ignorando IDs de gimnasio enviados por el cliente. Las
+cuentas existentes se conservaron y existe reporte/CLI para roles ambiguos. El
+CRUD completo de gimnasios sigue correctamente reservado para la Fase 5.
+
+**Defensas terminadas:** CSRF en todas las mutaciones autenticadas, expiración
+inactiva y absoluta, `Secure` obligatorio en producción, rate limiting
+persistente, Turnstile con fallo cerrado en producción, correo real obligatorio
+en producción, CSP/CORS restringido, auditoría de seguridad, consentimientos y
+limpieza de tokens/límites por CLI. La migración 003 es idempotente, tiene
+rollback controlado y fue validada sobre una base temporal desde cero.
 
 **Dataset controlado:** la migración versionada agrega `demo_datasets`, `gimnasios` y marcadores `is_demo`/`demo_dataset_id`. `seed:demo`, `--reset`, `--remove` y `--status` crean cinco gimnasios y cuatro usuarios de forma transaccional e idempotente; rechazan colisiones con registros reales, requieren contraseña de entorno y bloquean producción por defecto. La interfaz lee el catálogo desde la API/MySQL, muestra “Datos de demostración” y no usa `demoData.js`. Las lecturas administrativas demo están aisladas de registros reales y el panel de presentación es de sólo lectura hasta el CRUD de la Fase 5.
 
 **Módulos beta:** WhatsApp, sincronización automática con Google Calendar, analítica avanzada, recomendaciones personalizadas y promociones de presentación están apagados por feature flags. Cuando se habilitan, sólo explican alcance funcional y pendiente; no muestran confirmaciones ni acciones falsas.
 
-**Pendiente dentro de la Fase 3 completa:** recuperación de contraseña, validación de correo, CSRF definitivo, rate limiting/lockout y gestión de sesiones. Estos puntos siguen siendo necesarios antes de producción aunque no bloqueen la presentación controlada solicitada.
+**Verificación:** pruebas de contratos, migración/rollback, seeder repetido,
+registro y duplicado, token válido/usado, cuenta no verificada, recuperación,
+revocación, expiración, CSRF, rate limit, cambio de contexto, IDOR, matriz de
+roles, build y 19 recorridos E2E. No se implementó ninguna pantalla ni endpoint
+propio de la Fase 4.
 
 ### Fase 4. Administración y gestión operativa
 
