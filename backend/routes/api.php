@@ -76,6 +76,20 @@ $rutas = [
     'GET /api/membresia/todas'       => ['MembresiaController', 'todas'],
 
     // Admin — requiere rol admin
+    'GET /api/admin/context'                        => ['AdminApiController', 'context'],
+    'POST /api/admin/context/select'                => ['AdminApiController', 'selectContext'],
+    'GET /api/admin/summary'                        => ['AdminApiController', 'summary'],
+    'GET /api/admin/activity'                       => ['AdminApiController', 'activity'],
+    'GET /api/admin/permissions'                    => ['AdminApiController', 'permissions'],
+    'GET /api/admin/members'                        => ['AdminApiController', 'members'],
+    'GET /api/admin/staff'                          => ['AdminApiController', 'staff'],
+    'GET /api/admin/classes'                        => ['AdminApiController', 'classes'],
+    'GET /api/admin/reservations'                   => ['AdminApiController', 'reservations'],
+    'GET /api/admin/memberships'                    => ['AdminApiController', 'memberships'],
+    'GET /api/admin/payments'                       => ['AdminApiController', 'payments'],
+    'GET /api/admin/exports'                        => ['AdminApiController', 'exports'],
+
+    // Contratos heredados conservados temporalmente por compatibilidad.
     'GET /api/admin/socios'                         => ['AdminController', 'listarSocios'],
     'GET /api/admin/socios/(\d+)'                  => ['AdminController', 'verSocio'],
     'PUT /api/admin/socios/(\d+)/estado'           => ['AdminController', 'actualizarEstadoSocio'],

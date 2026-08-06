@@ -783,6 +783,40 @@ propio de la Fase 4.
 - Pruebas: navegación por rol, deep links, sidebar móvil, permisos por acceso rápido, fallos parciales y empty states.
 - Criterios de aceptación: Administración es visible para roles autorizados; cada sección se alcanza en máximo un clic desde sidebar; quick actions abren flujos reales; Finanzas y Reportes están a un clic.
 
+#### Estado de ejecución de la Fase 4 - 6 de agosto de 2026
+
+**Administración terminada para el alcance aprobado:** `/administracion` monta
+un solo shell persistente con sidebar, header, breadcrumbs, selector de
+gimnasio, notificaciones honestas, perfil y vistas hijas para las trece
+secciones solicitadas. `/admin` sólo redirige por compatibilidad. Empleado,
+dueño y administrador general ven el acceso desde su panel según rol y permiso;
+un socio recibe 403.
+
+**Contrato operativo real:** los endpoints `context`, `context/select`,
+`summary`, `activity`, `permissions`, `members`, `staff`, `classes`,
+`reservations`, `memberships`, `payments` y `exports` requieren cookie, correo
+verificado, capacidad y scope de gimnasio desde sesión. Las listas tienen
+búsqueda, filtros, allowlist de orden, paginación y `request_id`. Resumen y
+tablas consultan MySQL; un indicador no modelado se declara no disponible en
+lugar de inventar un cero. El administrador global debe registrar motivo de
+soporte, rota sesión/CSRF y deja auditoría.
+
+**Datos y trazabilidad:** la migración 004 idempotente crea `audit_logs` y
+`exports`, con rollback controlado y marcadores `is_demo`/`demo_dataset_id`.
+Las lecturas demo no mezclan registros reales. Los stores por dominio cancelan
+solicitudes al cambiar de gimnasio y descartan su estado anterior.
+
+**Límites respetados:** no se anticipó el CRUD de gimnasios, socios, personal o
+membresías de Fase 5; tampoco clases/reservas de Fase 6 ni pagos, finanzas o
+exportaciones de Fase 7. Las acciones futuras son visibles pero deshabilitadas,
+con fase y explicación. Promociones conserva su feature flag beta.
+
+**Verificación:** contratos PHP, API autenticada, CSRF, request ID, RBAC de
+empleado/dueño/admin, intento fuera de alcance, build, tests unitarios y E2E.
+Administración se validó sin scroll horizontal en 360, 390, 768, 1024, 1440 y
+1920 px, sin errores de consola y sin violaciones axe serias o críticas. Las
+capturas están en `frontend/artifacts/phase4/`.
+
 ### Fase 5. Gimnasios, socios, empleados y membresías
 
 **Objetivo:** establecer el tenant y las entidades comerciales principales.

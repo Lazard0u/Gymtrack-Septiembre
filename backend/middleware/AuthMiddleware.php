@@ -72,6 +72,18 @@ final class AuthMiddleware
 
     private static function denegar(int $status,string $message,string $code='forbidden'): never
     {
+        if (str_starts_with((string) ($_SERVER['REQUEST_URI'] ?? ''), '/api/admin')) {
+            AdminAuditLogger::record(
+                'admin.access.denied',
+                'endpoint',
+                'denied',
+                self::obtenerUsuarioId() ?: null,
+                self::obtenerGimnasioContextoId(),
+                null,
+                $code
+            );
+            ApiResponder::error($status, $code, $message);
+        }
         http_response_code($status); echo json_encode(['error'=>true,'codigo'=>$code,'mensaje'=>$message],JSON_UNESCAPED_UNICODE); exit;
     }
 }

@@ -41,6 +41,7 @@ final class MeController
     {
         AuthMiddleware::verificarSesion();$data=json_decode((string)file_get_contents('php://input'),true);$gymId=(int)($data['gym_id']??0);
         if($gymId<1){$this->respond(422,['error'=>true,'mensaje'=>'Seleccioná un gimnasio válido.']);return;}
+        if((new AuthorizationService())->globalRole(AuthMiddleware::obtenerUsuarioId())===AuthorizationService::ADMIN){$this->respond(409,['error'=>true,'codigo'=>'admin_context_endpoint_required','mensaje'=>'Usá Administración para seleccionar un gimnasio e indicar el motivo de soporte.']);return;}
         $csrf=(new SessionManager())->rotateContext($gymId);$payload=(new UserContextService())->payload(AuthMiddleware::obtenerUsuarioId());SecurityLogger::record('auth.gym_context_changed','success',AuthMiddleware::obtenerUsuarioId(),['gym_id'=>$gymId]);
         $this->respond(200,['error'=>false,'mensaje'=>'Contexto de gimnasio actualizado.','usuario'=>$payload,'csrf_token'=>$csrf]);
     }

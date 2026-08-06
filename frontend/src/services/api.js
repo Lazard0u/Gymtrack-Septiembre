@@ -21,12 +21,16 @@ client.interceptors.request.use((config) => {
   return config
 })
 
-async function request(method, endpoint, body = null) {
+async function request(method, endpoint, body = null, options = {}) {
   try {
-    const response = await client.request({ method, url: endpoint, data: body })
-    if (response.data?.csrf_token) setCsrfToken(response.data.csrf_token)
+    const response = await client.request({ method, url: endpoint, data: body, ...options })
+    const nextCsrf = response.data?.csrf_token || response.data?.data?.csrf_token
+    if (nextCsrf) setCsrfToken(nextCsrf)
     return { ok: true, status: response.status, data: response.data }
   } catch (error) {
+    if (axios.isCancel(error) || error.code === 'ERR_CANCELED') {
+      return { ok: false, cancelled: true, status: 0, data: null }
+    }
     const response = error.response
     return {
       ok: false,
@@ -42,11 +46,11 @@ async function request(method, endpoint, body = null) {
 }
 
 export const api = {
-  post: (endpoint, body) => request('POST', endpoint, body),
-  get: (endpoint) => request('GET', endpoint),
-  put: (endpoint, body) => request('PUT', endpoint, body),
-  patch: (endpoint, body) => request('PATCH', endpoint, body),
-  delete: (endpoint, body = null) => request('DELETE', endpoint, body),
+  post: (endpoint, body, options = {}) => request('POST', endpoint, body, options),
+  get: (endpoint, options = {}) => request('GET', endpoint, null, options),
+  put: (endpoint, body, options = {}) => request('PUT', endpoint, body, options),
+  patch: (endpoint, body, options = {}) => request('PATCH', endpoint, body, options),
+  delete: (endpoint, body = null, options = {}) => request('DELETE', endpoint, body, options),
   clearCsrf: () => setCsrfToken(''),
 }
 

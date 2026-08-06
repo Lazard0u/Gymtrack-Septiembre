@@ -27,7 +27,8 @@ La propuesta confirmada es una plataforma web para conectar descubrimiento, memb
 
 - Superficie pública para descubrir el producto y consultar gimnasios publicados desde MySQL.
 - Superficie autenticada con contexto diferente para socios, empleados, dueños y administración general.
-- Superficie administrativa existente para la operación actual.
+- Superficie administrativa única en `/administracion`, con navegación por
+  gimnasio, permisos efectivos, consultas operativas y modo soporte auditado.
 - Uso responsive desde teléfonos de 360 px hasta escritorios de 1920 px.
 - Mapas basados en Leaflet y OpenStreetMap con atribución visible.
 
@@ -35,7 +36,8 @@ La propuesta confirmada es una plataforma web para conectar descubrimiento, memb
 
 - Stack obligatorio: Vue 3, PHP, MySQL, Docker, Leaflet y OpenStreetMap.
 - No se reescribe el proyecto desde cero ni se cambia el stack.
-- La Fase 3 se limita a usuarios, roles, permisos y asociaciones mínimas con gimnasio; no anticipa el CRUD completo de la Fase 5.
+- La Fase 4 agrega el shell administrativo y consultas operativas paginadas,
+  pero no anticipa el CRUD completo de la Fase 5 ni operaciones de fases 6 y 7.
 - No se implementan anticipadamente pagos, administración completa, calendario, WhatsApp, inteligencia artificial ni el CRUD operativo multigimnasio definitivo.
 - Los datos de demostración sólo existen en MySQL mediante un seeder versionado, idempotente y opt-in; llevan `is_demo`/`demo_dataset_id` y una etiqueta visible.
 - El seeder demo nunca se ejecuta automáticamente ni puede activarse en producción sin una autorización excepcional explícita.
@@ -71,4 +73,6 @@ La propuesta confirmada es una plataforma web para conectar descubrimiento, memb
 
 La superficie web debe admitir navegación por teclado, lectores de pantalla, foco visible, contraste WCAG AA, `prefers-reduced-motion`, zoom al 200 %, targets táctiles de al menos 44 px y los anchos 360, 390, 768, 1024, 1440 y 1920 px.
 
-Los hechos de producto de este archivo fueron actualizados con la aclaración de alcance de la Fase 3: dataset controlado para presentación, cuatro roles y contexto mínimo de gimnasio.
+Los hechos de producto de este archivo incluyen el alcance terminado de la
+Fase 4: administración visible, contexto obligatorio, consultas reales y
+acceso global explícito con auditoría.

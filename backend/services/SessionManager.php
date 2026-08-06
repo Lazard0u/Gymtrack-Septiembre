@@ -208,6 +208,9 @@ final class SessionManager
 
     private function deny(int $status, string $message): never
     {
+        if (str_starts_with((string) ($_SERVER['REQUEST_URI'] ?? ''), '/api/admin')) {
+            ApiResponder::error($status, $status === 419 ? 'csrf_expired' : 'authentication_required', $message);
+        }
         if ($status === 419) {
             header('HTTP/1.1 419 Page Expired');
         } else {

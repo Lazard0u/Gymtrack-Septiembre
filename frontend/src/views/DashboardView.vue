@@ -23,6 +23,7 @@ const system = useSystemStore()
 const status = ref('loading')
 const gyms = ref([])
 const switchingGym = ref(false)
+const canAccessAdministration = computed(() => ['empleado', 'dueño', 'admin_general'].includes(auth.user?.role))
 
 const role = computed(() => ({
   socio: { name: 'Socio', description: 'Explorá gimnasios y consultá los contextos asociados a tu cuenta.' },
@@ -43,10 +44,7 @@ const metrics = computed(() => [
   { label: 'Clases visibles', value: activeClasses.value, icon: IconCalendarEvent },
   { label: 'Rol activo', value: role.value.name, icon: auth.esAdmin ? IconShieldCheck : IconUsersGroup },
 ])
-const contextOptions = computed(() => [
-  ...(auth.esAdmin ? [{ value: '', label: 'Vista global' }] : []),
-  ...contexts.value.map((context) => ({ value: String(context.gimnasio_id), label: `${context.nombre} (${context.rol_nombre})` })),
-])
+const contextOptions = computed(() => auth.esAdmin ? [] : contexts.value.map((context) => ({ value: String(context.gimnasio_id), label: `${context.nombre} (${context.rol_nombre})` })))
 const betaDefinitions = {
   whatsapp: { name: 'WhatsApp - Beta', works: 'La interfaz puede identificar el canal configurado.', pending: 'Todavía no envía mensajes ni registra entregas.' },
   google_calendar_sync: { name: 'Sincronización automática con Google Calendar - Beta', works: 'La función puede presentarse como capacidad opcional.', pending: 'OAuth y sincronización bidireccional todavía no están conectados.' },
@@ -92,7 +90,7 @@ onMounted(load)
     <header class="dashboard-nav">
       <div class="container dashboard-nav__inner">
         <RouterLink class="brand" :to="{ name: 'home' }" aria-label="GymTrack, ir al inicio"><img class="brand-mark" :src="brandMark" alt="" width="36" height="36" /><span class="brand-word">Gym<span>Track</span></span></RouterLink>
-        <nav aria-label="Navegación del panel"><RouterLink :to="{ name: 'home' }">Inicio</RouterLink><RouterLink :to="{ name: 'gyms' }">Gimnasios</RouterLink><RouterLink :to="{ name: 'sessions' }">Sesiones</RouterLink><RouterLink v-if="auth.esAdmin" :to="{ name: 'admin' }">Administración</RouterLink></nav>
+        <nav aria-label="Navegación del panel"><RouterLink :to="{ name: 'home' }">Inicio</RouterLink><RouterLink :to="{ name: 'gyms' }">Gimnasios</RouterLink><RouterLink :to="{ name: 'sessions' }">Sesiones</RouterLink><RouterLink v-if="canAccessAdministration" :to="{ name: 'admin-summary' }">Administración</RouterLink></nav>
         <AppButton variant="ghost" size="sm" @click="logout"><template #icon><IconLogout :size="17" /></template>Salir</AppButton>
       </div>
     </header>
@@ -126,7 +124,7 @@ onMounted(load)
           </div>
         </section>
 
-        <section v-if="auth.esAdmin" class="admin-cta"><div><span class="eyebrow">Administración</span><h2>La cuenta tiene permiso global.</h2><p>El panel administrativo actual continúa disponible. Su reorganización operativa completa pertenece a la Fase 4.</p></div><AppLinkButton :to="{ name: 'admin' }">Abrir administración</AppLinkButton></section>
+        <section v-if="canAccessAdministration" class="admin-cta"><div><span class="eyebrow">Administración</span><h2>Operación centralizada por gimnasio.</h2><p>Consultá socios, personal, clases, reservas, membresías y pagos con permisos y contexto activo.</p></div><AppLinkButton :to="{ name: 'admin-summary' }">Abrir administración</AppLinkButton></section>
 
         <section v-if="enabledBetaFeatures.length" class="beta-section" aria-labelledby="beta-heading"><div class="section-title"><div><span class="eyebrow">Funciones opcionales</span><h2 id="beta-heading">Beta, sin acciones falsas.</h2></div></div><div class="beta-grid"><AppCard v-for="feature in enabledBetaFeatures" :key="feature.name"><IconFlask :size="21" /><h3>{{ feature.name }}</h3><p><strong>Funciona:</strong> {{ feature.works }}</p><p><strong>Pendiente:</strong> {{ feature.pending }}</p></AppCard></div></section>
       </template>

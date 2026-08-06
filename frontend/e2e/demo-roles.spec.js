@@ -23,7 +23,7 @@ test.describe('roles y contexto demo', () => {
       for (const gym of account.gyms) {
         await expect(page.getByRole('heading', { name: gym })).toBeVisible()
       }
-      if (account.role === 'Administrador general') {
+      if (['Administrador general', 'Empleado', 'Dueño'].includes(account.role)) {
         await expect(page.getByRole('link', { name: 'Abrir administración' })).toBeVisible()
       } else {
         await expect(page.getByRole('link', { name: 'Abrir administración' })).toHaveCount(0)
@@ -37,12 +37,20 @@ test.describe('roles y contexto demo', () => {
     await page.getByLabel('Contraseña').fill(password)
     await page.getByRole('button', { name: 'Ingresar' }).click()
     await page.getByRole('link', { name: 'Abrir administración' }).click()
-    await expect(page).toHaveURL(/\/admin$/)
-    await expect(page.getByText(/Esta vista permite recorrer y consultar el dataset/)).toBeVisible()
+    await expect(page).toHaveURL(/\/administracion\/resumen$/)
+    await expect(page.getByRole('heading', { name: 'Elegí un gimnasio para continuar' })).toBeVisible()
+    await page.getByLabel('Gimnasio activo').last().selectOption({ label: 'GymTrack Centro' })
+    await page.getByLabel('Motivo de soporte').fill('Validación funcional de la presentación')
+    await page.getByRole('button', { name: 'Entrar al gimnasio' }).click()
+    await expect(page.getByRole('heading', { name: 'Resumen operativo' })).toBeVisible()
+    await page.getByRole('link', { name: 'Socios' }).first().click()
     await expect(page.getByText('socio.demo@gymtrack.local').first()).toBeVisible()
     await expect(page.getByText('usuario@gmail.com')).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Crear membresía' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Crear clase' })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Desactivar' })).toHaveCount(0)
+    await page.getByRole('link', { name: 'Resumen' }).first().click()
+    await expect(page.getByRole('button', { name: 'Crear clase' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Registrar pago manual' })).toBeDisabled()
+    await expect(page.getByRole('link', { name: /Finanzas/ }).first()).toBeVisible()
+    await expect(page.getByRole('link', { name: /Reportes/ }).first()).toBeVisible()
   })
+
 })

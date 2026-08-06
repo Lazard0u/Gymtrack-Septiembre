@@ -68,6 +68,9 @@ docker compose exec -T db sh -lc \
 docker compose exec -T db sh -lc \
   'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
   < database/migrations/003_phase3_identity_security.sql
+docker compose exec -T db sh -lc \
+  'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+  < database/migrations/004_phase4_administration.sql
 ```
 
 Antes de `003`, realizá un respaldo. El rollback controlado está en
@@ -187,9 +190,10 @@ En el alcance actual son estables el registro de socio, solicitud de alta de
 dueño, inicio y cierre de sesión, validación de correo, recuperación y cambio de
 contraseña, revocación de sesiones, perfiles básicos, roles, permisos, contexto
 de gimnasio, lectura del catálogo desde MySQL, filtros y navegación/mapa de
-presentación. Los CRUD
-operativos, pagos y módulos de fases posteriores no se presentan como
-operaciones terminadas.
+presentación. También son estables el shell administrativo, el modo soporte
+auditado y las consultas paginadas de socios, personal, clases, reservas,
+membresías y pagos registrados. Los CRUD operativos, estados avanzados de pago
+y módulos de fases posteriores no se presentan como operaciones terminadas.
 
 Sólo se muestran funciones beta cuando su feature flag está activa. Cada bloque
 explica qué funciona y qué falta, y no ofrece acciones que confirmen operaciones
@@ -298,6 +302,58 @@ docker run --rm --ipc=host \
 
 Las capturas de esta fase se guardan en `frontend/artifacts/phase3/`. El test no
 incluye ninguna contraseña fija: la recibe únicamente desde el entorno.
+
+## Administración de la Fase 4
+
+Los roles `empleado`, `dueño` y `admin_general` acceden al único panel vigente
+desde `/administracion/resumen`. `/admin` se conserva como redirección de
+compatibilidad y no monta un segundo dashboard. La barra lateral contiene
+Resumen, Gestión operativa, Socios, Empleados, Entrenadores, Clases, Reservas,
+Membresías, Pagos, Promociones, Finanzas, Reportes y Configuración; cada destino
+se muestra según las capacidades resueltas por PHP.
+
+Todas las lecturas administrativas exigen sesión verificada, gimnasio activo,
+permiso y scope demo/real consistente. El administrador general entra a un
+gimnasio mediante `POST /api/admin/context/select`, debe explicar el motivo de
+soporte y genera un evento en `audit_logs` con `request_id`. Cambiar un ID en
+query o payload no amplía el alcance. Las tablas usan paginación, búsqueda,
+filtros y ordenamiento del servidor; el frontend cancela peticiones anteriores
+al cambiar de gimnasio.
+
+La migración `004_phase4_administration.sql` crea `audit_logs` y `exports`,
+incluidos `is_demo` y `demo_dataset_id`. Su rollback controlado está en
+`004_phase4_administration.down.sql` y elimina exclusivamente esas dos tablas,
+por lo que requiere respaldo y ventana de mantenimiento. No debe ejecutarse un
+rollback sobre producción sin retener primero la auditoría necesaria.
+
+La Fase 4 es de consulta y navegación operativa. Registrar socios, crear clases,
+registrar pagos, exportar archivos y editar configuración permanecen
+deshabilitados con una explicación de su fase; no confirman operaciones falsas.
+
+### Verificación de la Fase 4
+
+```bash
+# Contrato API autenticado, soporte, paginación y aislamiento
+DEMO_USER_PASSWORD='la-clave-definida-en-tu-entorno' sh tests/phase4_admin_api.sh
+
+# Componentes, build, PHP y Compose
+docker compose exec -T frontend npm run test:run
+docker compose exec -T frontend npm run build
+docker compose exec -T backend sh -lc \
+  'find /var/www/html -name "*.php" -print0 | xargs -0 -n1 php -l'
+docker compose config --quiet
+
+# E2E por rol, responsive, consola y axe con la imagen ya fijada
+docker run --rm --network gymtrack-final1_gymtrack_net \
+  --volumes-from gymtrack_frontend -w /app \
+  -e DEMO_USER_PASSWORD='la-clave-definida-en-tu-entorno' \
+  mcr.microsoft.com/playwright:v1.62.1-noble npm run test:e2e
+```
+
+Las evidencias responsive de Administración están en
+`frontend/artifacts/phase4/` para 360, 390, 768, 1024, 1440 y 1920 px. El
+detalle de arquitectura, matriz de rutas, contratos y límites está en
+`docs/PHASE4_ADMINISTRATION.md`.
 
 ---
 

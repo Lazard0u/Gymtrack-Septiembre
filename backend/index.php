@@ -30,12 +30,25 @@ if ($origenPeticion !== '' && hash_equals($origenPermitido, $origenPeticion)) {
 }
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token');
+header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, X-Request-ID');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
 header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
 header('Content-Type: application/json; charset=UTF-8');
+
+// Correlación segura de cada petición. Se acepta el identificador del cliente
+// únicamente si respeta el formato UUID; en cualquier otro caso se genera uno.
+$requestId = trim((string) ($_SERVER['HTTP_X_REQUEST_ID'] ?? ''));
+if (!preg_match('/^[a-f0-9-]{36}$/i', $requestId)) {
+    $bytes = random_bytes(16);
+    $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x40);
+    $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+    $hex = bin2hex($bytes);
+    $requestId = sprintf('%s-%s-%s-%s-%s', substr($hex, 0, 8), substr($hex, 8, 4), substr($hex, 12, 4), substr($hex, 16, 4), substr($hex, 20));
+}
+$GLOBALS['gymtrack_request_id'] = strtolower($requestId);
+header('X-Request-ID: ' . $GLOBALS['gymtrack_request_id']);
 
 set_exception_handler(function (Throwable $error) use ($entorno): void {
     error_log(sprintf(
@@ -50,10 +63,17 @@ set_exception_handler(function (Throwable $error) use ($entorno): void {
         header('Content-Type: application/json; charset=UTF-8');
     }
 
+    $adminRequest = str_starts_with((string) ($_SERVER['REQUEST_URI'] ?? ''), '/api/admin');
     $respuesta = [
         'error' => true,
+        'codigo' => 'unexpected_error',
         'mensaje' => 'Ocurrió un error inesperado. Intentá nuevamente.',
+        'request_id' => (string) ($GLOBALS['gymtrack_request_id'] ?? ''),
     ];
+    if ($adminRequest) {
+        $respuesta['ok'] = false;
+        $respuesta['fields'] = (object) [];
+    }
     if ($entorno === 'development') {
         $respuesta['detalle'] = $error->getMessage();
     }

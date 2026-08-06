@@ -27,11 +27,13 @@ final class AuthorizationService
     public function gymAssignments(int $userId): array
     {
         if ($this->globalRole($userId) === self::ADMIN) {
-            $stmt = $this->pdo->query(
+            $scope = $this->demoScope($userId);
+            $stmt = $this->pdo->prepare(
                 'SELECT NULL AS asignacion_id, g.id AS gimnasio_id, g.nombre, g.slug, g.ciudad, g.departamento,
                         g.estado, g.imagen_path, g.is_demo, "admin_general" AS rol_nombre
-                 FROM gimnasios g ORDER BY g.nombre'
+                 FROM gimnasios g WHERE g.is_demo=? AND (g.demo_dataset_id <=> ?) ORDER BY g.nombre'
             );
+            $stmt->execute([$scope['is_demo'], $scope['dataset_id']]);
             return array_map(static fn(array $row): array => [
                 'assignment_id' => null, 'gimnasio_id' => (int)$row['gimnasio_id'], 'nombre' => $row['nombre'],
                 'slug' => $row['slug'], 'ciudad' => $row['ciudad'], 'departamento' => $row['departamento'],
@@ -66,8 +68,9 @@ final class AuthorizationService
     public function canAccessGym(int $userId, int $gymId): bool
     {
         if ($this->globalRole($userId) === self::ADMIN) {
-            $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM gimnasios WHERE id=?');
-            $stmt->execute([$gymId]);
+            $scope = $this->demoScope($userId);
+            $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM gimnasios WHERE id=? AND is_demo=? AND (demo_dataset_id <=> ?)');
+            $stmt->execute([$gymId, $scope['is_demo'], $scope['dataset_id']]);
             return (int) $stmt->fetchColumn() === 1;
         }
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM usuario_gimnasio_roles WHERE usuario_id=? AND gimnasio_id=? AND activo=1');
@@ -129,5 +132,13 @@ final class AuthorizationService
     public function hasPermission(int $userId, string $permission, ?int $gymId): bool
     {
         return in_array($permission, $this->permissions($userId, $gymId), true);
+    }
+
+    private function demoScope(int $userId): array
+    {
+        $stmt = $this->pdo->prepare('SELECT is_demo,demo_dataset_id FROM usuarios WHERE id=? LIMIT 1');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch() ?: ['is_demo' => 0, 'demo_dataset_id' => null];
+        return ['is_demo' => (int) $row['is_demo'], 'dataset_id' => $row['demo_dataset_id'] === null ? null : (int) $row['demo_dataset_id']];
     }
 }

@@ -133,6 +133,8 @@ final class DemoDatasetSeeder
             'membresias' => 'membresías',
             'reservas' => 'reservas',
         ];
+        if ($this->tableExists('audit_logs')) $tables['audit_logs'] = 'eventos de auditoría';
+        if ($this->tableExists('exports')) $tables['exports'] = 'exportaciones';
 
         echo "Dataset demo '{$this->datasetName}' v" . self::VERSION . ": activo.\n";
         foreach ($tables as $table => $label) {
@@ -382,12 +384,26 @@ final class DemoDatasetSeeder
 
     private function removeRows(int $datasetId): void
     {
+        foreach (['audit_logs', 'exports'] as $phase4Table) {
+            if (!$this->tableExists($phase4Table)) continue;
+            $stmt = $this->pdo->prepare("DELETE FROM {$phase4Table} WHERE is_demo = 1 AND demo_dataset_id = ?");
+            $stmt->execute([$datasetId]);
+        }
         foreach (['reservas', 'membresias', 'clases', 'usuario_gimnasio_roles', 'usuarios', 'gimnasios'] as $table) {
             $stmt = $this->pdo->prepare("DELETE FROM {$table} WHERE is_demo = 1 AND demo_dataset_id = ?");
             $stmt->execute([$datasetId]);
         }
         $stmt = $this->pdo->prepare('DELETE FROM demo_datasets WHERE id = ? AND nombre = ?');
         $stmt->execute([$datasetId, $this->datasetName]);
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT COUNT(*) FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name=?'
+        );
+        $stmt->execute([$table]);
+        return (int) $stmt->fetchColumn() === 1;
     }
 
     private function gyms(): array

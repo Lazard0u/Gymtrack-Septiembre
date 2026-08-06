@@ -20,6 +20,13 @@ export const useAuthStore = defineStore('auth', () => {
     sessionState.value = 'active'
   }
 
+  function applyExternalSession(usuario) {
+    if (!usuario) return
+    user.value = usuario
+    initialized.value = true
+    sessionState.value = 'active'
+  }
+
   async function login(email, password) {
     const response = await api.post('/auth/login', { email, password })
     if (!response.ok || response.data.error) throw apiError(response)
@@ -98,5 +105,5 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return { user, initialized, sessionState, estaAutenticado, esAdmin, esEmpleado, esDueno, correoVerificado, permisos,
-    login, registro, bootstrap, probe, cargarPerfil: () => bootstrap(true), logout, logoutAll, cambiarGimnasio, limpiarGimnasio, tienePermiso, limpiarSesionLocal }
+    login, registro, bootstrap, probe, cargarPerfil: () => bootstrap(true), logout, logoutAll, cambiarGimnasio, limpiarGimnasio, tienePermiso, limpiarSesionLocal, applyExternalSession }
 })

@@ -230,6 +230,31 @@ La geometría es suavemente técnica: controles de 8 px, tarjetas de 12 px y cap
 - Drawer y dialog usan overlay oscuro, borde fuerte, sombra alta, cierre explícito y focus trap. El dialog se limita a 544 px y `90dvh` de alto.
 - Footer: marca + dos grupos de enlaces; bajo 768 px mantiene dos columnas y desplaza la marca a una fila completa.
 
+### Administración operativa
+
+- `/administracion` usa un shell B2B persistente: sidebar de 256 px desde
+  1024 px, header compacto con contexto, y drawer con focus trap bajo ese ancho.
+- La densidad visual es mayor que en marketing, pero conserva Manrope, la
+  paleta mate, radios 8/12/16 y azul escaso. Los títulos de página usan
+  `1.8rem-2.8rem`; no heredan el display de portada ni se preceden con cejas
+  que repitan el título o el contexto ya visible.
+- Los indicadores ocupan una fila de cinco en escritorio y dos columnas en
+  móvil, incluso a 360 px; un fallback puede ocupar la fila completa. Un dato
+  ausente se etiqueta `No disponible`, mientras que un fallo de consulta se
+  comunica como error. Ninguno se reemplaza por cero ni por una tendencia
+  inventada.
+- Las tablas tienen header tonal, ordenamiento accesible, filtros persistentes
+  y paginación de servidor. Bajo 768 px cada fila se transforma en una tarjeta
+  con labels visibles, sin scroll horizontal.
+- Acciones rápidas distinguen enlaces operativos de botones deshabilitados. Un
+  botón futuro incluye su fase o condición con texto plenamente legible; el
+  estado deshabilitado no reduce la opacidad del bloque completo ni ofrece
+  hover o apariencia activa.
+- El modo soporte usa warning sin dominar la pantalla y exige motivo en un
+  diálogo. Su badge permanece visible junto al selector de gimnasio.
+- No hay animación en navegación frecuente o tablas. Drawer, diálogo, hover y
+  feedback reutilizan únicamente los tokens de 140 y 220 ms.
+
 ### Explorer and disclosure
 
 - En escritorio, `GymExplorer` une mapa real de Leaflet/OpenStreetMap y panel lateral de 320–400 px dentro de un marco de 576 px de alto. El panel se puede colapsar y el mapa recalcula su tamaño.
