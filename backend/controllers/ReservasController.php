@@ -41,7 +41,8 @@ class ReservasController
         }
 
         // Actualizar estados vencidos antes de verificar
-        $this->membresiaModel->actualizarVencidas();
+        $datasetId = AuthMiddleware::obtenerDemoDatasetId();
+        $this->membresiaModel->actualizarVencidas($datasetId);
 
         // Verificar membresía activa (RF-10)
         if (!$this->membresiaModel->tieneMembresiaActiva($usuarioId)) {
@@ -53,7 +54,7 @@ class ReservasController
         }
 
         // Intentar la reserva con transacción atómica
-        $resultado = $this->reservaModel->reservar($usuarioId, (int) $datos['clase_id']);
+        $resultado = $this->reservaModel->reservar($usuarioId, (int) $datos['clase_id'], $datasetId);
 
         if ($resultado['ok']) {
             $this->responder(201, [
@@ -107,7 +108,7 @@ class ReservasController
         AuthMiddleware::verificarRol(2);
 
         $usuarioId = isset($_GET['usuario_id']) ? (int) $_GET['usuario_id'] : null;
-        $reservas  = $this->reservaModel->listarTodas($usuarioId);
+        $reservas  = $this->reservaModel->listarTodas($usuarioId, AuthMiddleware::obtenerDemoDatasetId());
 
         $this->responder(200, ['error' => false, 'reservas' => $reservas]);
     }

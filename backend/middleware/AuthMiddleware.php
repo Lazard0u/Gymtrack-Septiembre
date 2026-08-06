@@ -58,7 +58,8 @@ class AuthMiddleware
      * Roles del sistema (tabla roles):
      *   1 = socio
      *   2 = admin
-     *   3 = moderador
+     *   3 = empleado
+     *   4 = dueño
      *
      * @param int $rolRequerido  El rol_id mínimo necesario para acceder
      */
@@ -71,6 +72,44 @@ class AuthMiddleware
         if ($rolUsuario !== $rolRequerido) {
             // 403 Forbidden: está autenticado pero no tiene permiso
             self::denegar(403, 'No tenés permisos para acceder a este recurso.');
+        }
+    }
+
+    public static function verificarRoles(array $rolesPermitidos): void
+    {
+        $rolUsuario = (int) ($_SESSION['rol_id'] ?? 0);
+        if (!in_array($rolUsuario, $rolesPermitidos, true)) {
+            self::denegar(403, 'No tenés permisos para acceder a este recurso.');
+        }
+    }
+
+    public static function verificarPermiso(string $permiso, ?int $gimnasioId = null): void
+    {
+        self::verificarSesion();
+        $pdo = Database::conectar();
+        $rolId = (int) ($_SESSION['rol_id'] ?? 0);
+        $usuarioId = self::obtenerUsuarioId();
+
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(*)
+             FROM rol_permisos rp
+             JOIN permisos p ON p.id = rp.permiso_id
+             WHERE rp.rol_id = ? AND p.codigo = ?'
+        );
+        $stmt->execute([$rolId, $permiso]);
+        if ((int) $stmt->fetchColumn() !== 1) {
+            self::denegar(403, 'No tenés el permiso requerido para esta acción.');
+        }
+
+        if ($gimnasioId !== null && $rolId !== 2) {
+            $stmt = $pdo->prepare(
+                'SELECT COUNT(*) FROM usuario_gimnasio_roles
+                 WHERE usuario_id = ? AND gimnasio_id = ? AND rol_id = ? AND activo = 1'
+            );
+            $stmt->execute([$usuarioId, $gimnasioId, $rolId]);
+            if ((int) $stmt->fetchColumn() !== 1) {
+                self::denegar(403, 'No tenés acceso a este gimnasio.');
+            }
         }
     }
 
@@ -120,6 +159,32 @@ class AuthMiddleware
     public static function obtenerUsuarioId(): int
     {
         return (int) ($_SESSION['usuario_id'] ?? 0);
+    }
+
+    public static function obtenerRolId(): int
+    {
+        return (int) ($_SESSION['rol_id'] ?? 0);
+    }
+
+    public static function esCuentaDemo(): bool
+    {
+        return (bool) ($_SESSION['is_demo'] ?? false);
+    }
+
+    public static function obtenerDemoDatasetId(): ?int
+    {
+        if (!self::esCuentaDemo() || empty($_SESSION['demo_dataset_id'])) {
+            return null;
+        }
+
+        return (int) $_SESSION['demo_dataset_id'];
+    }
+
+    public static function impedirMutacionDemo(): void
+    {
+        if (self::esCuentaDemo()) {
+            self::denegar(409, 'El panel de presentación es de solo lectura. El CRUD operativo se habilitará en la Fase 5.');
+        }
     }
 
     private static function obtenerBearerToken(): ?string

@@ -36,6 +36,10 @@ $rutas = [
     'POST /api/auth/login'    => ['AuthController', 'login'],
     'POST /api/auth/logout'   => ['AuthController', 'logout'],
 
+    // Contexto público de aplicación y catálogo de solo lectura.
+    'GET /api/system/context'    => ['SystemController', 'context'],
+    'GET /api/public/gimnasios' => ['PublicGymController', 'index'],
+
     // Perfil — protegidas (requieren sesión activa)
     'GET /api/perfil'         => ['PerfilController', 'ver'],
     'PUT /api/perfil'         => ['PerfilController', 'actualizar'],

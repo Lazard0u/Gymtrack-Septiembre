@@ -43,9 +43,12 @@ class Usuario
         // Usamos "?" como marcador y PDO lo reemplaza de forma segura.
         // Esto previene ataques de SQL Injection.
         $stmt = $this->pdo->prepare(
-            'SELECT id, nombre, email, password_hash, rol_id, activo
-             FROM usuarios
-             WHERE email = ?
+            'SELECT u.id, u.nombre, u.email, u.password_hash, u.rol_id, u.activo, u.is_demo,
+                    u.demo_dataset_id,
+                    r.nombre AS rol_nombre
+             FROM usuarios u
+             JOIN roles r ON r.id = u.rol_id
+             WHERE u.email = ?
              LIMIT 1'
         );
         $stmt->execute([$email]);
@@ -126,9 +129,12 @@ class Usuario
     public function buscarPorId(int $id): array|false
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id, nombre, email, telefono, rol_id, activo, creado_en
-             FROM usuarios
-             WHERE id = ?
+            'SELECT u.id, u.nombre, u.email, u.telefono, u.rol_id, u.activo, u.is_demo,
+                    u.demo_dataset_id, u.creado_en,
+                    r.nombre AS rol_nombre
+             FROM usuarios u
+             JOIN roles r ON r.id = u.rol_id
+             WHERE u.id = ?
              LIMIT 1'
             // Nota: NO incluimos password_hash en el SELECT.
             // Nunca enviamos el hash al frontend, aunque esté cifrado.
@@ -138,18 +144,70 @@ class Usuario
         return $stmt->fetch();
     }
 
-    public function listarSocios(): array
+    public function contextosGimnasio(int $usuarioId): array
     {
-        $stmt = $this->pdo->query(
+        $stmt = $this->pdo->prepare(
+            'SELECT g.id, g.nombre, g.slug, g.ciudad, g.departamento, g.estado, g.imagen_path,
+                    ugr.rol_id, r.nombre AS rol_nombre, g.is_demo
+             FROM usuario_gimnasio_roles ugr
+             JOIN gimnasios g ON g.id = ugr.gimnasio_id
+             JOIN roles r ON r.id = ugr.rol_id
+             WHERE ugr.usuario_id = ? AND ugr.activo = 1
+             ORDER BY g.nombre'
+        );
+        $stmt->execute([$usuarioId]);
+
+        return array_map(static fn (array $row): array => [
+            'gimnasio_id' => (int) $row['id'],
+            'nombre' => $row['nombre'],
+            'slug' => $row['slug'],
+            'ciudad' => $row['ciudad'],
+            'departamento' => $row['departamento'],
+            'estado' => $row['estado'],
+            'imagen_path' => $row['imagen_path'],
+            'rol_id' => (int) $row['rol_id'],
+            'rol_nombre' => $row['rol_nombre'],
+            'is_demo' => (bool) $row['is_demo'],
+        ], $stmt->fetchAll());
+    }
+
+    public function listarSocios(?int $demoDatasetId = null): array
+    {
+        $sql =
             'SELECT u.id, u.nombre, u.email, u.telefono, u.rol_id, u.activo, u.creado_en,
                     r.nombre AS rol_nombre
              FROM usuarios u
              JOIN roles r ON u.rol_id = r.id
-             WHERE u.rol_id = 1
-             ORDER BY u.creado_en DESC'
-        );
+             WHERE u.rol_id = 1 AND u.is_demo = ?';
+        $params = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND u.demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $sql .= ' ORDER BY u.creado_en DESC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->fetchAll();
+    }
+
+    public function buscarPorIdEnDataset(int $id, ?int $demoDatasetId): array|false
+    {
+        $sql = 'SELECT u.id, u.nombre, u.email, u.telefono, u.rol_id, u.activo, u.is_demo,
+                       u.demo_dataset_id, u.creado_en, r.nombre AS rol_nombre
+                FROM usuarios u
+                JOIN roles r ON r.id = u.rol_id
+                WHERE u.id = ? AND u.is_demo = ?';
+        $params = [$id, $demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND u.demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetch();
     }
 
     public function cambiarEstado(int $id, int $activo): bool
@@ -161,11 +219,16 @@ class Usuario
         return $stmt->execute([$activo, $id]);
     }
 
-    public function contarSociosActivos(): int
+    public function contarSociosActivos(?int $demoDatasetId = null): int
     {
-        $stmt = $this->pdo->query(
-            'SELECT COUNT(*) FROM usuarios WHERE rol_id = 1 AND activo = 1'
-        );
+        $sql = 'SELECT COUNT(*) FROM usuarios WHERE rol_id = 1 AND activo = 1 AND is_demo = ?';
+        $params = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return (int) $stmt->fetchColumn();
     }

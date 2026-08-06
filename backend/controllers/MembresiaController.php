@@ -29,7 +29,7 @@ class MembresiaController
         $usuarioId = AuthMiddleware::obtenerUsuarioId();
 
         // Actualizar vencidas antes de devolver el estado
-        $this->membresiaModel->actualizarVencidas();
+        $this->membresiaModel->actualizarVencidas(AuthMiddleware::obtenerDemoDatasetId());
 
         $membresia = $this->membresiaModel->obtenerPorUsuario($usuarioId);
 
@@ -63,6 +63,7 @@ class MembresiaController
     {
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2);
+        AuthMiddleware::impedirMutacionDemo();
 
         $datos = json_decode(file_get_contents('php://input'), true);
 
@@ -115,6 +116,7 @@ class MembresiaController
     {
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2);
+        AuthMiddleware::impedirMutacionDemo();
 
         $datos = json_decode(file_get_contents('php://input'), true);
 
@@ -144,8 +146,9 @@ class MembresiaController
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2);
 
-        $this->membresiaModel->actualizarVencidas();
-        $membresias = $this->membresiaModel->listarTodas();
+        $datasetId = AuthMiddleware::obtenerDemoDatasetId();
+        $this->membresiaModel->actualizarVencidas($datasetId);
+        $membresias = $this->membresiaModel->listarTodas($datasetId);
         $this->responder(200, ['error' => false, 'membresias' => $membresias]);
     }
 

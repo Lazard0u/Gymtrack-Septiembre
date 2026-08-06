@@ -4,7 +4,7 @@ Fecha de auditoría: 5 de agosto de 2026
 
 Repositorio auditado: `gymtrack-final1`
 
-Alcance: análisis solamente. No se modificó código ni configuración existente.
+Alcance original: análisis solamente. Las secciones de estado posteriores registran la implementación aprobada por fases.
 Stack que se conserva: Vue 3, PHP, MySQL, Docker, Leaflet y OpenStreetMap.
 
 ## 1. Decisión ejecutiva
@@ -713,7 +713,7 @@ Las prioridades usadas son: **Bloqueante**, **Alta**, **Media** y **Mejora poste
 
 **Verificado:** build productivo; pruebas unitarias de estados, formularios y overlays; foco atrapado, cierre con `Escape` y restauración de foco; navegación móvil; auditoría axe sin violaciones serias o críticas; contraste AA de acciones y marca; capturas y ausencia de desbordamiento horizontal a 360, 390, 768, 1024, 1440 y 1920 px. Swiper y las cargas CDN de Google Fonts/Leaflet fueron retiradas. La documentación de producto, dirección por superficie y sistema visual queda versionada junto al código.
 
-**Pendiente por diseño de fases siguientes:** datos reales y marcadores del catálogo (Fase 5); geolocalización, distancias, filtros y sincronización marcador-tarjeta (Fase 8); autenticación ampliada y roles socio/empleado/dueño/admin general (Fase 3). No se adelantaron esos contratos.
+**Resuelto después en la Fase 3:** el catálogo de presentación ya consume cinco gimnasios identificados desde MySQL y los cuatro roles reciben contexto mínimo. La geolocalización, distancias y el CRUD operativo definitivo siguen reservados para sus fases correspondientes.
 
 ### Fase 3. Autenticación, recuperación y roles
 
@@ -730,6 +730,16 @@ Las prioridades usadas son: **Bloqueante**, **Alta**, **Media** y **Mejora poste
 - Riesgos: bloquear usuarios existentes. Crear herramienta de migración, reset forzado y soporte auditado.
 - Pruebas: enumeración, token expirado/usado, CSRF, fijación de sesión, brute force, matriz de roles y acceso cruzado.
 - Criterios de aceptación: PHP deniega por defecto; frontend no decide autorización; correo verificado según política; reset invalida sesiones; las cuatro identidades sólo ven sus rutas y datos.
+
+#### Estado de ejecución parcial de la Fase 3 — 5 de agosto de 2026
+
+**Alcance aprobado para la presentación:** usuarios, roles, permisos y asociaciones mínimas con gimnasio. Se migraron los roles estables socio/administrador general/empleado/dueño, la matriz de permisos y la relación usuario–gimnasio. Login y perfil devuelven rol y contextos desde PHP; las cuentas existentes se conservan. El CRUD completo de gimnasios no fue implementado.
+
+**Dataset controlado:** la migración versionada agrega `demo_datasets`, `gimnasios` y marcadores `is_demo`/`demo_dataset_id`. `seed:demo`, `--reset`, `--remove` y `--status` crean cinco gimnasios y cuatro usuarios de forma transaccional e idempotente; rechazan colisiones con registros reales, requieren contraseña de entorno y bloquean producción por defecto. La interfaz lee el catálogo desde la API/MySQL, muestra “Datos de demostración” y no usa `demoData.js`. Las lecturas administrativas demo están aisladas de registros reales y el panel de presentación es de sólo lectura hasta el CRUD de la Fase 5.
+
+**Módulos beta:** WhatsApp, sincronización automática con Google Calendar, analítica avanzada, recomendaciones personalizadas y promociones de presentación están apagados por feature flags. Cuando se habilitan, sólo explican alcance funcional y pendiente; no muestran confirmaciones ni acciones falsas.
+
+**Pendiente dentro de la Fase 3 completa:** recuperación de contraseña, validación de correo, CSRF definitivo, rate limiting/lockout y gestión de sesiones. Estos puntos siguen siendo necesarios antes de producción aunque no bloqueen la presentación controlada solicitada.
 
 ### Fase 4. Administración y gestión operativa
 

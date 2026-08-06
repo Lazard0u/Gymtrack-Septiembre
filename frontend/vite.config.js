@@ -1,6 +1,8 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET || 'http://backend'
+
 export default defineConfig({
   plugins: [vue()],
   test: {
@@ -15,7 +17,17 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://backend',
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+    },
+  },
+  preview: {
+    host: true,
+    port: 4173,
+    proxy: {
+      '/api': {
+        target: apiProxyTarget,
         changeOrigin: true,
       },
     },

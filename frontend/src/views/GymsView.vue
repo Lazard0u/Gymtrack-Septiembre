@@ -6,7 +6,7 @@ import AppPageHeader from '../components/ui/AppPageHeader.vue'
 </script>
 
 <template>
-  <div class="public-page"><PublicHeader /><main class="container"><AppPageHeader eyebrow="Gimnasios" title="Explorá el mapa. Elegí con contexto." description="La estructura de mapa y lista ya está preparada. Los resultados aparecerán cuando los gimnasios publicados se conecten a esta experiencia." /><GymExplorer compact-heading /></main><PublicFooter /></div>
+  <div class="public-page"><PublicHeader /><main class="container"><AppPageHeader eyebrow="Gimnasios" title="Explorá el mapa. Elegí con contexto." description="Filtrá por ciudad o categoría y sincronizá cada sede publicada con su marcador. El modo presentación utiliza registros demo identificados en MySQL." /><GymExplorer compact-heading /></main><PublicFooter /></div>
 </template>
 
 <style scoped>

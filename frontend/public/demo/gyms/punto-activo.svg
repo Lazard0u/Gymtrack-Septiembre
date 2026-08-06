@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
+  <title id="title">Placeholder de Punto Activo</title><desc id="desc">Imagen abstracta ámbar identificada como demostración.</desc>
+  <rect width="800" height="500" fill="#15120d"/><path d="M0 380 220 145l140 120L550 90l250 245v165H0Z" fill="#34291b"/><rect x="585" y="72" width="145" height="145" rx="72" fill="#b77a21"/>
+  <text x="56" y="78" fill="#f3ad4e" font-family="system-ui,sans-serif" font-size="24" font-weight="700">DATOS DEMO</text><text x="56" y="440" fill="#f4f7f9" font-family="system-ui,sans-serif" font-size="48" font-weight="750">Punto Activo</text>
+</svg>

@@ -1,3 +1,12 @@
+<script setup>
+import { onMounted } from 'vue'
+import DemoDataNotice from './components/system/DemoDataNotice.vue'
+import { useSystemStore } from './stores/system'
+
+const system = useSystemStore()
+onMounted(() => system.load())
+</script>
+
 <template>
   <!--
     THESIS: Calma operativa con energía física; oscuro mate, directo y confiable.
@@ -8,4 +17,5 @@
     FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
   -->
   <router-view />
+  <DemoDataNotice />
 </template>

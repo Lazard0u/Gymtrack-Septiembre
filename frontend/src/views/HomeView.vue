@@ -35,7 +35,7 @@ const capabilities = [
 ]
 
 const questions = [
-  { question: '¿GymTrack ya muestra gimnasios reales?', answer: 'Todavía no. La interfaz pública está preparada, pero el catálogo se completará cuando el módulo de gestión de gimnasios quede conectado a MySQL.' },
+  { question: '¿Los gimnasios de la presentación son reales?', answer: 'No. Son cinco sedes ficticias identificadas como datos de demostración. Existen en MySQL y pueden eliminarse por dataset sin mezclarse con futuros gimnasios reales.' },
   { question: '¿Puedo crear una cuenta?', answer: 'Sí. El registro actual crea una cuenta de socio. Los flujos específicos para dueños, empleados y entrenadores se incorporarán en las fases de administración y roles.' },
   { question: '¿Los pagos están habilitados?', answer: 'No todavía. GymTrack no presenta un checkout ficticio: Mercado Pago, los webhooks y la activación segura de membresías forman parte de la fase de pagos.' },
   { question: '¿Funciona en el celular?', answer: 'La experiencia pública se adapta desde 360 px, incluye navegación móvil y un panel inferior para explorar el mapa sin scroll horizontal.' },
@@ -57,7 +57,7 @@ const questions = [
               <AppLinkButton :to="{ name: 'gyms' }" size="lg">Explorar gimnasios<template #icon><IconMap2 :size="19" /></template></AppLinkButton>
               <AppLinkButton :to="{ name: 'for-gyms' }" variant="secondary" size="lg">Gestioná tu gimnasio<template #icon><IconArrowRight :size="19" /></template></AppLinkButton>
             </div>
-            <p class="hero__note"><IconShieldCheck :size="17" aria-hidden="true" /> Sin gimnasios, precios ni resultados inventados.</p>
+            <p class="hero__note"><IconShieldCheck :size="17" aria-hidden="true" /> Los datos ficticios se identifican siempre como demostración.</p>
           </div>
 
           <div class="hero__visual">

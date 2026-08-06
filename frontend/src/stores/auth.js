@@ -22,6 +22,8 @@ export const useAuthStore = defineStore('auth', () => {
   // ── Getters ─────────────────────────────────────────────
   const estaAutenticado = computed(() => !!token.value)
   const esAdmin         = computed(() => user.value?.rol_id === 2)
+  const esEmpleado      = computed(() => user.value?.rol_id === 3)
+  const esDueno         = computed(() => user.value?.rol_id === 4)
 
   // ── Acciones ────────────────────────────────────────────
 
@@ -109,6 +111,8 @@ export const useAuthStore = defineStore('auth', () => {
     // Getters
     estaAutenticado,
     esAdmin,
+    esEmpleado,
+    esDueno,
     // Acciones
     login,
     registro,

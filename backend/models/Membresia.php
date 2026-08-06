@@ -14,22 +14,29 @@ class Membresia
         $this->pdo = Database::conectar();
     }
 
-    public function listarTodos(): array
+    public function listarTodos(?int $demoDatasetId = null): array
     {
-        $stmt = $this->pdo->query(
+        $sql =
             'SELECT m.id, m.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                     m.plan, m.fecha_inicio, m.fecha_vencimiento, m.estado, m.precio_pagado, m.creado_en
              FROM membresias m
              JOIN usuarios u ON m.usuario_id = u.id
-             ORDER BY m.fecha_vencimiento ASC, m.creado_en DESC'
-        );
+             WHERE m.is_demo = ?';
+        $params = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND m.demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $sql .= ' ORDER BY m.fecha_vencimiento ASC, m.creado_en DESC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->fetchAll();
     }
 
-    public function listarTodas(): array
+    public function listarTodas(?int $demoDatasetId = null): array
     {
-        return $this->listarTodos();
+        return $this->listarTodos($demoDatasetId);
     }
 
     public function crear(int $usuarioId, string $plan, string $fechaInicio, string $fechaVencimiento, float $precioPagado): int
@@ -44,30 +51,43 @@ class Membresia
         return (int) $this->pdo->lastInsertId();
     }
 
-    public function listarVencidas(): array
+    public function listarVencidas(?int $demoDatasetId = null): array
     {
-        $stmt = $this->pdo->query(
+        $sql =
             'SELECT m.id, m.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                     m.plan, m.fecha_inicio, m.fecha_vencimiento, m.estado, m.precio_pagado
              FROM membresias m
              JOIN usuarios u ON m.usuario_id = u.id
-             WHERE m.estado = "vencida" OR m.fecha_vencimiento < CURRENT_DATE()
-             ORDER BY m.fecha_vencimiento ASC'
-        );
+             WHERE (m.estado = "vencida" OR m.fecha_vencimiento < CURRENT_DATE())
+               AND m.is_demo = ?';
+        $params = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND m.demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $sql .= ' ORDER BY m.fecha_vencimiento ASC';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->fetchAll();
     }
 
-    public function contarPorVencer(int $dias = 7): int
+    public function contarPorVencer(int $dias = 7, ?int $demoDatasetId = null): int
     {
-        $stmt = $this->pdo->prepare(
+        $sql =
             'SELECT COUNT(DISTINCT m.usuario_id)
              FROM membresias m
              WHERE m.estado = "activa"
-               AND m.fecha_vencimiento BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL ? DAY)'
-        );
+               AND m.fecha_vencimiento BETWEEN CURRENT_DATE() AND DATE_ADD(CURRENT_DATE(), INTERVAL ? DAY)
+               AND m.is_demo = ?';
+        $params = [$dias, $demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND m.demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $stmt = $this->pdo->prepare($sql);
 
-        $stmt->execute([$dias]);
+        $stmt->execute($params);
 
         return (int) $stmt->fetchColumn();
     }
@@ -86,14 +106,20 @@ class Membresia
         return $stmt->fetchAll();
     }
 
-    public function actualizarVencidas(): int
+    public function actualizarVencidas(?int $demoDatasetId = null): int
     {
-        $stmt = $this->pdo->prepare(
+        $sql =
             'UPDATE membresias
              SET estado = "vencida"
-             WHERE estado = "activa" AND fecha_vencimiento < CURRENT_DATE()'
-        );
-        $stmt->execute();
+             WHERE estado = "activa" AND fecha_vencimiento < CURRENT_DATE()
+               AND is_demo = ?';
+        $params = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->rowCount();
     }

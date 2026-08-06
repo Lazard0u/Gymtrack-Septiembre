@@ -2,16 +2,18 @@ import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
 const widths = [360, 390, 768, 1024, 1440, 1920]
+const gymCard = (page, name) => page.locator('.gym-card').filter({ hasText: name })
 
 for (const width of widths) {
   test(`inicio sin desbordamiento a ${width} px`, async ({ page }) => {
     await page.setViewportSize({ width, height: width < 768 ? 800 : 900 })
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('heading', { name: 'Tu gimnasio, en un solo lugar.' })).toBeVisible()
+    await expect(gymCard(page, 'GymTrack Centro')).toBeVisible()
     await page.locator('[aria-label="Cargando mapa"]').waitFor({ state: 'detached', timeout: 9_000 }).catch(() => {})
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `artifacts/phase2/home-${width}.png`, fullPage: true })
+    await page.screenshot({ path: `artifacts/phase3/home-${width}.png`, fullPage: true })
   })
 }
 
@@ -45,6 +47,25 @@ test('el explorador responde como panel en escritorio y bottom sheet en móvil',
   await expect(openControl).toBeVisible()
   await openControl.click()
   await expect(page.getByRole('button', { name: 'Expandir lista' })).toBeVisible()
+})
+
+test('el catálogo demo llega desde la API y sus filtros actualizan lista y mapa', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/gimnasios')
+  await expect(page.getByText('Datos de demostración').first()).toBeVisible()
+  await expect(gymCard(page, 'GymTrack Centro')).toBeVisible()
+  await expect(gymCard(page, 'Norte Fitness Club')).toBeVisible()
+  await expect(gymCard(page, 'Titan Training')).toBeVisible()
+  await expect(gymCard(page, 'Punto Activo')).toBeVisible()
+  await expect(gymCard(page, 'Arena Functional Gym')).toBeVisible()
+  await page.getByLabel('Ciudad').selectOption('Salto')
+  await expect(gymCard(page, 'Norte Fitness Club')).toBeVisible()
+  await expect(gymCard(page, 'GymTrack Centro')).toBeHidden()
+  await expect(page.locator('.gym-marker')).toHaveCount(1)
+  await page.getByLabel('Ciudad').selectOption('')
+  await page.getByLabel('Buscar').fill('Titan')
+  await expect(gymCard(page, 'Titan Training')).toBeVisible()
+  await expect(page.locator('.gym-marker')).toHaveCount(1)
 })
 
 test('la portada no tiene violaciones automáticas serias o críticas', async ({ page }) => {

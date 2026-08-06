@@ -13,7 +13,9 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./database/gymtrack_database.sql:/docker-entrypoint-initdb.d/gymtrack_database.sql
+      - ./database/gymtrack_database.sql:/docker-entrypoint-initdb.d/000_bootstrap.sql:ro
+      - ./database/migrations/001_phase1_integrity.sql:/docker-entrypoint-initdb.d/001_phase1_integrity.sql:ro
+      - ./database/migrations/002_phase3_roles_demo_context.sql:/docker-entrypoint-initdb.d/002_phase3_roles_demo_context.sql:ro
       - db_data:/var/lib/mysql
     networks:
       - gymtrack_net
@@ -43,6 +45,15 @@ services:
       SESSION_SECURE: ${SESSION_SECURE:-false}
       TURNSTILE_ENABLED: ${TURNSTILE_ENABLED:-false}
       TURNSTILE_SECRET_KEY: ${TURNSTILE_SECRET_KEY:-}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
+      DEMO_DATASET_NAME: ${DEMO_DATASET_NAME:-gymtrack-presentation}
+      DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}
+      ALLOW_DEMO_DATA_IN_PRODUCTION: ${ALLOW_DEMO_DATA_IN_PRODUCTION:-false}
+      FEATURE_WHATSAPP: ${FEATURE_WHATSAPP:-false}
+      FEATURE_GOOGLE_CALENDAR_SYNC: ${FEATURE_GOOGLE_CALENDAR_SYNC:-false}
+      FEATURE_ADVANCED_ANALYTICS: ${FEATURE_ADVANCED_ANALYTICS:-false}
+      FEATURE_PERSONAL_RECOMMENDATIONS: ${FEATURE_PERSONAL_RECOMMENDATIONS:-false}
+      FEATURE_PROMOTIONS_BETA: ${FEATURE_PROMOTIONS_BETA:-false}
     ports:
       - "8080:80"
     volumes:

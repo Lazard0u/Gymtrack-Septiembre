@@ -14,36 +14,49 @@ class Clase
         $this->pdo = Database::conectar();
     }
 
-    public function listarTodos(): array
+    public function listarTodos(?int $demoDatasetId = null): array
     {
-        $stmt = $this->pdo->query(
+        $sql =
             'SELECT c.id, c.nombre, c.instructor_id, u.nombre AS instructor_nombre,
                     c.dia_semana, c.hora_inicio, c.hora_fin, c.cupo_maximo,
                     c.cupos_disponibles, c.activa
              FROM clases c
              JOIN usuarios u ON c.instructor_id = u.id
-             ORDER BY FIELD(c.dia_semana, "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"), c.hora_inicio'
-        );
+             WHERE c.is_demo = ?';
+        $params = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND c.demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $sql .= ' ORDER BY FIELD(c.dia_semana, "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"), c.hora_inicio';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->fetchAll();
     }
 
-    public function listarTodas(): array
+    public function listarTodas(?int $demoDatasetId = null): array
     {
-        return $this->listarTodos();
+        return $this->listarTodos($demoDatasetId);
     }
 
-    public function listarActivas(): array
+    public function listarActivas(?int $demoDatasetId = null): array
     {
-        $stmt = $this->pdo->query(
+        $sql =
             'SELECT c.id, c.nombre, c.instructor_id, u.nombre AS instructor_nombre,
                     c.dia_semana, c.hora_inicio, c.hora_fin, c.cupo_maximo,
                     c.cupos_disponibles, c.activa
              FROM clases c
              JOIN usuarios u ON c.instructor_id = u.id
-             WHERE c.activa = 1
-             ORDER BY FIELD(c.dia_semana, "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"), c.hora_inicio'
-        );
+             WHERE c.activa = 1 AND c.is_demo = ?';
+        $params = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND c.demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $sql .= ' ORDER BY FIELD(c.dia_semana, "lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"), c.hora_inicio';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->fetchAll();
     }
@@ -106,16 +119,23 @@ class Clase
         return $this->cancelar($id);
     }
 
-    public function estadisticas(): array
+    public function estadisticas(?int $demoDatasetId = null): array
     {
-        $stmt = $this->pdo->query(
+        $sql =
             'SELECT
                 COUNT(*) AS clases_totales,
                 SUM(c.activa = 1) AS clases_activas,
                 COALESCE(SUM(CASE WHEN c.activa = 1 THEN c.cupo_maximo ELSE 0 END), 0) AS cupos_totales,
                 COALESCE(SUM(CASE WHEN c.activa = 1 THEN c.cupos_disponibles ELSE 0 END), 0) AS cupos_disponibles
-             FROM clases c'
-        );
+             FROM clases c
+             WHERE c.is_demo = ?';
+        $params = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND c.demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         $datos = $stmt->fetch() ?: [];
         $cuposTotales = (int) ($datos['cupos_totales'] ?? 0);
@@ -132,13 +152,19 @@ class Clase
         ];
     }
 
-    public function buscarPorId(int $id): array|false
+    public function buscarPorId(int $id, ?int $demoDatasetId = null): array|false
     {
-        $stmt = $this->pdo->prepare(
+        $sql =
             'SELECT id, nombre, instructor_id, dia_semana, hora_inicio, hora_fin, cupo_maximo, cupos_disponibles, activa
-             FROM clases WHERE id = ? LIMIT 1'
-        );
-        $stmt->execute([$id]);
+             FROM clases WHERE id = ? AND is_demo = ?';
+        $params = [$id, $demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND demo_dataset_id = ?';
+            $params[] = $demoDatasetId;
+        }
+        $sql .= ' LIMIT 1';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
 
         return $stmt->fetch();
     }
@@ -159,15 +185,23 @@ class Clase
         return $stmt->fetchAll();
     }
 
-    public function contarClasesHoy(): int
+    public function contarClasesHoy(?int $demoDatasetId = null): int
     {
         $dias = [1 => 'lunes', 2 => 'martes', 3 => 'miercoles', 4 => 'jueves', 5 => 'viernes', 6 => 'sabado', 7 => 'domingo'];
         $diaHoy = $dias[(int) date('N')];
 
         $stmt = $this->pdo->prepare(
-            'SELECT COUNT(*) FROM clases WHERE dia_semana = ? AND activa = 1'
+            'SELECT COUNT(*) FROM clases WHERE dia_semana = ? AND activa = 1 AND is_demo = ?'
         );
-        $stmt->execute([$diaHoy]);
+        $params = [$diaHoy, $demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $stmt = $this->pdo->prepare(
+                'SELECT COUNT(*) FROM clases
+                 WHERE dia_semana = ? AND activa = 1 AND is_demo = 1 AND demo_dataset_id = ?'
+            );
+            $params = [$diaHoy, $demoDatasetId];
+        }
+        $stmt->execute($params);
 
         return (int) $stmt->fetchColumn();
     }

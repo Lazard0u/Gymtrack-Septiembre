@@ -11,6 +11,10 @@
       </div>
     </header>
 
+    <p v-if="demoReadOnly" class="feedback info" role="status">
+      Datos de demostración · Esta vista permite recorrer y consultar el dataset. Las altas, ediciones y cancelaciones se habilitarán con el CRUD operativo de la Fase 5.
+    </p>
+
     <p v-if="cargando" class="feedback loading" role="status" aria-live="polite">
       Cargando información administrativa…
     </p>
@@ -56,7 +60,7 @@
               <td>{{ socio.activo ? 'Sí' : 'No' }}</td>
               <td>{{ formatearFecha(socio.creado_en) }}</td>
               <td>
-                <button class="btn-small" @click="toggleActivo(socio)" :disabled="Boolean(accionEnCurso)">
+                <button v-if="!demoReadOnly" class="btn-small" @click="toggleActivo(socio)" :disabled="Boolean(accionEnCurso)">
                   {{ accionEnCurso === `socio-${socio.id}` ? 'Guardando…' : socio.activo ? 'Desactivar' : 'Activar' }}
                 </button>
                 <button class="btn-small secondary" @click="verPerfil(socio.id)" :disabled="Boolean(accionEnCurso)">Perfil</button>
@@ -70,10 +74,10 @@
     <section id="membresias" class="admin-section">
       <div class="section-header">
         <h2>Membresías</h2>
-        <span>Crear membresías y ver vencimientos.</span>
+        <span>{{ demoReadOnly ? 'Consultá las membresías del dataset.' : 'Crear membresías y ver vencimientos.' }}</span>
       </div>
 
-      <form class="card-form" @submit.prevent="crearMembresia">
+      <form v-if="!demoReadOnly" class="card-form" @submit.prevent="crearMembresia">
         <div class="form-grid">
           <label>
             Socio
@@ -139,10 +143,10 @@
     <section id="clases" class="admin-section">
       <div class="section-header">
         <h2>Clases</h2>
-        <span>Crear nuevas clases, editarlas y ver quiénes están inscriptos.</span>
+        <span>{{ demoReadOnly ? 'Consultá clases e inscriptos del dataset.' : 'Crear nuevas clases, editarlas y ver quiénes están inscriptos.' }}</span>
       </div>
 
-      <form class="card-form" @submit.prevent="crearClase">
+      <form v-if="!demoReadOnly" class="card-form" @submit.prevent="crearClase">
         <div class="form-grid">
           <label>
             Nombre
@@ -210,7 +214,7 @@
               <td>{{ cl.activa ? 'Activa' : 'Cancelada' }}</td>
               <td>
                 <button class="btn-small" @click="cargarInscriptos(cl.id)" :disabled="Boolean(accionEnCurso)">Ver inscriptos</button>
-                <button class="btn-small secondary" @click="cancelarClase(cl.id)" :disabled="!cl.activa || Boolean(accionEnCurso)">
+                <button v-if="!demoReadOnly" class="btn-small secondary" @click="cancelarClase(cl.id)" :disabled="!cl.activa || Boolean(accionEnCurso)">
                   {{ accionEnCurso === `clase-${cl.id}` ? 'Cancelando…' : 'Cancelar' }}
                 </button>
               </td>
@@ -273,7 +277,7 @@
               <td>{{ reserva.fecha_reserva }}</td>
               <td>{{ reserva.estado }}</td>
               <td>
-                <button class="btn-small secondary" @click="cancelarReserva(reserva.id)" :disabled="reserva.estado === 'cancelada' || Boolean(accionEnCurso)">
+                <button v-if="!demoReadOnly" class="btn-small secondary" @click="cancelarReserva(reserva.id)" :disabled="reserva.estado === 'cancelada' || Boolean(accionEnCurso)">
                   {{ accionEnCurso === `reserva-${reserva.id}` ? 'Cancelando…' : 'Cancelar' }}
                 </button>
               </td>
@@ -289,7 +293,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { api } from '../services/api'
@@ -308,6 +312,7 @@ const mensaje = ref('')
 const error = ref('')
 const cargando = ref(true)
 const accionEnCurso = ref('')
+const demoReadOnly = computed(() => Boolean(authStore.user?.is_demo))
 
 const membresia = reactive({ usuario_id: '', plan: 'mensual', fecha_inicio: '', fecha_vencimiento: '', precio_pagado: '' })
 const clase = reactive({ nombre: '', instructor_id: '', dia_semana: 'lunes', hora_inicio: '08:00', hora_fin: '09:00', cupo_maximo: 12 })
@@ -489,7 +494,7 @@ onMounted(async () => {
   margin: 0 auto;
   padding: 30px 24px 60px;
   color: #F0FDF4;
-  font-family: 'Poppins', sans-serif;
+  font-family: inherit;
 }
 .admin-header {
   display: flex;
@@ -674,5 +679,11 @@ tbody tr:last-child td {
   margin-bottom: 20px;
   background: rgba(56, 189, 248, 0.12);
   color: #BAE6FD;
+}
+.feedback.info {
+  margin-bottom: 20px;
+  border: 1px solid rgba(104, 182, 255, 0.32);
+  background: rgba(104, 182, 255, 0.12);
+  color: #b8dcff;
 }
 </style>

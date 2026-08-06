@@ -60,6 +60,9 @@ class PerfilController
                     ? htmlspecialchars($usuario['telefono'], ENT_QUOTES, 'UTF-8')
                     : null,
                 'rol_id'    => $usuario['rol_id'],
+                'rol_nombre' => $usuario['rol_nombre'],
+                'is_demo' => (bool) $usuario['is_demo'],
+                'gimnasios' => $this->usuarioModel->contextosGimnasio((int) $usuario['id']),
                 'creado_en' => $usuario['creado_en'],
             ]
         ]);

@@ -219,6 +219,11 @@ class AuthController
         // Guardamos los datos del usuario en la sesión del servidor
         $_SESSION['usuario_id'] = $usuario['id'];
         $_SESSION['rol_id']     = $usuario['rol_id'];
+        $_SESSION['rol_nombre'] = $usuario['rol_nombre'];
+        $_SESSION['is_demo'] = (bool) $usuario['is_demo'];
+        $_SESSION['demo_dataset_id'] = $usuario['demo_dataset_id'] === null
+            ? null
+            : (int) $usuario['demo_dataset_id'];
 
         // ── Respuesta al frontend ─────────────────────────────
         // NUNCA enviamos el password_hash al frontend
@@ -230,6 +235,9 @@ class AuthController
                 'nombre' => $usuario['nombre'],
                 'email'  => $usuario['email'],
                 'rol_id' => $usuario['rol_id'],
+                'rol_nombre' => $usuario['rol_nombre'],
+                'is_demo' => (bool) $usuario['is_demo'],
+                'gimnasios' => $this->usuarioModel->contextosGimnasio((int) $usuario['id']),
             ],
             // El session_id se usa como token en las peticiones autenticadas
             'token' => session_id()

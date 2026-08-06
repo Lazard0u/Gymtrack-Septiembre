@@ -29,13 +29,17 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS roles (
     id   INT UNSIGNED    NOT NULL AUTO_INCREMENT,
-    nombre ENUM('socio', 'admin', 'moderador') NOT NULL,
+    nombre VARCHAR(50) NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_roles_nombre (nombre)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Datos iniciales de roles
-INSERT INTO roles (nombre) VALUES ('socio'), ('admin'), ('moderador')
+INSERT INTO roles (id, nombre) VALUES
+    (1, 'socio'),
+    (2, 'administrador_general'),
+    (3, 'empleado'),
+    (4, 'dueno')
 ON DUPLICATE KEY UPDATE nombre = VALUES(nombre);
 
 -- ------------------------------------------------------------
@@ -74,9 +78,6 @@ CREATE TABLE IF NOT EXISTS membresias (
     precio_pagado     DECIMAL(10, 2)    NOT NULL,
     creado_en         TIMESTAMP         NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_reservas_usuario_clase (usuario_id, clase_id),
-    KEY idx_reservas_clase_estado (clase_id, estado),
-    KEY idx_reservas_usuario_fecha (usuario_id, fecha_reserva),
     CONSTRAINT fk_membresias_usuario
         FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
         ON UPDATE CASCADE ON DELETE CASCADE
@@ -113,6 +114,9 @@ CREATE TABLE IF NOT EXISTS reservas (
     fecha_reserva DATETIME      NOT NULL,
     estado        ENUM('confirmada', 'cancelada', 'asistio') NOT NULL DEFAULT 'confirmada',
     PRIMARY KEY (id),
+    UNIQUE KEY uq_reservas_usuario_clase (usuario_id, clase_id),
+    KEY idx_reservas_clase_estado (clase_id, estado),
+    KEY idx_reservas_usuario_fecha (usuario_id, fecha_reserva),
     CONSTRAINT fk_reservas_usuario
         FOREIGN KEY (usuario_id) REFERENCES usuarios (id)
         ON UPDATE CASCADE ON DELETE CASCADE,

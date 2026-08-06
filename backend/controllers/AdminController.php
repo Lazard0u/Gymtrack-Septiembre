@@ -24,7 +24,7 @@ class AdminController
     public function listarSocios(): void
     {
         $this->verificarAdmin();
-        $socios = $this->usuarioModel->listarSocios();
+        $socios = $this->usuarioModel->listarSocios($this->demoDatasetId());
 
         $this->responder(200, [
             'error'  => false,
@@ -36,7 +36,7 @@ class AdminController
     {
         $this->verificarAdmin();
 
-        $socio = $this->usuarioModel->buscarPorId($id);
+        $socio = $this->usuarioModel->buscarPorIdEnDataset($id, $this->demoDatasetId());
         if (!$socio || (int) $socio['rol_id'] !== 1) {
             $this->responder(404, [
                 'error'   => true,
@@ -57,6 +57,7 @@ class AdminController
     public function actualizarEstadoSocio(int $id): void
     {
         $this->verificarAdmin();
+        AuthMiddleware::impedirMutacionDemo();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         if (!isset($datos['activo'])) {
@@ -86,7 +87,7 @@ class AdminController
     public function listarMembresias(): void
     {
         $this->verificarAdmin();
-        $membresias = $this->membresiaModel->listarTodos();
+        $membresias = $this->membresiaModel->listarTodos($this->demoDatasetId());
 
         $this->responder(200, [
             'error'      => false,
@@ -97,6 +98,7 @@ class AdminController
     public function crearMembresia(): void
     {
         $this->verificarAdmin();
+        AuthMiddleware::impedirMutacionDemo();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         $campos = ['usuario_id', 'plan', 'fecha_inicio', 'fecha_vencimiento', 'precio_pagado'];
@@ -146,7 +148,7 @@ class AdminController
     public function listarMembresiasVencidas(): void
     {
         $this->verificarAdmin();
-        $membresias = $this->membresiaModel->listarVencidas();
+        $membresias = $this->membresiaModel->listarVencidas($this->demoDatasetId());
 
         $this->responder(200, [
             'error'      => false,
@@ -157,7 +159,7 @@ class AdminController
     public function listarClases(): void
     {
         $this->verificarAdmin();
-        $clases = $this->claseModel->listarTodos();
+        $clases = $this->claseModel->listarTodos($this->demoDatasetId());
 
         $this->responder(200, [
             'error'   => false,
@@ -168,6 +170,7 @@ class AdminController
     public function crearClase(): void
     {
         $this->verificarAdmin();
+        AuthMiddleware::impedirMutacionDemo();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         $campos = ['nombre', 'instructor_id', 'dia_semana', 'hora_inicio', 'hora_fin', 'cupo_maximo'];
@@ -218,6 +221,7 @@ class AdminController
     public function actualizarClase(int $id): void
     {
         $this->verificarAdmin();
+        AuthMiddleware::impedirMutacionDemo();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         $campos = ['nombre', 'instructor_id', 'dia_semana', 'hora_inicio', 'hora_fin', 'cupo_maximo'];
@@ -266,6 +270,7 @@ class AdminController
     public function cancelarClase(int $id): void
     {
         $this->verificarAdmin();
+        AuthMiddleware::impedirMutacionDemo();
 
         $resultado = $this->claseModel->cancelar($id);
 
@@ -285,6 +290,10 @@ class AdminController
     public function listarInscriptosClase(int $claseId): void
     {
         $this->verificarAdmin();
+        if (!$this->claseModel->buscarPorId($claseId, $this->demoDatasetId())) {
+            $this->responder(404, ['error' => true, 'mensaje' => 'No se encontró esa clase en este dataset.']);
+            return;
+        }
         $inscriptos = $this->claseModel->listarInscriptos($claseId);
 
         $this->responder(200, [
@@ -309,7 +318,8 @@ class AdminController
 
         $reservas = $this->reservaModel->listarPorRango(
             $desde->format('Y-m-d 00:00:00'),
-            $hasta->format('Y-m-d 23:59:59')
+            $hasta->format('Y-m-d 23:59:59'),
+            $this->demoDatasetId()
         );
 
         $this->responder(200, [
@@ -321,6 +331,7 @@ class AdminController
     public function cancelarReserva(int $id): void
     {
         $this->verificarAdmin();
+        AuthMiddleware::impedirMutacionDemo();
 
         $resultado = $this->reservaModel->cancelar($id);
 
@@ -341,9 +352,10 @@ class AdminController
     {
         $this->verificarAdmin();
 
-        $sociosActivos = $this->usuarioModel->contarSociosActivos();
-        $clasesHoy     = $this->claseModel->contarClasesHoy();
-        $porVencer     = $this->membresiaModel->contarPorVencer();
+        $datasetId = $this->demoDatasetId();
+        $sociosActivos = $this->usuarioModel->contarSociosActivos($datasetId);
+        $clasesHoy     = $this->claseModel->contarClasesHoy($datasetId);
+        $porVencer     = $this->membresiaModel->contarPorVencer(7, $datasetId);
 
         $this->responder(200, [
             'error'   => false,
@@ -359,6 +371,11 @@ class AdminController
     {
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2);
+    }
+
+    private function demoDatasetId(): ?int
+    {
+        return AuthMiddleware::obtenerDemoDatasetId();
     }
 
     private function responder(int $codigo, array $datos): void

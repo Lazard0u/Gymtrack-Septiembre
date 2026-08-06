@@ -11,9 +11,13 @@ backend/
 │   └── Database.php            ← Conexión PDO a MySQL (Singleton)
 ├── controllers/
 │   ├── AuthController.php      ← Registro, login, logout
-│   └── PerfilController.php    ← Ver y actualizar perfil
+│   ├── PerfilController.php    ← Ver y actualizar perfil
+│   ├── PublicGymController.php ← Catálogo público de sólo lectura
+│   └── SystemController.php    ← Dataset activo y feature flags públicas
 ├── models/
-│   └── Usuario.php             ← Operaciones sobre la tabla usuarios
+│   ├── Usuario.php             ← Usuarios, rol y contextos de gimnasio
+│   ├── Gimnasio.php            ← Lectura pública mínima de gimnasios
+│   └── SystemContext.php       ← Estado seguro del entorno de presentación
 ├── middleware/
 │   └── AuthMiddleware.php      ← Verificación de sesión y roles
 └── routes/
@@ -29,6 +33,8 @@ backend/
 | POST | `/api/auth/logout` | Público | Cerrar sesión |
 | GET | `/api/perfil` | Autenticado | Ver perfil propio |
 | PUT | `/api/perfil` | Autenticado | Actualizar nombre y teléfono |
+| GET | `/api/public/gimnasios` | Público | Listar gimnasios publicados desde MySQL |
+| GET | `/api/system/context` | Público | Consultar dataset demo y feature flags no sensibles |
 | GET/POST/PUT/DELETE | `/api/clases/*` | Según rol | Consultar y gestionar clases |
 | GET/POST/DELETE | `/api/reservas/*` | Autenticado | Consultar, crear y cancelar reservas |
 | GET/POST | `/api/membresia/*` | Según rol | Consultar y administrar membresías |
@@ -72,3 +78,12 @@ Authorization: Bearer <token>
 ## Configuración
 
 Copiá `.env.example` a `.env`, rotá los secretos y no los subas al repositorio. `TURNSTILE_ENABLED` sólo debe estar desactivado en desarrollo controlado.
+
+## Dataset demo
+
+La consola `php console.php seed:demo [--reset|--remove|--status]` gestiona un
+dataset idempotente y aislado mediante `is_demo` y `demo_dataset_id`. La creación
+requiere `APP_ENV=demo` o `SEED_DEMO_DATA=true`, además de una
+`DEMO_USER_PASSWORD` de 12 caracteres o más. En producción se bloquea salvo
+autorización explícita. Consultá el README principal para el procedimiento y las
+cuentas disponibles.

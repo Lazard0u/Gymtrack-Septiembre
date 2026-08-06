@@ -14,7 +14,7 @@ class Reserva
         $this->pdo = Database::conectar();
     }
 
-    public function listarPorRango(string $desde, string $hasta): array
+    public function listarPorRango(string $desde, string $hasta, ?int $demoDatasetId = null): array
     {
         $stmt = $this->pdo->prepare(
             'SELECT r.id, r.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
@@ -23,16 +23,30 @@ class Reserva
              FROM reservas r
              JOIN usuarios u ON r.usuario_id = u.id
              JOIN clases c ON r.clase_id = c.id
-             WHERE r.fecha_reserva BETWEEN ? AND ?
+             WHERE r.fecha_reserva BETWEEN ? AND ? AND r.is_demo = ?
              ORDER BY r.fecha_reserva DESC'
         );
 
-        $stmt->execute([$desde, $hasta]);
+        if ($demoDatasetId === null) {
+            $stmt->execute([$desde, $hasta, 0]);
+        } else {
+            $stmt = $this->pdo->prepare(
+                'SELECT r.id, r.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
+                        r.clase_id, c.nombre AS clase_nombre, c.dia_semana, c.hora_inicio, c.hora_fin,
+                        r.fecha_reserva, r.estado
+                 FROM reservas r
+                 JOIN usuarios u ON r.usuario_id = u.id
+                 JOIN clases c ON r.clase_id = c.id
+                 WHERE r.fecha_reserva BETWEEN ? AND ? AND r.is_demo = 1 AND r.demo_dataset_id = ?
+                 ORDER BY r.fecha_reserva DESC'
+            );
+            $stmt->execute([$desde, $hasta, $demoDatasetId]);
+        }
 
         return $stmt->fetchAll();
     }
 
-    public function reservar(int $usuarioId, int $claseId): array
+    public function reservar(int $usuarioId, int $claseId, ?int $demoDatasetId = null): array
     {
         try {
             $this->pdo->beginTransaction();
@@ -40,10 +54,10 @@ class Reserva
             $stmtClase = $this->pdo->prepare(
                 'SELECT id, activa, cupos_disponibles
                  FROM clases
-                 WHERE id = ?
+                 WHERE id = ? AND is_demo = ? AND (demo_dataset_id <=> ?)
                  FOR UPDATE'
             );
-            $stmtClase->execute([$claseId]);
+            $stmtClase->execute([$claseId, $demoDatasetId === null ? 0 : 1, $demoDatasetId]);
             $clase = $stmtClase->fetch();
 
             if (!$clase || !(int) $clase['activa']) {
@@ -82,10 +96,16 @@ class Reserva
                 $reservaId = (int) $existente['id'];
             } else {
                 $stmtReserva = $this->pdo->prepare(
-                    'INSERT INTO reservas (usuario_id, clase_id, fecha_reserva, estado)
-                     VALUES (?, ?, NOW(), "confirmada")'
+                    'INSERT INTO reservas
+                     (usuario_id, clase_id, fecha_reserva, estado, is_demo, demo_dataset_id)
+                     VALUES (?, ?, NOW(), "confirmada", ?, ?)'
                 );
-                $stmtReserva->execute([$usuarioId, $claseId]);
+                $stmtReserva->execute([
+                    $usuarioId,
+                    $claseId,
+                    $demoDatasetId === null ? 0 : 1,
+                    $demoDatasetId,
+                ]);
                 $reservaId = (int) $this->pdo->lastInsertId();
             }
 
@@ -186,18 +206,23 @@ class Reserva
         return $stmt->fetchAll();
     }
 
-    public function listarTodas(?int $usuarioId = null): array
+    public function listarTodas(?int $usuarioId = null, ?int $demoDatasetId = null): array
     {
         $sql = 'SELECT r.id, r.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                        r.clase_id, c.nombre AS clase_nombre, c.dia_semana, c.hora_inicio, c.hora_fin,
                        r.fecha_reserva, r.estado
                 FROM reservas r
                 JOIN usuarios u ON u.id = r.usuario_id
-                JOIN clases c ON c.id = r.clase_id';
+                JOIN clases c ON c.id = r.clase_id
+                WHERE r.is_demo = ?';
 
-        $parametros = [];
+        $parametros = [$demoDatasetId === null ? 0 : 1];
+        if ($demoDatasetId !== null) {
+            $sql .= ' AND r.demo_dataset_id = ?';
+            $parametros[] = $demoDatasetId;
+        }
         if ($usuarioId !== null) {
-            $sql .= ' WHERE r.usuario_id = ?';
+            $sql .= ' AND r.usuario_id = ?';
             $parametros[] = $usuarioId;
         }
         $sql .= ' ORDER BY r.fecha_reserva DESC';

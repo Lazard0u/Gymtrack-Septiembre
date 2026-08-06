@@ -29,7 +29,7 @@ class ClasesController
     public function listar(): void
     {
         AuthMiddleware::verificarSesion();
-        $clases = $this->claseModel->listarActivas();
+        $clases = $this->claseModel->listarActivas(AuthMiddleware::obtenerDemoDatasetId());
         $this->responder(200, ['error' => false, 'clases' => $clases]);
     }
 
@@ -40,7 +40,7 @@ class ClasesController
     {
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2); // Solo admin
-        $clases = $this->claseModel->listarTodas();
+        $clases = $this->claseModel->listarTodas(AuthMiddleware::obtenerDemoDatasetId());
         $this->responder(200, ['error' => false, 'clases' => $clases]);
     }
 
@@ -50,7 +50,7 @@ class ClasesController
     public function ver(int $id): void
     {
         AuthMiddleware::verificarSesion();
-        $clase = $this->claseModel->buscarPorId($id);
+        $clase = $this->claseModel->buscarPorId($id, AuthMiddleware::obtenerDemoDatasetId());
         if (!$clase) {
             $this->responder(404, ['error' => true, 'mensaje' => 'Clase no encontrada.']);
             return;
@@ -65,6 +65,7 @@ class ClasesController
     {
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2);
+        AuthMiddleware::impedirMutacionDemo();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         if (!is_array($datos)) {
@@ -107,6 +108,7 @@ class ClasesController
     {
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2);
+        AuthMiddleware::impedirMutacionDemo();
 
         $datos = json_decode(file_get_contents('php://input'), true);
         if (!is_array($datos)) {
@@ -151,6 +153,7 @@ class ClasesController
     {
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2);
+        AuthMiddleware::impedirMutacionDemo();
 
         $ok = $this->claseModel->eliminar($id);
         if ($ok) {
@@ -168,7 +171,7 @@ class ClasesController
         AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(2);
 
-        $stats = $this->claseModel->estadisticas();
+        $stats = $this->claseModel->estadisticas(AuthMiddleware::obtenerDemoDatasetId());
         $this->responder(200, ['error' => false, 'estadisticas' => $stats]);
     }
 
