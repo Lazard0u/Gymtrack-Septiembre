@@ -136,7 +136,7 @@ h3 {
   color: var(--info);
 }
 
-/* Compatibilidad visual para vistas heredadas de Fase 1. */
+/* Compatibilidad visual temporal para vistas heredadas. */
 .primary-btn,
 .ghost-btn,
 .text-btn {

@@ -12,7 +12,7 @@
     </header>
 
     <p v-if="demoReadOnly" class="feedback info" role="status">
-      Datos de demostración · Esta vista permite recorrer y consultar el dataset. Las altas, ediciones y cancelaciones se habilitarán con el CRUD operativo de la Fase 5.
+      Datos de demostración · Esta vista permite recorrer y consultar el dataset. Las acciones disponibles dependen del rol y del contexto activo.
     </p>
 
     <p v-if="cargando" class="feedback loading" role="status" aria-live="polite">

@@ -13,7 +13,6 @@ for (const width of widths) {
     await page.locator('[aria-label="Cargando mapa"]').waitFor({ state: 'detached', timeout: 9_000 }).catch(() => {})
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(1)
-    await page.screenshot({ path: `artifacts/phase3/home-${width}.png`, fullPage: true })
   })
 }
 

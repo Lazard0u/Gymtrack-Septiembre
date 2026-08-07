@@ -54,4 +54,4 @@ if ($fallos) {
     exit(1);
 }
 
-echo "Contratos de Fase 1 correctos.\n";
+echo "Contratos de integridad correctos.\n";

@@ -3,7 +3,7 @@ set -eu
 
 API_BASE_URL="${API_BASE_URL:-http://localhost:8080/api}"
 DEMO_USER_PASSWORD="${DEMO_USER_PASSWORD:?Definí DEMO_USER_PASSWORD para validar aislamiento por gimnasio}"
-tmp_dir="$(mktemp -d /tmp/gymtrack-phase3-tenant.XXXXXX)"
+tmp_dir="$(mktemp -d /tmp/gymtrack-tenant-isolation.XXXXXX)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
 assert_status() {

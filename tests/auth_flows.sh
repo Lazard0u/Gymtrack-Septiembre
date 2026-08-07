@@ -4,8 +4,8 @@ set -eu
 API_BASE_URL="${API_BASE_URL:-http://localhost:8080/api}"
 AUTH_TEST_PASSWORD="${AUTH_TEST_PASSWORD:?Definí AUTH_TEST_PASSWORD con la política vigente}"
 AUTH_TEST_NEW_PASSWORD="${AUTH_TEST_NEW_PASSWORD:?Definí AUTH_TEST_NEW_PASSWORD con la política vigente}"
-email='phase3.auth.test@gymtrack.local'
-tmp_dir="$(mktemp -d /tmp/gymtrack-phase3-auth.XXXXXX)"
+email='auth.test@gymtrack.local'
+tmp_dir="$(mktemp -d /tmp/gymtrack-auth.XXXXXX)"
 trap 'rm -rf "$tmp_dir"' EXIT
 
 query() {

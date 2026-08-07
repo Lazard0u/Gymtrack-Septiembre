@@ -194,7 +194,7 @@ docker compose exec -T backend sh -lc \
 
 # Integración de la operación multi-gimnasio
 DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
-  sh tests/phase5_tenant_operations.sh
+  sh tests/tenant_operations.sh
 
 # Navegación, responsive, accesibilidad y consola
 docker run --rm --network host \

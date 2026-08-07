@@ -12,7 +12,7 @@ import {
 } from '../../stores/adminResources'
 import { useAdminStore } from '../../stores/admin'
 
-const props = defineProps({ resource: { type: String, required: true }, title: { type: String, required: true }, description: { type: String, required: true }, columns: { type: Array, required: true }, filters: { type: Array, default: () => [] }, emptyTitle: { type: String, default: 'No hay registros' }, emptyDescription: { type: String, default: 'No encontramos resultados con estos filtros.' }, phase: { type: String, default: '' } })
+const props = defineProps({ resource: { type: String, required: true }, title: { type: String, required: true }, description: { type: String, required: true }, columns: { type: Array, required: true }, filters: { type: Array, default: () => [] }, emptyTitle: { type: String, default: 'No hay registros' }, emptyDescription: { type: String, default: 'No encontramos resultados con estos filtros.' }, statusLabel: { type: String, default: '' } })
 const route = useRoute()
 const router = useRouter()
 const admin = useAdminStore()
@@ -37,7 +37,7 @@ onBeforeUnmount(() => store.cancel())
 
 <template>
   <section>
-    <AdminPageHeading :title="title" :description="description"><template v-if="phase" #actions><AppBadge tone="info">{{ phase }}</AppBadge></template></AdminPageHeading>
+    <AdminPageHeading :title="title" :description="description"><template v-if="statusLabel" #actions><AppBadge tone="info">{{ statusLabel }}</AppBadge></template></AdminPageHeading>
     <AppCard :padded="false" class="resource-card">
       <AdminFilterBar :model-value="query" :filters="filters" :loading="store.status === 'loading'" @apply="update" @clear="clear" />
       <AdminDataTable :columns="columns" :items="store.items" :pagination="store.pagination" :status="store.status" :error="store.error" :sort="query.sort" :direction="query.direction" :empty-title="emptyTitle" :empty-description="emptyDescription" :request-id="store.requestId" @sort="sort" @page="page" @retry="store.load(query.value)" />

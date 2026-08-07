@@ -72,7 +72,7 @@ final class AdminRepository
             'label' => 'Pagos pendientes',
             'status' => 'unavailable',
             'value' => null,
-            'detail' => 'El esquema actual registra pagos confirmados, pero todavía no modela estados pendientes. Se implementará en la Fase 7.',
+            'detail' => 'El esquema actual registra pagos confirmados, pero todavía no modela estados pendientes.',
         ];
 
         $alerts = [];

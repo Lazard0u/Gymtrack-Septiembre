@@ -72,7 +72,7 @@
   --bp-mobile: 48rem;
   --bp-desktop: 64rem;
 
-  /* Alias heredados para las vistas de Fase 1; se retirarán al migrarlas. */
+  /* Alias heredados para vistas pendientes de migración. */
   --bg: var(--bg-canvas);
   --carbon: var(--bg-canvas);
   --graphite: var(--surface-1);

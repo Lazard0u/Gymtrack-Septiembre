@@ -126,7 +126,7 @@
           <h3>Acciones rápidas</h3>
           <router-link to="/admin#socios" class="action-link">Gestionar socios</router-link>
           <router-link to="/admin#clases" class="action-link">Crear clase</router-link>
-          <button class="action-link" type="button" disabled title="Se implementará con datos reales en la Fase 7">Exportación próximamente</button>
+          <button class="action-link" type="button" disabled title="Se habilitará cuando la exportación use datos reales">Exportación próximamente</button>
         </article>
       </aside>
     </div>

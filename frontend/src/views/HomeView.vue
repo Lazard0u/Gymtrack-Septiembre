@@ -37,7 +37,7 @@ const capabilities = [
 const questions = [
   { question: '¿Los gimnasios de la presentación son reales?', answer: 'No. Son cinco sedes ficticias identificadas como datos de demostración. Existen en MySQL y pueden eliminarse por dataset sin mezclarse con futuros gimnasios reales.' },
   { question: '¿Puedo crear una cuenta?', answer: 'Sí. El registro actual crea una cuenta de socio. Los flujos específicos para dueños, empleados y entrenadores se incorporarán en las fases de administración y roles.' },
-  { question: '¿Los pagos están habilitados?', answer: 'No todavía. GymTrack no presenta un checkout ficticio: Mercado Pago, los webhooks y la activación segura de membresías forman parte de la fase de pagos.' },
+  { question: '¿Los pagos están habilitados?', answer: 'No todavía. GymTrack no presenta un checkout ficticio: Mercado Pago, los webhooks y la activación segura de membresías continúan en desarrollo.' },
   { question: '¿Funciona en el celular?', answer: 'La experiencia pública se adapta desde 360 px, incluye navegación móvil y un panel inferior para explorar el mapa sin scroll horizontal.' },
 ]
 </script>

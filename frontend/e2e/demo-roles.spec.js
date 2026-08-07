@@ -31,7 +31,7 @@ test.describe('roles y contexto demo', () => {
     })
   }
 
-  test('el panel demo no mezcla cuentas reales ni ofrece mutaciones de fases posteriores', async ({ page }) => {
+  test('el panel demo no mezcla cuentas reales ni ofrece mutaciones todavía no implementadas', async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel('Correo electrónico').fill('admin.demo@gymtrack.local')
     await page.getByLabel('Contraseña').fill(password)

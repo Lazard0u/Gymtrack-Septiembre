@@ -37,9 +37,7 @@ test.describe('identidad segura', () => {
     }
 
     await page.goto('/login')
-    await page.screenshot({ path: 'artifacts/phase3/login-360.png', fullPage: true })
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/registro')
-    await page.screenshot({ path: 'artifacts/phase3/register-1440.png', fullPage: true })
   })
 })

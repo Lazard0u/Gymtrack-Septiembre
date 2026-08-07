@@ -11,12 +11,12 @@ async function enterAdministration(page) {
   await page.getByRole('button', { name: 'Ingresar' }).click()
   await page.getByRole('link', { name: 'Abrir administración' }).click()
   await page.getByLabel('Gimnasio activo').last().selectOption({ label: 'GymTrack Centro' })
-  await page.getByLabel('Motivo de soporte').fill('Validación responsive de Fase 5')
+  await page.getByLabel('Motivo de soporte').fill('Validación responsive de operación multi-gimnasio')
   await page.getByRole('button', { name: 'Entrar al gimnasio' }).click()
   await expect(page.getByRole('heading', { name: 'Resumen operativo' })).toBeVisible()
 }
 
-test.describe('Operación multi-gimnasio Fase 5', () => {
+test.describe('Operación multi-gimnasio', () => {
   test.skip(!password, 'DEMO_USER_PASSWORD no está definida.')
 
   test('personas, entrenadores, membresías y configuración son operables y responsive', async ({ page }) => {
@@ -45,7 +45,6 @@ test.describe('Operación multi-gimnasio Fase 5', () => {
     for (const width of widths) {
       await page.setViewportSize({ width, height: width < 768 ? 844 : 1000 })
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true)
-      await page.screenshot({ path: `artifacts/phase5/admin-settings-${width}.png`, fullPage: true })
     }
 
     expect(consoleErrors).toEqual([])

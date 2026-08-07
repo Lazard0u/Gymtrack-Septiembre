@@ -111,4 +111,4 @@ assert_equal "$real_users_before" "$(query 'SELECT COUNT(*) FROM usuarios WHERE 
 seed_command
 seed_command --status
 
-echo 'Contratos de Fase 3 y dataset demo correctos.'
+echo 'Contratos y dataset demo correctos.'

@@ -68,7 +68,7 @@ final class AuthMiddleware
     }
     public static function esCuentaDemo(): bool { return (bool)($_SESSION['is_demo']??false); }
     public static function obtenerDemoDatasetId(): ?int { return self::esCuentaDemo()&&!empty($_SESSION['demo_dataset_id'])?(int)$_SESSION['demo_dataset_id']:null; }
-    public static function impedirMutacionDemo(): void { if(self::esCuentaDemo()) self::denegar(409,'El panel de presentación es de solo lectura. El CRUD operativo se habilitará en la Fase 5.'); }
+    public static function impedirMutacionDemo(): void { if(self::esCuentaDemo()) self::denegar(409,'El panel de presentación es de solo lectura para esta operación.'); }
 
     private static function denegar(int $status,string $message,string $code='forbidden'): never
     {

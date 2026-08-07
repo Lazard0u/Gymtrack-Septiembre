@@ -14,4 +14,4 @@ foreach(['SET NAMES utf8mb4','debe_cambiar_password=1'] as $required){if(!str_co
 $tenantSources=file_get_contents($root.'/backend/models/Clase.php').file_get_contents($root.'/backend/models/Reserva.php').file_get_contents($root.'/backend/models/Membresia.php');
 if(!str_contains($tenantSources,'gimnasio_id'))$failures[]='Los modelos operativos no filtran por gimnasio.';
 if(!is_file($root.'/database/migrations/003_phase3_identity_security.down.sql'))$failures[]='Falta rollback de la migración 003.';
-if($failures){fwrite(STDERR,implode(PHP_EOL,$failures).PHP_EOL);exit(1);}echo "Contratos de identidad de Fase 3 correctos.\n";
+if($failures){fwrite(STDERR,implode(PHP_EOL,$failures).PHP_EOL);exit(1);}echo "Contratos de identidad correctos.\n";

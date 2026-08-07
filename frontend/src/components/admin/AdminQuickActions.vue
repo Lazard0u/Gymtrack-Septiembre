@@ -10,14 +10,14 @@ import { useAdminStore } from '../../stores/admin'
 const admin = useAdminStore()
 const actionDefinitions = [
   { label: 'Registrar socio', icon: IconUsersPlus, route: 'admin-members', query: { action: 'invite' }, permission: 'members.write', note: 'Invitación y alta operativa' },
-  { label: 'Crear clase', icon: IconCalendarPlus, disabled: true, note: 'Disponible en Fase 6' },
-  { label: 'Registrar pago manual', icon: IconCreditCardPay, disabled: true, note: 'Disponible en Fase 7' },
-  { label: 'Revisar pagos pendientes', icon: IconReceipt, disabled: true, note: 'El estado pendiente se modela en Fase 7' },
+  { label: 'Crear clase', icon: IconCalendarPlus, disabled: true, note: 'Creación de clases próximamente' },
+  { label: 'Registrar pago manual', icon: IconCreditCardPay, disabled: true, note: 'Registro de pagos próximamente' },
+  { label: 'Revisar pagos pendientes', icon: IconReceipt, disabled: true, note: 'Estados de pago avanzados próximamente' },
   { label: 'Gestionar membresías', icon: IconIdBadge2, route: 'admin-memberships', permission: 'memberships.read', note: 'Consulta operativa real' },
   { label: 'Consultar reservas', icon: IconReceipt, route: 'admin-reservations', permission: 'reservations.read', note: 'Consulta operativa real' },
-  { label: 'Crear promoción', icon: IconGift, disabled: true, beta: true, note: 'Campañas en Fase 9' },
-  { label: 'Descargar Excel', icon: IconDownload, disabled: true, note: 'Exportación en Fase 7' },
-  { label: 'Descargar PDF', icon: IconFileTypePdf, disabled: true, note: 'Exportación en Fase 7' },
+  { label: 'Crear promoción', icon: IconGift, disabled: true, beta: true, note: 'Campañas en desarrollo' },
+  { label: 'Descargar Excel', icon: IconDownload, disabled: true, note: 'Exportación próximamente' },
+  { label: 'Descargar PDF', icon: IconFileTypePdf, disabled: true, note: 'Exportación próximamente' },
 ]
 const actions = computed(() => actionDefinitions.map((action) => action.permission && !admin.hasPermission(action.permission)
   ? { ...action, route: undefined, query: undefined, disabled: true, note: 'Tu rol no tiene permiso para esta acción' }
