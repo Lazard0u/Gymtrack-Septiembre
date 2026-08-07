@@ -24,3 +24,8 @@ Thumbs.db
 .idea/
 *.suo
 *.user
+
+# ── Documentación local ─────────────────────────────────────
+# GitHub conserva únicamente el README principal del proyecto.
+*.md
+!/README.md
