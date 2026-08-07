@@ -222,6 +222,10 @@ La geometría es suavemente técnica: controles de 8 px, tarjetas de 12 px y cap
 
 - `AppCard`: superficie 1, borde sutil, radio de 12 px, sombra baja y padding fluido de 20–32 px. Solo `interactive` eleva 2 px y refuerza el borde al hover.
 - Input, select y textarea: fondo sutil, borde fuerte, radio de 8 px, label a `0.875rem`; hint terciario y error rojo. Input expone hover; el foco visible lo aporta la regla global. `aria-invalid` y `aria-describedby` conectan errores y ayudas.
+- `AppCheckbox` extiende el label a un objetivo táctil mínimo de 44 px y
+  conserva el input nativo. `required` llega al control real; los errores se
+  enlazan mediante `aria-invalid` y `aria-describedby`, sin depender solo del
+  borde rojo.
 - Alertas y badges tienen tonos info/success/warning/danger. Empty state centra icono, título, explicación y acción; error state usa `role="alert"` y retry. Skeleton y spinner representan carga. Toast combina superficie elevada, punto semántico y `aria-live="polite"`.
 
 ### Navigation and overlays
@@ -254,6 +258,33 @@ La geometría es suavemente técnica: controles de 8 px, tarjetas de 12 px y cap
   diálogo. Su badge permanece visible junto al selector de gimnasio.
 - No hay animación en navegación frecuente o tablas. Drawer, diálogo, hover y
   feedback reutilizan únicamente los tokens de 140 y 220 ms.
+- En Fase 5 las tablas de personas, entrenadores y membresías conservan la
+  densidad `Operate`; “Gestionar” abre un drawer focalizado y nunca convierte
+  toda la fila en una navegación ambigua. Cada pantalla mantiene una sola alta
+  primaria en el encabezado.
+- Los importes se formatean con la moneda declarada por cada fila; la tabla no
+  impone UYU sobre planes o membresías en USD. Si una entidad no declara moneda,
+  UYU es el fallback explícito del componente.
+- Los permisos de empleados se presentan como capacidades por gimnasio e
+  incluyen `finance.read` y `reports.export`. Marcarlos o desmarcarlos modifica
+  permisos efectivos en PHP; no son preferencias visuales ni promesas de que
+  los módulos de Fase 7 ya estén implementados.
+- Configuración separa identidad, sede principal y operación en secciones con
+  bordes de ritmo, sin encerrar cada bloque en tarjetas. Sedes e imagen pública
+  viven debajo del resumen; el uploader nombra el archivo seleccionado y
+  comunica límites antes de enviar.
+- Archivar se comunica como retiro de la navegación y del catálogo, no como
+  borrado. El diálogo explica que conserva el historial, exige un motivo
+  auditado y anticipa el bloqueo cuando existen membresías activas.
+- La ficha pública de gimnasio usa una imagen dominante, información práctica,
+  sedes y planes reales. Si no hay imagen, muestra un placeholder explícito; un
+  fallo al cargar planes no oculta la ficha ya disponible. El estado
+  temporalmente cerrado muestra “Inscripciones pausadas” y una sede abierta
+  ofrece inicio de sesión o contacto por correo, nunca una falsa asociación ni
+  checkout simulado.
+- La etiqueta global “Datos de demostración” participa del flujo normal del
+  documento. No usa posición fija, no tapa navegación, formularios ni acciones
+  y no sustituye los badges contextuales de una ficha demo.
 
 ### Explorer and disclosure
 

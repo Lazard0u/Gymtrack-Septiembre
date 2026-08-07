@@ -5,9 +5,9 @@ primary_target: "frontend/src/layouts/AdminShell.vue"
 related_targets: []
 ---
 
-# Fase 4: Administración y gestión operativa
+# Fases 4 y 5: Administración y operación por gimnasio
 
-Fecha: 6 de agosto de 2026
+Actualizado: 7 de agosto de 2026
 
 ## Resultado
 
@@ -147,6 +147,28 @@ datos operativos, pero elimina auditoría y exportaciones; exige respaldo.
 Las capturas de 360, 390, 768, 1024, 1440 y 1920 px están en
 `frontend/artifacts/phase4/`.
 
+## Contrato de interfaz incorporado en Fase 5
+
+- Socios, empleados, entrenadores, planes y membresías mantienen tablas densas
+  y abren acciones focalizadas en drawers. Los importes usan la moneda declarada
+  por cada fila; UYU es sólo el fallback cuando el contrato no trae `moneda`.
+- Los permisos editables de empleados incluyen `finance.read` y
+  `reports.export`. Activarlos modifica capacidades efectivas por gimnasio,
+  pero no presenta como terminadas finanzas ni exportaciones de Fase 7.
+- `AppCheckbox` conserva el control nativo, un label clicable de al menos 44 px,
+  `required` real y error asociado mediante `aria-describedby`.
+- La etiqueta “Datos de demostración” participa del flujo del documento: no es
+  fija y no se superpone con navegación, formularios o acciones.
+- Archivar significa retirar de navegación y catálogo, no borrar. El diálogo
+  comunica la conservación del historial, exige motivo auditado y explica el
+  bloqueo por membresías activas.
+- La ficha pública no ofrece asociación ni checkout ficticios. Muestra inicio de
+  sesión o contacto real, “Inscripciones pausadas” cuando corresponde, placeholder
+  honesto si falta imagen y un error de planes independiente del error de ficha.
+
+Las capturas finales de configuración para los seis anchos están en
+`frontend/artifacts/phase5/`.
+
 ## Pruebas realizadas
 
 - Lint PHP completo y migración 004 repetida.
@@ -160,8 +182,6 @@ Las capturas de 360, 390, 768, 1024, 1440 y 1920 px están en
 
 ## Pendiente por diseño
 
-- Fase 5: altas/ediciones de gimnasios, socios, empleados, entrenadores y
-  membresías.
 - Fase 6: agenda fechada, cupos, reservas y asistencia completos.
 - Fase 7: estados de pago, finanzas, gráficas, Excel y PDF.
 - Fase 9: promociones y notificaciones funcionales.

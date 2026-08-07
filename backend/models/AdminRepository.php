@@ -96,17 +96,17 @@ final class AdminRepository
 
     public function members(int $gymId, array $query): array
     {
-        $where = ['ugr.gimnasio_id=?', 'ugr.activo=1', 'r.nombre="socio"', 'u.is_demo=?', '(u.demo_dataset_id <=> ?)'];
+        $where = ['ugr.gimnasio_id=?', 'r.nombre="socio"', 'u.is_demo=?', '(u.demo_dataset_id <=> ?)'];
         $params = [$gymId, $this->demoFlag(), $this->datasetId];
         $this->like($where, $params, $query['q'], ['u.nombre', 'u.apellido', 'u.email']);
         if ($query['status'] !== '') {
-            $where[] = 'u.activo=?';
-            $params[] = $query['status'] === 'activo' ? 1 : 0;
+            $where[] = 'COALESCE(sp.estado,IF(ugr.activo=1,"activo","inactivo"))=?';
+            $params[] = in_array($query['status'], ['activo','inactivo','archivado'], true) ? $query['status'] : 'activo';
         }
         $sort = $this->sort($query, ['name' => 'u.nombre', 'email' => 'u.email', 'created_at' => 'u.creado_en'], 'u.nombre');
-        $base = ' FROM usuarios u JOIN usuario_gimnasio_roles ugr ON ugr.usuario_id=u.id JOIN roles r ON r.id=ugr.rol_id WHERE ' . implode(' AND ', $where);
+        $base = ' FROM usuarios u JOIN usuario_gimnasio_roles ugr ON ugr.usuario_id=u.id JOIN roles r ON r.id=ugr.rol_id LEFT JOIN socio_perfiles sp ON sp.usuario_gimnasio_rol_id=ugr.id WHERE ' . implode(' AND ', $where);
         return $this->page(
-            'SELECT DISTINCT u.id,u.nombre,u.apellido,u.email,u.telefono,u.activo,u.email_verificado_en,u.creado_en' . $base . " ORDER BY {$sort}",
+            'SELECT DISTINCT u.id,ugr.id asignacion_id,sp.id perfil_id,sp.numero_socio,COALESCE(sp.estado,IF(ugr.activo=1,"activo","inactivo")) estado_socio,sp.fecha_alta,u.nombre,u.apellido,u.email,u.telefono,u.activo,u.email_verificado_en,u.creado_en' . $base . " ORDER BY {$sort}",
             'SELECT COUNT(DISTINCT u.id)' . $base,
             $params,
             $query
@@ -115,13 +115,14 @@ final class AdminRepository
 
     public function staff(int $gymId, array $query): array
     {
-        $where = ['ugr.gimnasio_id=?', 'ugr.activo=1', 'r.nombre="empleado"', 'u.is_demo=?', '(u.demo_dataset_id <=> ?)'];
+        $where = ['ugr.gimnasio_id=?', 'r.nombre="empleado"', 'u.is_demo=?', '(u.demo_dataset_id <=> ?)'];
         $params = [$gymId, $this->demoFlag(), $this->datasetId];
         $this->like($where, $params, $query['q'], ['u.nombre', 'u.apellido', 'u.email']);
         $sort = $this->sort($query, ['name' => 'u.nombre', 'email' => 'u.email', 'created_at' => 'ugr.creado_en'], 'u.nombre');
-        $base = ' FROM usuarios u JOIN usuario_gimnasio_roles ugr ON ugr.usuario_id=u.id JOIN roles r ON r.id=ugr.rol_id WHERE ' . implode(' AND ', $where);
+        if ($query['status'] !== '') { $where[] = 'COALESCE(ep.estado,IF(ugr.activo=1,"activo","inactivo"))=?'; $params[] = in_array($query['status'], ['activo','inactivo','archivado'], true) ? $query['status'] : 'activo'; }
+        $base = ' FROM usuarios u JOIN usuario_gimnasio_roles ugr ON ugr.usuario_id=u.id JOIN roles r ON r.id=ugr.rol_id LEFT JOIN empleado_perfiles ep ON ep.usuario_gimnasio_rol_id=ugr.id WHERE ' . implode(' AND ', $where);
         return $this->page(
-            'SELECT DISTINCT u.id,u.nombre,u.apellido,u.email,u.telefono,u.activo,u.email_verificado_en,ugr.creado_en' . $base . " ORDER BY {$sort}",
+            'SELECT DISTINCT u.id,ugr.id asignacion_id,ep.id perfil_id,ep.cargo,COALESCE(ep.estado,IF(ugr.activo=1,"activo","inactivo")) estado_empleado,ep.fecha_ingreso,u.nombre,u.apellido,u.email,u.telefono,u.activo,u.email_verificado_en,ugr.creado_en' . $base . " ORDER BY {$sort}",
             'SELECT COUNT(DISTINCT u.id)' . $base,
             $params,
             $query
@@ -167,12 +168,12 @@ final class AdminRepository
     {
         $where = ['m.gimnasio_id=?', 'm.is_demo=?', '(m.demo_dataset_id <=> ?)'];
         $params = [$gymId, $this->demoFlag(), $this->datasetId];
-        $this->like($where, $params, $query['q'], ['u.nombre', 'u.apellido', 'u.email', 'm.plan']);
+        $this->like($where, $params, $query['q'], ['u.nombre', 'u.apellido', 'u.email', 'm.plan', 'pm.nombre']);
         if ($query['status'] !== '') { $where[] = 'm.estado=?'; $params[] = $query['status']; }
         $sort = $this->sort($query, ['member' => 'u.nombre', 'plan' => 'm.plan', 'expires_at' => 'm.fecha_vencimiento', 'status' => 'm.estado'], 'm.fecha_vencimiento');
-        $base = ' FROM membresias m JOIN usuarios u ON u.id=m.usuario_id WHERE ' . implode(' AND ', $where);
+        $base = ' FROM membresias m JOIN usuarios u ON u.id=m.usuario_id LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE ' . implode(' AND ', $where);
         return $this->page(
-            'SELECT m.id,m.plan,m.fecha_inicio,m.fecha_vencimiento,m.estado,m.precio_pagado,m.creado_en,u.id usuario_id,CONCAT_WS(" ",u.nombre,u.apellido) usuario_nombre,u.email usuario_email' . $base . " ORDER BY {$sort}",
+            'SELECT m.id,m.plan_id,COALESCE(pm.nombre,m.plan) plan,m.numero_socio,m.fecha_inicio,m.fecha_vencimiento,m.estado,m.precio_pagado,COALESCE(pm.moneda,"UYU") moneda,m.creado_en,u.id usuario_id,CONCAT_WS(" ",u.nombre,u.apellido) usuario_nombre,u.email usuario_email' . $base . " ORDER BY {$sort}",
             'SELECT COUNT(*)' . $base,
             $params,
             $query

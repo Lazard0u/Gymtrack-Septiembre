@@ -71,9 +71,10 @@ onMounted(initialize)
       <main id="admin-content" class="admin-content">
         <div v-if="admin.status === 'loading'" class="admin-loading" aria-label="Cargando administración"><AppSkeleton height="2rem" width="16rem" /><AppSkeleton height="8rem" /><AppSkeleton height="18rem" /></div>
         <AppErrorState v-else-if="admin.status === 'error'" title="No pudimos abrir Administración" :description="admin.error" @retry="initialize" />
-        <section v-else-if="!admin.hasContext" class="context-gate" aria-labelledby="context-title">
+        <section v-else-if="!admin.hasContext && route.name !== 'admin-gym-create'" class="context-gate" aria-labelledby="context-title">
           <h1 id="context-title">Elegí un gimnasio para continuar</h1><p>Las consultas, permisos y acciones administrativas siempre se limitan al gimnasio activo.</p><GymContextSelector @changed="router.replace({ name: 'admin-summary' })" />
           <AppAlert v-if="admin.isGlobalAdmin" tone="warning" title="Modo soporte"><p>Como administrador general, el acceso requiere un motivo y queda registrado en la auditoría.</p></AppAlert>
+          <AppButton v-if="admin.hasPermission('gym.configure')" variant="secondary" @click="router.push({ name: 'admin-gym-create' })">Crear un gimnasio</AppButton>
         </section>
         <RouterView v-else :key="`${route.fullPath}:${admin.version}`" />
       </main>

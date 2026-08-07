@@ -25,4 +25,25 @@ describe('AdminDataTable', () => {
     expect(wrapper.get('[role="status"]').text()).toContain('Sin socios')
     expect(wrapper.find('table').exists()).toBe(false)
   })
+
+  it('expone una acción por fila y entrega el registro completo', async () => {
+    const item = { id: 7, nombre: 'Persona Demo', estado: 'activa' }
+    const wrapper = mount(AdminDataTable, {
+      props: { columns, items: [item], pagination, status: 'ready', rowActionLabel: 'Gestionar' },
+    })
+    await wrapper.get('tbody button').trigger('click')
+    expect(wrapper.emitted('row')?.[0]).toEqual([item])
+  })
+
+  it('formatea importes con la moneda real de cada registro', () => {
+    const wrapper = mount(AdminDataTable, {
+      props: {
+        columns: [{ key: 'precio', label: 'Precio', format: 'money', currencyKey: 'moneda' }],
+        items: [{ id: 9, precio: '25.00', moneda: 'USD' }],
+        pagination,
+        status: 'ready',
+      },
+    })
+    expect(wrapper.text()).toMatch(/US\$|USD/)
+  })
 })

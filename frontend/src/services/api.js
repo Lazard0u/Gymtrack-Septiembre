@@ -51,6 +51,7 @@ export const api = {
   put: (endpoint, body, options = {}) => request('PUT', endpoint, body, options),
   patch: (endpoint, body, options = {}) => request('PATCH', endpoint, body, options),
   delete: (endpoint, body = null, options = {}) => request('DELETE', endpoint, body, options),
+  upload: (endpoint, body, options = {}) => request('POST', endpoint, body, { ...options, headers: { ...(options.headers || {}), 'Content-Type': 'multipart/form-data' } }),
   clearCsrf: () => setCsrfToken(''),
 }
 

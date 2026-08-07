@@ -833,6 +833,43 @@ capturas están en `frontend/artifacts/phase4/`.
 - Pruebas: aislamiento tenant, uniques, permisos, upload malicioso, paginación, desactivación con historial y migración reversible.
 - Criterios de aceptación: dueño sólo opera sus gimnasios; un usuario puede pertenecer a más de uno con rol distinto; membresías y planes son trazables; no hay datos demo en producción.
 
+#### Estado de ejecución de la Fase 5 - 6 de agosto de 2026
+
+**Tenant y operación comercial terminados para el alcance aprobado:** la
+migración 005 idempotente crea sedes, perfiles de socio/empleado/entrenador,
+asignaciones técnicas, planes, historial, invitaciones y archivos. Mantiene las
+tablas heredadas compatibles y dispone de rollback controlado probado sobre una
+base temporal.
+
+**Flujos administrativos reales:** Configuración permite crear un gimnasio en
+borrador, editar su información, verificar/publicar según rol, gestionar sedes
+y subir una imagen. Socios, empleados y entrenadores tienen fichas, estado,
+notas, permisos o especialidades e invitaciones de 72 horas. Membresías permite
+crear planes, versionar precio/duración cuando ya fueron usados, dar de alta
+una membresía y transicionar sus estados con motivo e historial.
+
+**Aislamiento y seguridad:** cada consulta y mutación exige gimnasio activo,
+permiso y dataset coherente desde PHP. Cambiar IDs produce 403; usuarios
+existentes se asocian sin duplicar correo; los tokens de invitación son de un
+uso y almacenan sólo su hash. Upload valida MIME, tamaño y dimensiones, guarda
+fuera del webroot y utiliza claves aleatorias. Las operaciones dejan auditoría
+y usan transacciones en cambios compuestos.
+
+**Presentación y datos demo:** el seeder v1.2.0 crea cinco sedes principales,
+perfiles, un entrenador y tres planes; todos los gimnasios publicados están
+verificados. `--reset` y `--remove` eliminan únicamente filas y binarios del
+dataset antes de regenerarlo. No existe contraseña fija versionada.
+
+**Límites respetados:** no se implementó el CRUD de clases/reservas de Fase 6,
+ni checkout, pagos, finanzas o reportes de Fase 7. La ficha pública muestra
+planes reales pero no ofrece compras falsas.
+
+**Verificación:** migración nueva, segunda ejecución, rollback y reaplicación;
+lint PHP; contratos API de tenant, personas, invitación, sedes, planes,
+membresía y upload; 12 pruebas Vitest; build productivo; E2E sin errores de
+consola, sin violaciones axe serias/críticas y sin scroll horizontal en 360,
+390, 768, 1024, 1440 y 1920 px.
+
 ### Fase 6. Clases, reservas, cupos y asistencia
 
 **Objetivo:** completar el flujo reserva-asistencia con consistencia bajo concurrencia.

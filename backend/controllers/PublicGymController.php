@@ -30,6 +30,31 @@ final class PublicGymController
         ]);
     }
 
+    public function show(string $slug): void
+    {
+        if (!preg_match('/^[a-z0-9-]{2,140}$/', $slug)) {
+            $this->respond(404, ['error' => true, 'mensaje' => 'Gimnasio no encontrado.']);
+            return;
+        }
+        $gym = (new Gimnasio())->buscarPublicoPorSlug($slug);
+        if (!$gym) {
+            $this->respond(404, ['error' => true, 'mensaje' => 'Gimnasio no encontrado.']);
+            return;
+        }
+        $this->respond(200, ['error' => false, 'gimnasio' => $gym]);
+    }
+
+    public function plans(string $gymId): void
+    {
+        $id = (int) $gymId;
+        $gym = (new Gimnasio())->buscarPublicoPorId($id);
+        if (!$gym) {
+            $this->respond(404, ['error' => true, 'mensaje' => 'Gimnasio no encontrado.']);
+            return;
+        }
+        $this->respond(200, ['error' => false, 'planes' => (new Gimnasio())->planesPublicos($id)]);
+    }
+
     private function respond(int $status, array $body): void
     {
         http_response_code($status);

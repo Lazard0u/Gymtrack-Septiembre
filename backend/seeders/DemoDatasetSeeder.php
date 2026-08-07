@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 final class DemoDatasetSeeder
 {
-    private const MIGRATION = '003_phase3_identity_security';
-    private const VERSION = '1.1.0';
+    private const MIGRATION = '005_phase5_tenant_operations';
+    private const VERSION = '1.2.0';
 
     private PDO $pdo;
     private string $datasetName;
+    private array $pendingFileDeletes = [];
 
     public function __construct()
     {
@@ -56,6 +57,12 @@ final class DemoDatasetSeeder
             $this->upsertGymRole($datasetId, $userIds['dueno.demo@gymtrack.local'], $gymIds['gymtrack-centro'], 'dueño');
             $this->upsertGymRole($datasetId, $userIds['dueno.demo@gymtrack.local'], $gymIds['arena-functional-gym'], 'dueño');
 
+            foreach ($this->gyms() as $gym) {
+                $this->upsertPrimaryLocation($datasetId, $gymIds[$gym['slug']], $gym);
+            }
+            $this->upsertPeopleProfiles($datasetId, $userIds, $gymIds);
+            $planIds = $this->upsertPlans($datasetId, $userIds['dueno.demo@gymtrack.local'], $gymIds);
+
             $classIds = [];
             foreach ($this->classes() as $class) {
                 $classIds[$class['demo_key']] = $this->upsertClass(
@@ -69,7 +76,8 @@ final class DemoDatasetSeeder
             $this->upsertMembership(
                 $datasetId,
                 $userIds['socio.demo@gymtrack.local'],
-                $gymIds['titan-training']
+                $gymIds['titan-training'],
+                $planIds['titan-training']
             );
             $this->upsertReservation(
                 $datasetId,
@@ -78,6 +86,7 @@ final class DemoDatasetSeeder
             );
 
             $this->pdo->commit();
+            $this->purgeDemoFiles();
         } catch (Throwable $error) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
@@ -106,6 +115,7 @@ final class DemoDatasetSeeder
         try {
             $this->removeRows($datasetId);
             $this->pdo->commit();
+            $this->purgeDemoFiles();
         } catch (Throwable $error) {
             if ($this->pdo->inTransaction()) {
                 $this->pdo->rollBack();
@@ -135,6 +145,9 @@ final class DemoDatasetSeeder
         ];
         if ($this->tableExists('audit_logs')) $tables['audit_logs'] = 'eventos de auditoría';
         if ($this->tableExists('exports')) $tables['exports'] = 'exportaciones';
+        foreach (['gimnasio_sedes'=>'sedes','entrenador_perfiles'=>'entrenadores','entrenador_gimnasios'=>'asignaciones de entrenador','planes_membresia'=>'planes','invitaciones_gimnasio'=>'invitaciones','archivos'=>'archivos'] as $table=>$label) {
+            if ($this->tableExists($table)) $tables[$table]=$label;
+        }
 
         echo "Dataset demo '{$this->datasetName}' v" . self::VERSION . ": activo.\n";
         foreach ($tables as $table => $label) {
@@ -151,7 +164,7 @@ final class DemoDatasetSeeder
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM schema_migrations WHERE version = ?');
         $stmt->execute([self::MIGRATION]);
         if ((int) $stmt->fetchColumn() !== 1) {
-            throw new RuntimeException('Falta aplicar database/migrations/003_phase3_identity_security.sql.');
+            throw new RuntimeException('Falta aplicar database/migrations/005_phase5_tenant_operations.sql.');
         }
     }
 
@@ -218,21 +231,21 @@ final class DemoDatasetSeeder
         $this->assertOwnedDemo($existing, $datasetId, 'gimnasio', $gym['slug']);
 
         $values = [
-            $gym['nombre'], $gym['descripcion'], $gym['direccion'], $gym['ciudad'], $gym['departamento'],
+            $gym['nombre'], $gym['nombre_legal'], $gym['descripcion'], $gym['direccion'], $gym['ciudad'], $gym['departamento'],
             $gym['latitud'], $gym['longitud'], 'America/Montevideo', $gym['telefono'], $gym['email'],
             json_encode($gym['horarios'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             json_encode($gym['categorias'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             json_encode($gym['servicios'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-            $gym['estado'], $gym['imagen_path'],
+            $gym['estado'], 'verificado', $gym['imagen_path'],
             json_encode($gym['scenario'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             $datasetId,
         ];
 
         if ($existing) {
             $stmt = $this->pdo->prepare(
-                'UPDATE gimnasios SET nombre = ?, descripcion = ?, direccion = ?, ciudad = ?, departamento = ?,
+                'UPDATE gimnasios SET nombre = ?, nombre_legal = ?, descripcion = ?, direccion = ?, ciudad = ?, departamento = ?,
                  latitud = ?, longitud = ?, zona_horaria = ?, telefono = ?, email = ?, horarios_json = ?,
-                 categorias_json = ?, servicios_json = ?, estado = ?, imagen_path = ?, demo_scenario_json = ?,
+                 categorias_json = ?, servicios_json = ?, estado = ?, verificacion_estado = ?, imagen_path = ?, demo_scenario_json = ?,
                  is_demo = 1, demo_dataset_id = ? WHERE id = ?'
             );
             $stmt->execute([...$values, (int) $existing['id']]);
@@ -241,17 +254,17 @@ final class DemoDatasetSeeder
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO gimnasios
-             (nombre, slug, descripcion, direccion, ciudad, departamento, latitud, longitud, zona_horaria,
-              telefono, email, horarios_json, categorias_json, servicios_json, estado, imagen_path,
+             (nombre, nombre_legal, slug, descripcion, direccion, ciudad, departamento, latitud, longitud, zona_horaria,
+              telefono, email, horarios_json, categorias_json, servicios_json, estado, verificacion_estado, imagen_path,
               demo_scenario_json, is_demo, demo_dataset_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)'
         );
         $stmt->execute([
-            $gym['nombre'], $gym['slug'], $gym['descripcion'], $gym['direccion'], $gym['ciudad'],
+            $gym['nombre'], $gym['nombre_legal'], $gym['slug'], $gym['descripcion'], $gym['direccion'], $gym['ciudad'],
             $gym['departamento'], $gym['latitud'], $gym['longitud'], 'America/Montevideo', $gym['telefono'],
             $gym['email'], json_encode($gym['horarios'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             json_encode($gym['categorias'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-            json_encode($gym['servicios'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $gym['estado'],
+            json_encode($gym['servicios'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $gym['estado'], 'verificado',
             $gym['imagen_path'], json_encode($gym['scenario'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
             $datasetId,
         ]);
@@ -295,6 +308,54 @@ final class DemoDatasetSeeder
         $stmt->execute([$userId, $gymId, $this->roleId($role), $datasetId]);
     }
 
+    private function upsertPrimaryLocation(int $datasetId,int $gymId,array $gym): void
+    {
+        $stmt=$this->pdo->prepare(
+            'INSERT INTO gimnasio_sedes
+             (gimnasio_id,nombre,direccion,ciudad,departamento,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado,is_demo,demo_dataset_id)
+             VALUES (?,"Sede principal",?,?,?,?,?,? ,?,?,?,1,"activa",1,?)
+             ON DUPLICATE KEY UPDATE direccion=VALUES(direccion),ciudad=VALUES(ciudad),departamento=VALUES(departamento),latitud=VALUES(latitud),
+             longitud=VALUES(longitud),zona_horaria=VALUES(zona_horaria),telefono=VALUES(telefono),email=VALUES(email),horarios_json=VALUES(horarios_json),
+             es_principal=1,estado="activa",is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
+        );
+        $stmt->execute([$gymId,$gym['direccion'],$gym['ciudad'],$gym['departamento'],$gym['latitud'],$gym['longitud'],'America/Montevideo',$gym['telefono'],$gym['email'],json_encode($gym['horarios'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$datasetId]);
+    }
+
+    private function upsertPeopleProfiles(int $datasetId,array $userIds,array $gymIds): void
+    {
+        foreach ([['gym'=>'gymtrack-centro','user'=>'socio.demo@gymtrack.local'],['gym'=>'titan-training','user'=>'socio.demo@gymtrack.local']] as $member) {
+            $assignment=$this->assignmentId($userIds[$member['user']],$gymIds[$member['gym']],'socio');
+            $stmt=$this->pdo->prepare('INSERT INTO socio_perfiles (usuario_gimnasio_rol_id,numero_socio,estado,fecha_alta) VALUES (?,? ,"activo",CURRENT_DATE()) ON DUPLICATE KEY UPDATE estado="activo"');
+            $stmt->execute([$assignment,$this->memberNumber($gymIds[$member['gym']],$userIds[$member['user']])]);
+        }
+        $employeeId=$userIds['empleado.demo@gymtrack.local'];$gymId=$gymIds['gymtrack-centro'];$assignment=$this->assignmentId($employeeId,$gymId,'empleado');
+        $this->pdo->prepare('INSERT INTO empleado_perfiles (usuario_gimnasio_rol_id,cargo,estado,fecha_ingreso) VALUES (?,"Entrenador y recepción","activo",CURRENT_DATE()) ON DUPLICATE KEY UPDATE cargo=VALUES(cargo),estado="activo"')->execute([$assignment]);
+        $stmt=$this->pdo->prepare('INSERT INTO entrenador_perfiles (usuario_id,biografia,especialidades_json,disponibilidad_json,estado,is_demo,demo_dataset_id) VALUES (?,? ,?,? ,"activo",1,?) ON DUPLICATE KEY UPDATE biografia=VALUES(biografia),especialidades_json=VALUES(especialidades_json),disponibilidad_json=VALUES(disponibilidad_json),estado="activo",is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)');
+        $stmt->execute([$employeeId,'Entrenador de demostración para validar especialidades y asignación técnica.',json_encode(['Funcional','Movilidad'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),json_encode(['Lunes 18:00','Miércoles 08:00'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$datasetId]);
+        $stmt=$this->pdo->prepare('SELECT id FROM entrenador_perfiles WHERE usuario_id=?');$stmt->execute([$employeeId]);$profileId=(int)$stmt->fetchColumn();
+        $this->pdo->prepare('INSERT INTO entrenador_gimnasios (entrenador_perfil_id,gimnasio_id,activo,is_demo,demo_dataset_id) VALUES (?,?,1,1,?) ON DUPLICATE KEY UPDATE activo=1,is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)')->execute([$profileId,$gymId,$datasetId]);
+    }
+
+    private function upsertPlans(int $datasetId,int $actorId,array $gymIds): array
+    {
+        $plans=[
+            'gymtrack-centro'=>['nombre'=>'Plan Centro Base','slug'=>'plan-centro-base','descripcion'=>'Acceso mensual demostrativo a la sede principal.','duracion'=>30,'precio'=>'1290.00','beneficios'=>['Acceso a sala','Evaluación inicial']],
+            'titan-training'=>['nombre'=>'Fuerza Mensual','slug'=>'fuerza-mensual','descripcion'=>'Plan mensual demostrativo orientado a fuerza.','duracion'=>30,'precio'=>'1490.00','beneficios'=>['Área de fuerza','Zona de movilidad']],
+            'arena-functional-gym'=>['nombre'=>'Funcional Flexible','slug'=>'funcional-flexible','descripcion'=>'Plan demostrativo para entrenamiento funcional.','duracion'=>30,'precio'=>'1390.00','beneficios'=>['Clases grupales','Zona exterior']],
+        ];
+        $ids=[];
+        foreach($plans as $gymSlug=>$plan){$gymId=$gymIds[$gymSlug];$stmt=$this->pdo->prepare('INSERT INTO planes_membresia (gimnasio_id,nombre,slug,descripcion,duracion_dias,precio,moneda,beneficios_json,version,estado,is_demo,demo_dataset_id,creado_por) VALUES (?,?,?,?,?,?,"UYU",?,1,"activo",1,?,?) ON DUPLICATE KEY UPDATE nombre=VALUES(nombre),descripcion=VALUES(descripcion),duracion_dias=VALUES(duracion_dias),precio=VALUES(precio),beneficios_json=VALUES(beneficios_json),estado="activo",is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)');$stmt->execute([$gymId,$plan['nombre'],$plan['slug'],$plan['descripcion'],$plan['duracion'],$plan['precio'],json_encode($plan['beneficios'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$datasetId,$actorId]);$stmt=$this->pdo->prepare('SELECT id FROM planes_membresia WHERE gimnasio_id=? AND slug=? AND version=1');$stmt->execute([$gymId,$plan['slug']]);$ids[$gymSlug]=(int)$stmt->fetchColumn();}
+        return $ids;
+    }
+
+    private function assignmentId(int $userId,int $gymId,string $role): int
+    {
+        $stmt=$this->pdo->prepare('SELECT ugr.id FROM usuario_gimnasio_roles ugr JOIN roles r ON r.id=ugr.rol_id WHERE ugr.usuario_id=? AND ugr.gimnasio_id=? AND r.nombre=? LIMIT 1');$stmt->execute([$userId,$gymId,$role]);$id=$stmt->fetchColumn();if($id===false)throw new RuntimeException('No se encontró la asociación demo esperada.');return (int)$id;
+    }
+
+    private function memberNumber(int $gymId,int $userId): string{return sprintf('GT-%04d-%06d',$gymId,$userId);}
+    private function upsertMembershipHistory(int $membershipId): void{$this->pdo->prepare('INSERT INTO membresia_historial (membresia_id,estado_anterior,estado_nuevo,motivo) SELECT ?,NULL,"activa","Dataset de presentación" WHERE NOT EXISTS (SELECT 1 FROM membresia_historial WHERE membresia_id=?)')->execute([$membershipId,$membershipId]);}
+
     private function upsertClass(int $datasetId, int $gymId, int $instructorId, array $class): int
     {
         $stmt = $this->pdo->prepare('SELECT id, is_demo, demo_dataset_id FROM clases WHERE demo_key = ? LIMIT 1');
@@ -328,7 +389,7 @@ final class DemoDatasetSeeder
         return (int) $this->pdo->lastInsertId();
     }
 
-    private function upsertMembership(int $datasetId, int $userId, int $gymId): void
+    private function upsertMembership(int $datasetId, int $userId, int $gymId, int $planId): void
     {
         $demoKey = 'presentation-socio-titan-membership';
         $stmt = $this->pdo->prepare('SELECT id, is_demo, demo_dataset_id FROM membresias WHERE demo_key = ? LIMIT 1');
@@ -340,20 +401,22 @@ final class DemoDatasetSeeder
 
         if ($existing) {
             $stmt = $this->pdo->prepare(
-                'UPDATE membresias SET usuario_id = ?, gimnasio_id = ?, plan = ?, fecha_inicio = ?,
+                'UPDATE membresias SET usuario_id = ?, numero_socio = ?, gimnasio_id = ?, plan_id = ?, plan = ?, fecha_inicio = ?,
                  fecha_vencimiento = ?, estado = ?, precio_pagado = ?, is_demo = 1, demo_dataset_id = ? WHERE id = ?'
             );
-            $stmt->execute([$userId, $gymId, 'mensual', $start, $end, 'activa', 1490, $datasetId, (int) $existing['id']]);
+            $stmt->execute([$userId, $this->memberNumber($gymId,$userId), $gymId, $planId, 'mensual', $start, $end, 'activa', 1490, $datasetId, (int) $existing['id']]);
+            $this->upsertMembershipHistory((int)$existing['id']);
             return;
         }
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO membresias
-             (usuario_id, gimnasio_id, plan, fecha_inicio, fecha_vencimiento, estado, precio_pagado,
+             (usuario_id, numero_socio, gimnasio_id, plan_id, plan, fecha_inicio, fecha_vencimiento, estado, precio_pagado,
               demo_key, is_demo, demo_dataset_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)'
         );
-        $stmt->execute([$userId, $gymId, 'mensual', $start, $end, 'activa', 1490, $demoKey, $datasetId]);
+        $stmt->execute([$userId, $this->memberNumber($gymId,$userId), $gymId, $planId, 'mensual', $start, $end, 'activa', 1490, $demoKey, $datasetId]);
+        $this->upsertMembershipHistory((int)$this->pdo->lastInsertId());
     }
 
     private function upsertReservation(int $datasetId, int $userId, int $classId): void
@@ -384,17 +447,37 @@ final class DemoDatasetSeeder
 
     private function removeRows(int $datasetId): void
     {
-        foreach (['audit_logs', 'exports'] as $phase4Table) {
-            if (!$this->tableExists($phase4Table)) continue;
-            $stmt = $this->pdo->prepare("DELETE FROM {$phase4Table} WHERE is_demo = 1 AND demo_dataset_id = ?");
+        if ($this->tableExists('archivos')) {
+            $stmt = $this->pdo->prepare('SELECT storage_key FROM archivos WHERE is_demo = 1 AND demo_dataset_id = ?');
+            $stmt->execute([$datasetId]);
+            $this->pendingFileDeletes = array_values(array_unique(array_merge($this->pendingFileDeletes, $stmt->fetchAll(PDO::FETCH_COLUMN))));
+        }
+        foreach (['archivos','invitaciones_gimnasio','entrenador_gimnasios','entrenador_perfiles','audit_logs','exports'] as $phaseTable) {
+            if (!$this->tableExists($phaseTable)) continue;
+            $stmt = $this->pdo->prepare("DELETE FROM {$phaseTable} WHERE is_demo = 1 AND demo_dataset_id = ?");
             $stmt->execute([$datasetId]);
         }
-        foreach (['reservas', 'membresias', 'clases', 'usuario_gimnasio_roles', 'usuarios', 'gimnasios'] as $table) {
+        foreach (['reservas','membresias','planes_membresia','clases','usuario_gimnasio_roles','usuarios','gimnasio_sedes','gimnasios'] as $table) {
+            if (!$this->tableExists($table)) continue;
             $stmt = $this->pdo->prepare("DELETE FROM {$table} WHERE is_demo = 1 AND demo_dataset_id = ?");
             $stmt->execute([$datasetId]);
         }
         $stmt = $this->pdo->prepare('DELETE FROM demo_datasets WHERE id = ? AND nombre = ?');
         $stmt->execute([$datasetId, $this->datasetName]);
+    }
+
+    private function purgeDemoFiles(): void
+    {
+        if ($this->pendingFileDeletes === []) return;
+        $storage = new LocalFileStorage();
+        foreach ($this->pendingFileDeletes as $key) {
+            try {
+                $storage->delete((string) $key);
+            } catch (Throwable $error) {
+                error_log('[GymTrack demo cleanup] No se pudo eliminar un archivo demo: ' . $error->getMessage());
+            }
+        }
+        $this->pendingFileDeletes = [];
     }
 
     private function tableExists(string $table): bool
@@ -410,7 +493,7 @@ final class DemoDatasetSeeder
     {
         return [
             [
-                'nombre' => 'GymTrack Centro', 'slug' => 'gymtrack-centro',
+                'nombre' => 'GymTrack Centro', 'nombre_legal' => 'GymTrack Centro Demo SAS', 'slug' => 'gymtrack-centro',
                 'descripcion' => 'Sede demostrativa urbana para probar clases, reservas y operación diaria.',
                 'direccion' => 'Avenida Demostración 100', 'ciudad' => 'Montevideo', 'departamento' => 'Montevideo',
                 'latitud' => -34.9045100, 'longitud' => -56.1850200, 'telefono' => '+598 000 000 01',
@@ -422,7 +505,7 @@ final class DemoDatasetSeeder
                 'scenario' => ['key' => 'multiple_classes', 'label' => 'Varias clases publicadas'],
             ],
             [
-                'nombre' => 'Norte Fitness Club', 'slug' => 'norte-fitness-club',
+                'nombre' => 'Norte Fitness Club', 'nombre_legal' => 'Norte Fitness Club Demo SAS', 'slug' => 'norte-fitness-club',
                 'descripcion' => 'Sede demostrativa sin clases para validar estados vacíos y navegación.',
                 'direccion' => 'Camino de Prueba Norte 250', 'ciudad' => 'Salto', 'departamento' => 'Salto',
                 'latitud' => -31.3880800, 'longitud' => -57.9600800, 'telefono' => '+598 000 000 02',
@@ -433,7 +516,7 @@ final class DemoDatasetSeeder
                 'scenario' => ['key' => 'no_classes', 'label' => 'Sin clases publicadas'],
             ],
             [
-                'nombre' => 'Titan Training', 'slug' => 'titan-training',
+                'nombre' => 'Titan Training', 'nombre_legal' => 'Titan Training Demo SAS', 'slug' => 'titan-training',
                 'descripcion' => 'Sede demostrativa con una membresía activa para comprobar el contexto del socio.',
                 'direccion' => 'Bulevar Ejemplo 45', 'ciudad' => 'Maldonado', 'departamento' => 'Maldonado',
                 'latitud' => -34.9002500, 'longitud' => -54.9508700, 'telefono' => '+598 000 000 03',
@@ -444,7 +527,7 @@ final class DemoDatasetSeeder
                 'scenario' => ['key' => 'membership_available', 'label' => 'Membresía demo activa'],
             ],
             [
-                'nombre' => 'Punto Activo', 'slug' => 'punto-activo',
+                'nombre' => 'Punto Activo', 'nombre_legal' => 'Punto Activo Demo SAS', 'slug' => 'punto-activo',
                 'descripcion' => 'Sede demostrativa temporalmente cerrada para probar estados no operativos.',
                 'direccion' => 'Calle Escenario 88', 'ciudad' => 'Canelones', 'departamento' => 'Canelones',
                 'latitud' => -34.5227800, 'longitud' => -56.2777800, 'telefono' => '+598 000 000 04',
@@ -455,7 +538,7 @@ final class DemoDatasetSeeder
                 'scenario' => ['key' => 'temporarily_closed', 'label' => 'Cierre temporal'],
             ],
             [
-                'nombre' => 'Arena Functional Gym', 'slug' => 'arena-functional-gym',
+                'nombre' => 'Arena Functional Gym', 'nombre_legal' => 'Arena Functional Gym Demo SAS', 'slug' => 'arena-functional-gym',
                 'descripcion' => 'Sede demostrativa para presentar comunicación promocional en estado beta.',
                 'direccion' => 'Rambla de Muestra 310', 'ciudad' => 'Ciudad de la Costa', 'departamento' => 'Canelones',
                 'latitud' => -34.8353400, 'longitud' => -55.9821300, 'telefono' => '+598 000 000 05',

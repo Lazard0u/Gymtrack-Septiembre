@@ -31,7 +31,7 @@ final class AuthorizationService
             $stmt = $this->pdo->prepare(
                 'SELECT NULL AS asignacion_id, g.id AS gimnasio_id, g.nombre, g.slug, g.ciudad, g.departamento,
                         g.estado, g.imagen_path, g.is_demo, "admin_general" AS rol_nombre
-                 FROM gimnasios g WHERE g.is_demo=? AND (g.demo_dataset_id <=> ?) ORDER BY g.nombre'
+                 FROM gimnasios g WHERE g.is_demo=? AND (g.demo_dataset_id <=> ?) AND g.archivado_en IS NULL ORDER BY g.nombre'
             );
             $stmt->execute([$scope['is_demo'], $scope['dataset_id']]);
             return array_map(static fn(array $row): array => [
@@ -47,7 +47,7 @@ final class AuthorizationService
              FROM usuario_gimnasio_roles ugr
              JOIN gimnasios g ON g.id=ugr.gimnasio_id
              JOIN roles r ON r.id=ugr.rol_id
-             WHERE ugr.usuario_id=? AND ugr.activo=1
+             WHERE ugr.usuario_id=? AND ugr.activo=1 AND g.archivado_en IS NULL
              ORDER BY g.nombre, r.nombre'
         );
         $stmt->execute([$userId]);
@@ -69,7 +69,7 @@ final class AuthorizationService
     {
         if ($this->globalRole($userId) === self::ADMIN) {
             $scope = $this->demoScope($userId);
-            $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM gimnasios WHERE id=? AND is_demo=? AND (demo_dataset_id <=> ?)');
+            $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM gimnasios WHERE id=? AND is_demo=? AND (demo_dataset_id <=> ?) AND archivado_en IS NULL');
             $stmt->execute([$gymId, $scope['is_demo'], $scope['dataset_id']]);
             return (int) $stmt->fetchColumn() === 1;
         }
@@ -111,11 +111,12 @@ final class AuthorizationService
             $stmt = $this->pdo->prepare(
                 'SELECT p.codigo, ugp.permitido
                  FROM usuario_gimnasio_roles ugr
+                 JOIN roles r ON r.id=ugr.rol_id
                  JOIN usuario_gimnasio_permisos ugp ON ugp.usuario_gimnasio_rol_id=ugr.id
                  JOIN permisos p ON p.id=ugp.permiso_id
-                 WHERE ugr.usuario_id=? AND ugr.gimnasio_id=? AND ugr.activo=1'
+                 WHERE ugr.usuario_id=? AND ugr.gimnasio_id=? AND ugr.activo=1 AND r.nombre=?'
             );
-            $stmt->execute([$userId, $gymId]);
+            $stmt->execute([$userId, $gymId, $role]);
             foreach ($stmt->fetchAll() as $override) {
                 $code = (string) $override['codigo'];
                 if ((bool) $override['permitido']) {

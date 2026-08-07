@@ -71,12 +71,19 @@ docker compose exec -T db sh -lc \
 docker compose exec -T db sh -lc \
   'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
   < database/migrations/004_phase4_administration.sql
+docker compose exec -T db sh -lc \
+  'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+  < database/migrations/005_phase5_tenant_operations.sql
 ```
 
-Antes de `003`, realizá un respaldo. El rollback controlado está en
+Antes de `003` y de `005`, realizá un respaldo. El rollback controlado está en
 `database/migrations/003_phase3_identity_security.down.sql` y requiere una
 ventana de mantenimiento: elimina sesiones, tokens y auditoría de identidad
 creados por esa migración.
+
+La Fase 5 dispone de `005_phase5_tenant_operations.down.sql`. Ese rollback
+elimina las entidades operativas creadas por la fase y debe ejecutarse sólo con
+respaldo verificado y ventana de mantenimiento.
 
 Las credenciales se definen en `.env`, que no debe versionarse. El repositorio no incluye una contraseña administrativa conocida. Para crear o rotar la cuenta inicial:
 
@@ -96,7 +103,7 @@ obligatorios.
 
 ## Modo demostración para presentaciones
 
-El modo demostración usa un seeder versionado (`v1.1.0`) y es opt-in: no se ejecuta al iniciar Docker ni durante una
+El modo demostración usa un seeder versionado (`v1.2.0`) y es opt-in: no se ejecuta al iniciar Docker ni durante una
 migración. Los cinco gimnasios y sus usuarios se guardan en MySQL, están
 marcados con `is_demo = true` y pertenecen al dataset indicado por
 `DEMO_DATASET_NAME`. La interfaz muestra la etiqueta discreta **Datos de
@@ -113,6 +120,12 @@ demostración** mientras el dataset está activo.
    docker compose exec -T db sh -lc \
      'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
      < database/migrations/003_phase3_identity_security.sql
+   docker compose exec -T db sh -lc \
+     'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+     < database/migrations/004_phase4_administration.sql
+   docker compose exec -T db sh -lc \
+     'mysql -u "$MYSQL_USER" -p"$MYSQL_PASSWORD" "$MYSQL_DATABASE"' \
+     < database/migrations/005_phase5_tenant_operations.sql
    ```
 
 2. Definí en tu `.env` una contraseña local de al menos 12 caracteres. No la
@@ -135,12 +148,10 @@ demostración** mientras el dataset está activo.
 
 El comando crea o actualiza, sin duplicar registros, `GymTrack Centro`, `Norte
 Fitness Club`, `Titan Training`, `Punto Activo` y `Arena Functional Gym`. Sus
-direcciones, teléfonos, correos, imágenes y escenarios son ficticios. La Fase 3
-sólo incorpora la estructura mínima de roles y contexto de gimnasio; el CRUD y
-el detalle operativo completo corresponden a la Fase 5. Por ese motivo, el
-panel administrativo de una cuenta demo es de sólo lectura: permite presentar
-datos, roles y navegación, pero oculta y bloquea altas, ediciones y
-cancelaciones. Sus consultas tampoco mezclan cuentas reales con el dataset.
+direcciones, teléfonos, correos, imágenes y escenarios son ficticios. La Fase 5
+agrega sedes, perfiles operativos, entrenador, planes y membresía con historial.
+Las cuentas demo autorizadas pueden probar esos CRUD dentro del dataset; PHP
+mantiene el aislamiento respecto de registros reales y de otros gimnasios.
 
 ### Credenciales demo
 
@@ -169,7 +180,7 @@ docker compose exec -T backend php console.php seed:demo --reset
 # Mostrar estado, cantidades y correos (nunca la contraseña)
 docker compose exec -T backend php console.php seed:demo --status
 
-# Eliminar exclusivamente los registros del dataset seleccionado
+# Eliminar exclusivamente los registros y archivos del dataset seleccionado
 docker compose exec -T backend php console.php seed:demo --remove
 ```
 
@@ -191,9 +202,11 @@ dueño, inicio y cierre de sesión, validación de correo, recuperación y cambi
 contraseña, revocación de sesiones, perfiles básicos, roles, permisos, contexto
 de gimnasio, lectura del catálogo desde MySQL, filtros y navegación/mapa de
 presentación. También son estables el shell administrativo, el modo soporte
-auditado y las consultas paginadas de socios, personal, clases, reservas,
-membresías y pagos registrados. Los CRUD operativos, estados avanzados de pago
-y módulos de fases posteriores no se presentan como operaciones terminadas.
+auditado, el CRUD acotado de gimnasio y sedes, las fichas e invitaciones de
+socios, empleados y entrenadores, los permisos por gimnasio, los planes
+versionados, el alta y las transiciones de membresía y las imágenes públicas
+almacenadas fuera del webroot. Clases y reservas mutables, pagos, finanzas y
+exportaciones siguen perteneciendo a fases posteriores.
 
 Sólo se muestran funciones beta cuando su feature flag está activa. Cada bloque
 explica qué funciona y qué falta, y no ofrece acciones que confirmen operaciones
@@ -354,6 +367,50 @@ Las evidencias responsive de Administración están en
 `frontend/artifacts/phase4/` para 360, 390, 768, 1024, 1440 y 1920 px. El
 detalle de arquitectura, matriz de rutas, contratos y límites está en
 `docs/PHASE4_ADMINISTRATION.md`.
+
+## Operación tenant de la Fase 5
+
+La migración `005_phase5_tenant_operations.sql` incorpora sedes, perfiles de
+socio y empleado, perfiles/asignaciones de entrenador, planes versionados,
+historial de membresía, invitaciones y metadatos de archivos. Las mutaciones
+requieren cookie HttpOnly, correo verificado, CSRF, permiso efectivo y gimnasio
+activo; el ID de una ruta nunca sustituye el contexto de sesión.
+
+Las imágenes se guardan en el volumen `gymtrack_uploads`, fuera del webroot. El
+backend acepta JPG, PNG y WebP de hasta 5 MB, valida MIME y dimensiones y usa
+claves aleatorias. `seed:demo --remove` elimina tanto las filas como los
+binarios pertenecientes al dataset, sin tocar archivos reales.
+
+Los detalles de arquitectura, rutas, transiciones y límites están en
+`docs/PHASE5_TENANT_OPERATIONS.md`.
+
+### Verificación de la Fase 5
+
+```bash
+# API real: scope, CRUD, invitación de un uso, upload y membresía
+DEMO_USER_PASSWORD='la-clave-definida-en-tu-entorno' \
+  sh tests/phase5_tenant_operations.sh
+
+# Componentes, build, PHP y Compose
+docker compose exec -T frontend npm run test:run
+docker compose exec -T frontend npm run build
+docker compose exec -T backend sh -lc \
+  'find /var/www/html -name "*.php" -print0 | xargs -0 -n1 php -l'
+docker compose config --quiet
+
+# E2E específico con responsive, consola y axe
+docker run --rm --network host \
+  -v "$PWD/frontend:/work" \
+  -v gymtrack-final1_frontend_node_modules:/work/node_modules \
+  -w /work \
+  -e VITE_API_PROXY_TARGET=http://127.0.0.1:8080 \
+  -e DEMO_USER_PASSWORD='la-clave-definida-en-tu-entorno' \
+  mcr.microsoft.com/playwright:v1.62.1-noble \
+  npx playwright test e2e/phase5-operations.spec.js
+```
+
+Las evidencias de Configuración están en `frontend/artifacts/phase5/` para 360,
+390, 768, 1024, 1440 y 1920 px. Ninguna prueba contiene una contraseña fija.
 
 ---
 

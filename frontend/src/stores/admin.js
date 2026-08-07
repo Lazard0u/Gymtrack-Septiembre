@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { api } from '../services/api'
 import { useAuthStore } from './auth'
 import { resetAdminDomainStores } from './adminResources'
+import { useAdminManagementStore } from './adminManagement'
 
 export const useAdminStore = defineStore('administration', () => {
   const status = ref('idle')
@@ -67,6 +68,7 @@ export const useAdminStore = defineStore('administration', () => {
       throw failure
     }
     resetAdminDomainStores()
+    useAdminManagementStore().reset()
     summaryController?.abort()
     summary.value = { widgets: [], alerts: [] }
     const auth = useAuthStore()

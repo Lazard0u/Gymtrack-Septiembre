@@ -18,6 +18,7 @@ services:
       - ./database/migrations/002_phase3_roles_demo_context.sql:/docker-entrypoint-initdb.d/002_phase3_roles_demo_context.sql:ro
       - ./database/migrations/003_phase3_identity_security.sql:/docker-entrypoint-initdb.d/003_phase3_identity_security.sql:ro
       - ./database/migrations/004_phase4_administration.sql:/docker-entrypoint-initdb.d/004_phase4_administration.sql:ro
+      - ./database/migrations/005_phase5_tenant_operations.sql:/docker-entrypoint-initdb.d/005_phase5_tenant_operations.sql:ro
       - db_data:/var/lib/mysql
     networks:
       - gymtrack_net
@@ -55,6 +56,7 @@ services:
       MAIL_TRANSPORT: ${MAIL_TRANSPORT:-log}
       MAIL_FROM: ${MAIL_FROM:-no-reply@gymtrack.local}
       MAIL_LOG_PATH: ${MAIL_LOG_PATH:-/tmp/gymtrack-mail/mail.log}
+      UPLOAD_STORAGE_PATH: ${UPLOAD_STORAGE_PATH:-/var/lib/gymtrack/uploads}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
       DEMO_DATASET_NAME: ${DEMO_DATASET_NAME:-gymtrack-presentation}
       DEMO_USER_PASSWORD: ${DEMO_USER_PASSWORD:-}
@@ -66,8 +68,10 @@ services:
       FEATURE_PROMOTIONS_BETA: ${FEATURE_PROMOTIONS_BETA:-false}
     ports:
       - "8080:80"
+    command: sh -lc 'install -d -o www-data -g www-data -m 0750 "$${UPLOAD_STORAGE_PATH}" && apache2-foreground'
     volumes:
       - ./backend:/var/www/html
+      - gymtrack_uploads:/var/lib/gymtrack
     depends_on:
       - db
     networks:
@@ -96,6 +100,7 @@ services:
 volumes:
   db_data:
   frontend_node_modules:
+  gymtrack_uploads:
 
 networks:
   gymtrack_net:

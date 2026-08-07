@@ -1,26 +1,32 @@
 <script setup>
+import { computed } from 'vue'
 import {
   IconCalendarPlus, IconCreditCardPay, IconDownload, IconFileTypePdf, IconGift,
   IconIdBadge2, IconReceipt, IconUsersPlus,
 } from '@tabler/icons-vue'
 import AppBadge from '../ui/AppBadge.vue'
+import { useAdminStore } from '../../stores/admin'
 
-const actions = [
-  { label: 'Registrar socio', icon: IconUsersPlus, disabled: true, note: 'Disponible en Fase 5' },
+const admin = useAdminStore()
+const actionDefinitions = [
+  { label: 'Registrar socio', icon: IconUsersPlus, route: 'admin-members', query: { action: 'invite' }, permission: 'members.write', note: 'Invitación y alta operativa' },
   { label: 'Crear clase', icon: IconCalendarPlus, disabled: true, note: 'Disponible en Fase 6' },
   { label: 'Registrar pago manual', icon: IconCreditCardPay, disabled: true, note: 'Disponible en Fase 7' },
   { label: 'Revisar pagos pendientes', icon: IconReceipt, disabled: true, note: 'El estado pendiente se modela en Fase 7' },
-  { label: 'Gestionar membresías', icon: IconIdBadge2, route: 'admin-memberships', note: 'Consulta operativa real' },
-  { label: 'Consultar reservas', icon: IconReceipt, route: 'admin-reservations', note: 'Consulta operativa real' },
+  { label: 'Gestionar membresías', icon: IconIdBadge2, route: 'admin-memberships', permission: 'memberships.read', note: 'Consulta operativa real' },
+  { label: 'Consultar reservas', icon: IconReceipt, route: 'admin-reservations', permission: 'reservations.read', note: 'Consulta operativa real' },
   { label: 'Crear promoción', icon: IconGift, disabled: true, beta: true, note: 'Campañas en Fase 9' },
   { label: 'Descargar Excel', icon: IconDownload, disabled: true, note: 'Exportación en Fase 7' },
   { label: 'Descargar PDF', icon: IconFileTypePdf, disabled: true, note: 'Exportación en Fase 7' },
 ]
+const actions = computed(() => actionDefinitions.map((action) => action.permission && !admin.hasPermission(action.permission)
+  ? { ...action, route: undefined, query: undefined, disabled: true, note: 'Tu rol no tiene permiso para esta acción' }
+  : action))
 </script>
 
 <template>
   <div class="quick-actions">
-    <component :is="action.route ? 'RouterLink' : 'button'" v-for="action in actions" :key="action.label" :to="action.route ? { name: action.route } : undefined" :type="action.route ? undefined : 'button'" :disabled="action.disabled || undefined" :aria-disabled="action.disabled || undefined" class="quick-action">
+    <component :is="action.route ? 'RouterLink' : 'button'" v-for="action in actions" :key="action.label" :to="action.route ? { name: action.route, query: action.query } : undefined" :type="action.route ? undefined : 'button'" :disabled="action.disabled || undefined" :aria-disabled="action.disabled || undefined" class="quick-action">
       <component :is="action.icon" :size="20" aria-hidden="true" />
       <span><strong>{{ action.label }}</strong><small>{{ action.note }}</small></span>
       <AppBadge v-if="action.beta" tone="warning">Beta</AppBadge>

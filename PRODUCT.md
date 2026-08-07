@@ -13,7 +13,7 @@ GymTrack sirve a dos audiencias principales confirmadas:
 - Socios que quieren descubrir gimnasios, consultar clases, administrar reservas y membresías, y revisar su actividad.
 - Dueños y equipos de gimnasios que necesitan operar socios, clases, membresías, cobros y reportes desde una sola aplicación.
 
-La Fase 3 incorpora los roles socio, empleado, dueño y administrador general, con permisos mínimos y asociaciones explícitas a gimnasio. La matriz operativa completa seguirá ampliándose junto con cada módulo.
+La Fase 5 opera los roles socio, empleado, dueño y administrador general sobre asociaciones explícitas a gimnasio, con perfiles de socio, empleado y entrenador y permisos efectivos por tenant.
 
 ## Product Purpose
 
@@ -21,7 +21,7 @@ GymTrack busca convertir la operación diaria de un gimnasio y la experiencia de
 
 ## Positioning
 
-La propuesta confirmada es una plataforma web para conectar descubrimiento, membresía, clases, reservas y operación del gimnasio dentro del mismo producto. La identidad ya admite asociaciones y contexto mínimo multigimnasio con aislamiento desde PHP; el CRUD y el modelo operativo definitivo todavía no están implementados y no deben presentarse como terminados.
+La propuesta confirmada es una plataforma web para conectar descubrimiento, membresía, clases, reservas y operación del gimnasio dentro del mismo producto. La identidad y la operación comercial básica ya admiten contexto multigimnasio, sedes, personas, entrenadores, planes y membresías con aislamiento desde PHP. Clases, reservas y pagos todavía no deben presentarse como flujos terminados.
 
 ## Operating Context
 
@@ -36,9 +36,9 @@ La propuesta confirmada es una plataforma web para conectar descubrimiento, memb
 
 - Stack obligatorio: Vue 3, PHP, MySQL, Docker, Leaflet y OpenStreetMap.
 - No se reescribe el proyecto desde cero ni se cambia el stack.
-- La Fase 4 agrega el shell administrativo y consultas operativas paginadas,
-  pero no anticipa el CRUD completo de la Fase 5 ni operaciones de fases 6 y 7.
-- No se implementan anticipadamente pagos, administración completa, calendario, WhatsApp, inteligencia artificial ni el CRUD operativo multigimnasio definitivo.
+- La Fase 5 agrega el tenant operativo y los CRUD comerciales principales, sin
+  anticipar clases y reservas de Fase 6 ni pagos y finanzas de Fase 7.
+- No se implementan anticipadamente pagos, calendario, WhatsApp ni inteligencia artificial.
 - Los datos de demostración sólo existen en MySQL mediante un seeder versionado, idempotente y opt-in; llevan `is_demo`/`demo_dataset_id` y una etiqueta visible.
 - El seeder demo nunca se ejecuta automáticamente ni puede activarse en producción sin una autorización excepcional explícita.
 - Cuando falta un endpoint, la interfaz debe comunicar un estado vacío honesto.
@@ -74,5 +74,5 @@ La propuesta confirmada es una plataforma web para conectar descubrimiento, memb
 La superficie web debe admitir navegación por teclado, lectores de pantalla, foco visible, contraste WCAG AA, `prefers-reduced-motion`, zoom al 200 %, targets táctiles de al menos 44 px y los anchos 360, 390, 768, 1024, 1440 y 1920 px.
 
 Los hechos de producto de este archivo incluyen el alcance terminado de la
-Fase 4: administración visible, contexto obligatorio, consultas reales y
-acceso global explícito con auditoría.
+Fase 5: tenant operativo, administración visible, contexto obligatorio,
+personas, sedes, planes, membresías trazables y acceso global auditado.
