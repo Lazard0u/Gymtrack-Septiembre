@@ -47,6 +47,11 @@ const locationStatus = ref('idle')
 const userLocation = ref(null)
 const failedImages = ref(new Set())
 const cardElements = new Map()
+const workspaceElement = ref(null)
+const panelElement = ref(null)
+const draggingSheet = ref(false)
+const sheetDragOffset = ref(null)
+const mobileViewport = ref(false)
 let leaflet = null
 let map = null
 let markersLayer = null
@@ -55,6 +60,14 @@ let resizeObserver = null
 let tileTimeout = null
 let locationPermission = null
 let locationPermissionHandler = null
+let mobileMediaQuery = null
+let mobileMediaHandler = null
+let dragStartY = 0
+let dragStartOffset = 0
+let dragMoved = false
+let lastSheetDragAt = 0
+
+const PREFERENCES_KEY = 'gymtrack.explorer.preferences.v1'
 
 const sheetLabel = computed(() => ({ closed: 'Abrir lista', medium: 'Expandir lista', full: 'Reducir lista' })[sheetPosition.value])
 const locationCopy = computed(() => ({
@@ -108,7 +121,12 @@ const visibleGyms = computed(() => filteredGyms.value
   .sort((first, second) => order.value === 'distance' && userLocation.value
     ? first.distance - second.distance
     : first.nombre.localeCompare(second.nombre, 'es')))
-const activeFilterCount = computed(() => [query.value, city.value, category.value, service.value, availability.value].filter(Boolean).length)
+const activeFilterCount = computed(() => [city.value, category.value, service.value, availability.value].filter(Boolean).length)
+const totalFilterCount = computed(() => activeFilterCount.value + (query.value ? 1 : 0))
+const effectivePanelCollapsed = computed(() => panelCollapsed.value && !mobileViewport.value)
+const panelStyle = computed(() => draggingSheet.value && sheetDragOffset.value !== null
+  ? { transform: `translateY(${sheetDragOffset.value}px)`, transition: 'none' }
+  : undefined)
 
 async function loadGyms() {
   catalogStatus.value = 'loading'
@@ -289,19 +307,96 @@ function imageFailed(path) {
   failedImages.value = new Set([...failedImages.value, path])
 }
 
-function togglePanel() {
-  panelCollapsed.value = !panelCollapsed.value
+async function togglePanel() {
+  const collapsing = !panelCollapsed.value
+  panelCollapsed.value = collapsing
+  await nextTick()
+  workspaceElement.value?.querySelector(collapsing ? '.reopen-control' : '.collapse-control')?.focus()
   window.setTimeout(() => map?.invalidateSize({ pan: false }), 240)
 }
 
 function cycleSheet() {
+  if (Date.now() - lastSheetDragAt < 300) return
   sheetPosition.value = sheetPosition.value === 'closed' ? 'medium' : sheetPosition.value === 'medium' ? 'full' : 'closed'
   window.setTimeout(() => map?.invalidateSize({ pan: false }), 240)
 }
 
+function sheetSnapOffsets() {
+  const height = panelElement.value?.getBoundingClientRect().height || 0
+  return {
+    full: 0,
+    medium: Math.max(0, height - 384),
+    closed: Math.max(0, height - 72),
+  }
+}
+
+function startSheetDrag(event) {
+  if (!window.matchMedia('(max-width: 47.99rem)').matches || !panelElement.value) return
+  const offsets = sheetSnapOffsets()
+  dragStartY = event.clientY
+  dragStartOffset = offsets[sheetPosition.value]
+  dragMoved = false
+  draggingSheet.value = true
+  sheetDragOffset.value = dragStartOffset
+  event.currentTarget.setPointerCapture?.(event.pointerId)
+}
+
+function moveSheetDrag(event) {
+  if (!draggingSheet.value) return
+  const offsets = sheetSnapOffsets()
+  const delta = event.clientY - dragStartY
+  if (Math.abs(delta) > 5) dragMoved = true
+  sheetDragOffset.value = Math.min(offsets.closed, Math.max(0, dragStartOffset + delta))
+}
+
+function endSheetDrag(event) {
+  if (!draggingSheet.value) return
+  event.currentTarget.releasePointerCapture?.(event.pointerId)
+  const offsets = sheetSnapOffsets()
+  const current = sheetDragOffset.value ?? dragStartOffset
+  sheetPosition.value = Object.entries(offsets).sort((first, second) => Math.abs(current - first[1]) - Math.abs(current - second[1]))[0][0]
+  draggingSheet.value = false
+  sheetDragOffset.value = null
+  if (dragMoved) lastSheetDragAt = Date.now()
+  window.setTimeout(() => map?.invalidateSize({ pan: false }), 240)
+}
+
+function restorePreferences() {
+  try {
+    const preferences = JSON.parse(window.localStorage.getItem(PREFERENCES_KEY) || '{}')
+    filtersOpen.value = Boolean(preferences.filtersOpen)
+    panelCollapsed.value = Boolean(preferences.panelCollapsed)
+    if (['closed', 'medium', 'full'].includes(preferences.sheetPosition)) sheetPosition.value = preferences.sheetPosition
+    city.value = typeof preferences.city === 'string' ? preferences.city : ''
+    category.value = typeof preferences.category === 'string' ? preferences.category : ''
+    service.value = typeof preferences.service === 'string' ? preferences.service : ''
+    availability.value = typeof preferences.availability === 'string' ? preferences.availability : ''
+  } catch { /* Las preferencias son opcionales; una entrada inválida vuelve a la vista inicial. */ }
+}
+
+function savePreferences() {
+  try {
+    window.localStorage.setItem(PREFERENCES_KEY, JSON.stringify({
+      filtersOpen: filtersOpen.value,
+      panelCollapsed: panelCollapsed.value,
+      sheetPosition: sheetPosition.value,
+      city: city.value,
+      category: category.value,
+      service: service.value,
+      availability: availability.value,
+    }))
+  } catch { /* El explorador funciona aunque el navegador bloquee el almacenamiento local. */ }
+}
+
 watch(filteredGyms, () => syncMarkers(true))
 watch(selectedGymId, () => syncMarkers(false))
+watch([filtersOpen, panelCollapsed, sheetPosition, city, category, service, availability], savePreferences)
 onMounted(async () => {
+  restorePreferences()
+  mobileMediaQuery = window.matchMedia('(max-width: 47.99rem)')
+  mobileViewport.value = mobileMediaQuery.matches
+  mobileMediaHandler = (event) => { mobileViewport.value = event.matches }
+  mobileMediaQuery.addEventListener?.('change', mobileMediaHandler)
   if (navigator.permissions?.query) {
     try {
       locationPermission = await navigator.permissions.query({ name: 'geolocation' })
@@ -322,6 +417,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   window.clearTimeout(tileTimeout)
   locationPermission?.removeEventListener?.('change', locationPermissionHandler)
+  mobileMediaQuery?.removeEventListener?.('change', mobileMediaHandler)
   resizeObserver?.disconnect()
   map?.remove()
 })
@@ -335,7 +431,7 @@ onBeforeUnmount(() => {
     </div>
     <h2 v-else id="explorer-title" class="visually-hidden">Explorador de gimnasios</h2>
 
-    <div :class="['explorer__workspace', { 'explorer__workspace--collapsed': panelCollapsed }]">
+    <div ref="workspaceElement" :class="['explorer__workspace', { 'explorer__workspace--collapsed': effectivePanelCollapsed }]">
       <div class="explorer__map-wrap">
         <div ref="mapElement" class="explorer__map" aria-label="Mapa de gimnasios de GymTrack" />
         <div v-if="mapStatus === 'loading'" class="explorer__map-state" role="status" aria-label="Cargando mapa"><AppSkeleton width="100%" height="100%" /></div>
@@ -348,38 +444,47 @@ onBeforeUnmount(() => {
         <div class="map-context"><IconMapPin :size="17" aria-hidden="true" /><span>{{ visibleGyms.length }} ubicaciones visibles</span><span v-if="userLocation && order === 'distance'">· ordenadas por cercanía</span></div>
       </div>
 
-      <aside :class="['explorer__panel', `explorer__panel--${sheetPosition}`, { 'explorer__panel--hidden': panelCollapsed }]" aria-label="Lista de gimnasios" :aria-hidden="panelCollapsed || undefined" :inert="panelCollapsed">
+      <aside ref="panelElement" :style="panelStyle" :class="['explorer__panel', `explorer__panel--${sheetPosition}`, { 'explorer__panel--hidden': effectivePanelCollapsed, 'explorer__panel--dragging': draggingSheet, 'explorer__panel--filters-open': filtersOpen }]" aria-label="Lista de gimnasios" :aria-hidden="effectivePanelCollapsed || undefined" :inert="effectivePanelCollapsed">
         <a class="mobile-map-attribution" href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">© OpenStreetMap</a>
-        <button class="sheet-handle" type="button" :aria-label="sheetLabel" @click="cycleSheet"><span /><IconChevronDown :size="18" aria-hidden="true" /></button>
-        <header class="explorer__panel-header">
+        <button class="sheet-handle" type="button" :aria-label="sheetLabel" @pointerdown="startSheetDrag" @pointermove="moveSheetDrag" @pointerup="endSheetDrag" @pointercancel="endSheetDrag" @click="cycleSheet"><span /><IconChevronDown :size="18" aria-hidden="true" /></button>
+        <div class="explorer__panel-content" :aria-hidden="mobileViewport && sheetPosition === 'closed' || undefined" :inert="mobileViewport && sheetPosition === 'closed'">
+          <header class="explorer__panel-header">
           <div><strong>Gimnasios</strong><span>{{ visibleGyms.length }} de {{ gyms.length }} sedes</span></div>
           <AppBadge v-if="system.demoDataActive" tone="info">Datos demo</AppBadge>
           <AppIconButton class="collapse-control" :label="panelCollapsed ? 'Mostrar lista' : 'Ocultar lista'" :pressed="!panelCollapsed" @click="togglePanel">
             <IconChevronRight v-if="!panelCollapsed" :size="20" /><IconChevronLeft v-else :size="20" />
           </AppIconButton>
-        </header>
+          </header>
 
-        <div class="location-status" role="status" aria-live="polite">
+          <div class="explorer__search">
+            <AppInput v-model="query" label="Buscar gimnasios" name="gym-search" placeholder="Nombre, ciudad o categoría" />
+          </div>
+
+          <div v-if="locationStatus !== 'idle'" class="location-status location-status--compact" role="status" aria-live="polite">
           <component :is="locationStatus === 'denied' || locationStatus === 'unsupported' ? IconLocationOff : IconRoute" :size="19" aria-hidden="true" />
           <div><strong>{{ locationCopy.title }}</strong><span>{{ locationCopy.text }}</span></div>
           <button v-if="['denied', 'unavailable'].includes(locationStatus)" type="button" @click="useFallbackLocation">Usar vista general</button>
-        </div>
+          </div>
 
-        <button class="filters-toggle" type="button" :aria-expanded="filtersOpen" aria-controls="gym-filters" @click="filtersOpen = !filtersOpen">
-          <IconAdjustmentsHorizontal :size="19" aria-hidden="true" /><span>Filtros</span><AppBadge v-if="activeFilterCount" tone="info">{{ activeFilterCount }}</AppBadge><IconChevronDown :class="{ 'filters-toggle__chevron--open': filtersOpen }" :size="18" aria-hidden="true" />
-        </button>
-        <div id="gym-filters" :class="['explorer__filters', { 'explorer__filters--open': filtersOpen }]">
-          <AppInput v-model="query" label="Buscar" name="gym-search" placeholder="Nombre, ciudad o categoría" />
+          <button class="filters-toggle" type="button" :aria-expanded="filtersOpen" aria-controls="gym-filters" @click="filtersOpen = !filtersOpen">
+          <IconAdjustmentsHorizontal :size="19" aria-hidden="true" /><span>{{ filtersOpen ? 'Ocultar filtros' : 'Filtros y orden' }}</span><AppBadge v-if="activeFilterCount" tone="info">{{ activeFilterCount }}</AppBadge><span class="filters-toggle__order">{{ order === 'distance' ? 'Más cercanos' : 'Por nombre' }}</span><IconChevronDown :class="{ 'filters-toggle__chevron--open': filtersOpen }" :size="18" aria-hidden="true" />
+          </button>
+          <div id="gym-filters" :class="['explorer__filters', { 'explorer__filters--open': filtersOpen }]">
+          <div v-if="locationStatus === 'idle'" class="location-status" role="status">
+            <component :is="locationStatus === 'denied' || locationStatus === 'unsupported' ? IconLocationOff : IconRoute" :size="19" aria-hidden="true" />
+            <div><strong>{{ locationCopy.title }}</strong><span>{{ locationCopy.text }}</span></div>
+            <button v-if="['denied', 'unavailable'].includes(locationStatus)" type="button" @click="useFallbackLocation">Usar vista general</button>
+          </div>
           <div class="explorer__filter-row">
             <AppSelect v-model="city" label="Ciudad" name="gym-city" :options="cityOptions" />
             <AppSelect v-model="category" label="Categoría" name="gym-category" :options="categoryOptions" />
             <AppSelect v-model="service" label="Servicio" name="gym-service" :options="serviceOptions" />
             <AppSelect v-model="availability" label="Estado" name="gym-availability" :options="availabilityOptions" />
           </div>
-          <div class="explorer__sort-row"><AppSelect v-model="order" label="Ordenar por" name="gym-order" :options="orderOptions" /><button v-if="activeFilterCount" type="button" @click="resetFilters">Limpiar filtros</button></div>
-        </div>
+          <div class="explorer__sort-row"><AppSelect v-model="order" label="Ordenar por" name="gym-order" :options="orderOptions" /><button v-if="totalFilterCount" type="button" @click="resetFilters">Limpiar filtros</button></div>
+          </div>
 
-        <div class="explorer__panel-body">
+          <div class="explorer__panel-body">
           <div v-if="catalogStatus === 'loading'" class="catalog-loading" role="status"><AppSpinner /><span>Cargando gimnasios…</span></div>
           <AppErrorState v-else-if="catalogStatus === 'error'" title="No pudimos cargar los gimnasios" description="La lista se obtiene desde MySQL. Intentá nuevamente." @retry="loadGyms" />
           <AppEmptyState v-else-if="gyms.length === 0" title="Todavía no hay gimnasios publicados" description="No mostramos ubicaciones ni precios inventados. Activá el dataset demo o publicá gimnasios reales para completar esta lista.">
@@ -404,10 +509,11 @@ onBeforeUnmount(() => {
               <RouterLink class="gym-card__detail" :to="{ name: 'gym-detail', params: { slug: gym.slug } }">Ver ficha</RouterLink>
             </article>
           </div>
+          </div>
         </div>
       </aside>
 
-      <AppIconButton v-if="panelCollapsed" class="reopen-control" label="Mostrar lista de gimnasios" :pressed="false" @click="togglePanel"><IconChevronLeft :size="20" /></AppIconButton>
+      <AppIconButton v-if="effectivePanelCollapsed" class="reopen-control" label="Mostrar lista de gimnasios" :pressed="false" @click="togglePanel"><IconChevronLeft :size="20" /></AppIconButton>
     </div>
   </section>
 </template>
@@ -418,10 +524,12 @@ onBeforeUnmount(() => {
 .explorer__workspace { position: relative; display: grid; height: clamp(40rem, 70vh, 47rem); grid-template-columns: minmax(0, 1fr) minmax(22rem, 27rem); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-dialog); background: var(--surface-1); box-shadow: var(--shadow-md); transition: grid-template-columns var(--duration-normal) var(--ease-out); }
 .explorer__workspace--collapsed { grid-template-columns: minmax(0, 1fr) 0; }.explorer__map-wrap { position: relative; min-width: 0; min-height: 40rem; background: var(--surface-2); }.explorer__map { position: absolute; inset: 0; z-index: 0; }.explorer__map-state { position: absolute; inset: 0; z-index: 2; background: var(--surface-1); }.explorer__map-state :deep(.skeleton) { border-radius: 0; }
 .map-tools { position: absolute; top: var(--space-4); right: var(--space-4); z-index: 3; display: flex; align-items: center; gap: var(--space-2); }.map-tools :deep(.app-button), .map-tools :deep(.icon-button) { background: var(--surface-glass); backdrop-filter: blur(10px); }.map-context { position: absolute; left: var(--space-4); bottom: var(--space-4); z-index: 3; display: flex; align-items: center; gap: var(--space-2); border: 1px solid var(--border-subtle); border-radius: var(--radius-pill); padding: var(--space-2) var(--space-3); background: var(--surface-glass); color: var(--text-secondary); font-size: .72rem; backdrop-filter: blur(10px); }
-.explorer__panel { position: relative; z-index: 4; display: flex; min-width: 0; flex-direction: column; border-left: 1px solid var(--border-subtle); background: var(--bg-subtle); transition: opacity var(--duration-fast), transform var(--duration-normal) var(--ease-out); }.explorer__panel--hidden { opacity: 0; pointer-events: none; transform: translateX(100%); }
+.explorer__panel { position: relative; z-index: 4; display: flex; min-width: 0; min-height: 0; flex-direction: column; border-left: 1px solid var(--border-subtle); background: var(--bg-subtle); transition: opacity var(--duration-fast), transform var(--duration-normal) var(--ease-out); }.explorer__panel--hidden { opacity: 0; pointer-events: none; transform: translateX(100%); }
+.explorer__panel-content { display: flex; min-height: 0; flex: 1; flex-direction: column; }
 .explorer__panel-header { display: flex; min-height: 4.75rem; align-items: center; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--border-subtle); }.explorer__panel-header > div:first-child { display: grid; margin-right: auto; }.explorer__panel-header strong { font-size: .95rem; }.explorer__panel-header > div:first-child > span { color: var(--text-tertiary); font-size: .72rem; }
-.location-status { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); background: var(--surface-1); }.location-status > svg { margin-top: .1rem; color: var(--info); }.location-status div { display: grid; gap: .1rem; }.location-status strong { font-size: .76rem; }.location-status span { color: var(--text-tertiary); font-size: .66rem; line-height: 1.4; }.location-status button, .explorer__sort-row button { display: inline-flex; min-height: 2.75rem; align-items: center; align-self: center; border: 0; padding: var(--space-1) 0; background: transparent; color: var(--status-info-strong); cursor: pointer; font: inherit; font-size: .69rem; font-weight: 720; text-decoration: underline; text-underline-offset: .2em; }
-.filters-toggle { display: none; }.explorer__filters { display: grid; gap: var(--space-3); padding: var(--space-4); border-bottom: 1px solid var(--border-subtle); }.explorer__filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }.explorer__sort-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-3); }.explorer__filters :deep(.field__label), .explorer__filters :deep(.field > span:first-child) { font-size: .72rem; }.explorer__panel-body { flex: 1; min-height: 0; overflow: auto; scrollbar-color: var(--border-strong) var(--bg-subtle); }.catalog-loading { display: flex; min-height: 12rem; align-items: center; justify-content: center; gap: var(--space-3); color: var(--text-secondary); font-size: .85rem; }
+.explorer__search { padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); }.explorer__search :deep(.field) { gap: var(--space-1); }.explorer__search :deep(.field > span:first-child) { font-size: .72rem; }
+.location-status { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr) auto; align-items: start; gap: var(--space-3); border-radius: var(--radius-control); padding: var(--space-3); background: var(--surface-1); }.location-status--compact { margin: var(--space-2) var(--space-4); padding-block: var(--space-2); }.location-status > svg { margin-top: .1rem; color: var(--info); }.location-status div { display: grid; gap: .1rem; }.location-status strong { font-size: .76rem; }.location-status span { color: var(--text-tertiary); font-size: .66rem; line-height: 1.4; }.location-status button, .explorer__sort-row button { display: inline-flex; min-height: 2.75rem; align-items: center; align-self: center; border: 0; padding: var(--space-1) 0; background: transparent; color: var(--status-info-strong); cursor: pointer; font: inherit; font-size: .69rem; font-weight: 720; text-decoration: underline; text-underline-offset: .2em; }
+.filters-toggle { display: grid; min-height: 2.75rem; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: var(--space-2); width: 100%; border: 0; border-bottom: 1px solid var(--border-subtle); padding-inline: var(--space-4); background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; font: inherit; font-size: .76rem; font-weight: 700; text-align: left; }.filters-toggle__order { color: var(--text-tertiary); font-size: .66rem; font-weight: 560; }.filters-toggle__chevron--open { transform: rotate(180deg); }.explorer__filters { display: none; gap: var(--space-3); max-height: 21rem; overflow: auto; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-subtle); background: var(--bg-subtle); scrollbar-color: var(--border-strong) var(--bg-subtle); }.explorer__filters--open { display: grid; }.explorer__filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2); }.explorer__sort-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--space-3); }.explorer__filters :deep(.field__label), .explorer__filters :deep(.field > span:first-child) { font-size: .72rem; }.explorer__panel-body { flex: 1; min-height: 13rem; overflow: auto; scrollbar-color: var(--border-strong) var(--bg-subtle); }.catalog-loading { display: flex; min-height: 12rem; align-items: center; justify-content: center; gap: var(--space-3); color: var(--text-secondary); font-size: .85rem; }
 .gym-list { display: grid; gap: var(--space-2); padding: var(--space-3); }.gym-card { position: relative; width: 100%; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--surface-1); color: var(--text-primary); transition: border-color var(--duration-fast), background-color var(--duration-fast), transform var(--duration-fast) var(--ease-out); }.gym-card:hover { border-color: var(--border-strong); background: var(--surface-2); }.gym-card--selected { border-color: var(--focus); background: var(--accent-soft); }.gym-card__select { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: var(--space-3); width: 100%; border: 0; padding: 0; background: transparent; color: inherit; cursor: pointer; text-align: left; }.gym-card img { width: 100%; height: 100%; min-height: 9.5rem; object-fit: cover; }.gym-card__content { display: grid; align-content: center; gap: var(--space-1); min-width: 0; padding: var(--space-3) var(--space-3) 2.75rem 0; }.gym-card__title { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }.gym-card__title strong { overflow: hidden; font-size: .86rem; text-overflow: ellipsis; white-space: nowrap; }.gym-card__location, .gym-card__categories { color: var(--text-secondary); font-size: .7rem; }.gym-card__facts { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); color: var(--text-tertiary); font-size: .65rem; }.gym-card__scenario { color: var(--info); font-size: .68rem; font-weight: 700; }.gym-card__detail { position: absolute; right: 0; bottom: 0; z-index: 1; display: inline-flex; min-height: 2.75rem; align-items: center; padding-inline: var(--space-3); color: var(--status-info-strong); font-size: .72rem; font-weight: 750; text-underline-offset: .2em; }
 .gym-card__visual { display: grid; min-height: 9.5rem; place-items: center; overflow: hidden; background: var(--surface-2); color: var(--text-tertiary); }.gym-card__visual img { transform: scale(1.5); }.gym-card__distance { display: flex; align-items: center; gap: var(--space-1); color: var(--status-info-text); font-size: .68rem; font-weight: 680; }.gym-card__distance svg { flex: 0 0 auto; }
 .sheet-handle, .mobile-map-attribution { display: none; }.reopen-control { position: absolute; right: var(--space-4); top: var(--space-4); z-index: 5; }
@@ -430,8 +538,9 @@ onBeforeUnmount(() => {
 
 @media (max-width: 47.99rem) {
   .explorer__intro { grid-template-columns: 1fr; gap: var(--space-4); }.explorer__intro h2 { max-width: 17ch; }.explorer__workspace, .explorer__workspace--collapsed { display: block; height: 38rem; }.explorer__map-wrap { min-height: 38rem; }
-  .explorer__panel { position: absolute; inset-inline: 0; bottom: 0; height: calc(100% - 4.5rem); border: 1px solid var(--border-strong); border-bottom: 0; border-radius: var(--radius-dialog) var(--radius-dialog) 0 0; box-shadow: var(--shadow-lg); transform: translateY(calc(100% - 17rem)); }.explorer__panel--hidden { opacity: 1; pointer-events: auto; transform: translateY(calc(100% - 4.5rem)); }.explorer__panel--closed { transform: translateY(calc(100% - 4.5rem)); }.explorer__panel--medium { transform: translateY(calc(100% - 17rem)); }.explorer__panel--full { transform: translateY(0); }
-  .sheet-handle { display: flex; width: 100%; min-height: 2.75rem; align-items: center; justify-content: center; gap: var(--space-2); border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: var(--text-tertiary); cursor: pointer; }.sheet-handle span { width: 2.5rem; height: 3px; border-radius: var(--radius-pill); background: var(--border-strong); }.mobile-map-attribution { position: absolute; top: -1.5rem; right: var(--space-2); z-index: 5; display: inline-flex; min-height: 1.5rem; align-items: center; padding-inline: .4rem; border-radius: var(--radius-control) var(--radius-control) 0 0; background: var(--surface-glass-soft); color: var(--info); font-size: .62rem; line-height: 1.2; text-underline-offset: .16em; }.collapse-control, .reopen-control { display: none; }.explorer__panel-header { min-height: 3.75rem; padding-block: var(--space-2); }.explorer__filters { padding-block: var(--space-3); }.explorer__filter-row { grid-template-columns: 1fr; }.map-context { bottom: 18rem; }.gym-card__select { grid-template-columns: 5.5rem minmax(0, 1fr); }.gym-card img { min-height: 8.5rem; }
-  .map-tools { top: var(--space-3); right: var(--space-3); max-width: calc(100% - 5.5rem); }.map-tools :deep(.app-button) { min-width: 0; min-height: 2.75rem; padding-inline: var(--space-3); }.map-tools :deep(.app-button span) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.map-context { left: var(--space-3); bottom: 18rem; max-width: calc(100% - var(--space-6)); }.location-status { grid-template-columns: 1.4rem minmax(0, 1fr); }.location-status button { grid-column: 2; justify-self: start; }.filters-toggle { display: grid; min-height: 2.75rem; grid-template-columns: auto 1fr auto auto; align-items: center; gap: var(--space-2); width: 100%; border: 0; border-bottom: 1px solid var(--border-subtle); padding-inline: var(--space-4); background: var(--bg-subtle); color: var(--text-primary); cursor: pointer; font: inherit; font-size: .78rem; font-weight: 700; text-align: left; }.filters-toggle__chevron--open { transform: rotate(180deg); }.explorer__filters { display: none; max-height: 52vh; overflow: auto; }.explorer__filters--open { display: grid; }.explorer__filter-row { grid-template-columns: 1fr; }.explorer__sort-row { grid-template-columns: 1fr; }.explorer__sort-row button { justify-self: start; }.gym-card__select { grid-template-columns: 5rem minmax(0, 1fr); }.gym-card img, .gym-card__visual { min-height: 8.5rem; }:deep(.leaflet-control-attribution) { display: none; }
+  .explorer__panel { position: absolute; inset-inline: 0; bottom: 0; height: calc(100% - 4.5rem); border: 1px solid var(--border-strong); border-bottom: 0; border-radius: var(--radius-dialog) var(--radius-dialog) 0 0; box-shadow: var(--shadow-lg); transform: translateY(calc(100% - 24rem)); }.explorer__panel--hidden { opacity: 1; pointer-events: auto; transform: translateY(calc(100% - 4.5rem)); }.explorer__panel--closed { transform: translateY(calc(100% - 4.5rem)); }.explorer__panel--medium { transform: translateY(calc(100% - 24rem)); }.explorer__panel--full { transform: translateY(0); }
+  .sheet-handle { display: flex; width: 100%; min-height: 2.75rem; touch-action: none; user-select: none; align-items: center; justify-content: center; gap: var(--space-2); border: 0; border-bottom: 1px solid var(--border-subtle); background: transparent; color: var(--text-tertiary); cursor: grab; }.sheet-handle:active { cursor: grabbing; }.sheet-handle span { width: 2.5rem; height: 3px; border-radius: var(--radius-pill); background: var(--border-strong); }.mobile-map-attribution { position: absolute; top: -1.5rem; right: var(--space-2); z-index: 5; display: inline-flex; min-height: 1.5rem; align-items: center; padding-inline: .4rem; border-radius: var(--radius-control) var(--radius-control) 0 0; background: var(--surface-glass-soft); color: var(--info); font-size: .62rem; line-height: 1.2; text-underline-offset: .16em; }.collapse-control, .reopen-control { display: none; }.explorer__panel-header { min-height: 3.75rem; padding-block: var(--space-2); }.explorer__search { padding-block: var(--space-2); }.explorer__search :deep(.field) { gap: 0; }.explorer__search :deep(.field > span:first-child) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }.explorer__filters { max-height: min(48vh, 23rem); padding-block: var(--space-3); }.explorer__filter-row { grid-template-columns: 1fr; }.map-context { bottom: 25rem; }.gym-card__select { grid-template-columns: 5.5rem minmax(0, 1fr); }.gym-card img { min-height: 8.5rem; }
+  .map-tools { top: var(--space-3); right: var(--space-3); max-width: calc(100% - 5.5rem); }.map-tools :deep(.app-button) { min-width: 0; min-height: 2.75rem; padding-inline: var(--space-3); }.map-tools :deep(.app-button span) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.map-context { left: var(--space-3); bottom: 25rem; max-width: calc(100% - var(--space-6)); }.location-status { grid-template-columns: 1.4rem minmax(0, 1fr); }.location-status button { grid-column: 2; justify-self: start; }.filters-toggle { grid-template-columns: auto minmax(0, 1fr) auto auto; }.filters-toggle__order { display: none; }.explorer__sort-row { grid-template-columns: 1fr; }.explorer__sort-row button { justify-self: start; }.gym-card__select { grid-template-columns: 5rem minmax(0, 1fr); }.gym-card img, .gym-card__visual { min-height: 8.5rem; }:deep(.leaflet-control-attribution) { display: none; }
+  .explorer__panel--filters-open .explorer__filters { flex: 1; max-height: none; min-height: 0; }.explorer__panel--filters-open .explorer__panel-body { display: none; }
 }
 </style>

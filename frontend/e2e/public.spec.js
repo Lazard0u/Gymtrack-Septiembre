@@ -3,6 +3,16 @@ import AxeBuilder from '@axe-core/playwright'
 
 const widths = [360, 390, 768, 1024, 1440, 1920]
 const gymCard = (page, name) => page.locator('.gym-card').filter({ hasText: name })
+const mediumSheetGeometry = (page, cardName) => page.evaluate((name) => {
+  const workspace = document.querySelector('.explorer__workspace').getBoundingClientRect()
+  const map = document.querySelector('.explorer__map-wrap').getBoundingClientRect()
+  const panel = document.querySelector('.explorer__panel').getBoundingClientRect()
+  const card = [...document.querySelectorAll('.gym-card')].find((item) => item.textContent.includes(name)).getBoundingClientRect()
+  return {
+    visibleMapHeight: Math.max(0, Math.min(map.bottom, panel.top, workspace.bottom) - Math.max(map.top, workspace.top)),
+    visibleCardHeight: Math.max(0, Math.min(card.bottom, panel.bottom, workspace.bottom) - Math.max(card.top, panel.top, workspace.top)),
+  }
+}, cardName)
 
 for (const width of widths) {
   test(`inicio sin desbordamiento a ${width} px`, async ({ page }) => {
@@ -32,7 +42,11 @@ test('el explorador responde como panel en escritorio y bottom sheet en móvil',
   await page.setViewportSize({ width: 1024, height: 800 })
   await page.goto('/gimnasios')
   await page.getByRole('button', { name: 'Ocultar lista' }).click()
-  await expect(page.getByRole('button', { name: 'Mostrar lista de gimnasios' })).toBeVisible()
+  const reopenPanel = page.getByRole('button', { name: 'Mostrar lista de gimnasios' })
+  await expect(reopenPanel).toBeVisible()
+  await expect(reopenPanel).toBeFocused()
+  await reopenPanel.click()
+  await expect(page.getByRole('button', { name: 'Ocultar lista' })).toBeFocused()
 
   await page.setViewportSize({ width: 390, height: 844 })
   await page.reload()
@@ -44,8 +58,10 @@ test('el explorador responde como panel en escritorio y bottom sheet en móvil',
   await reduceControl.click()
   const openControl = page.getByRole('button', { name: 'Abrir lista' })
   await expect(openControl).toBeVisible()
+  await expect(page.locator('.explorer__panel-content')).toHaveAttribute('inert', '')
   await openControl.click()
   await expect(page.getByRole('button', { name: 'Expandir lista' })).toBeVisible()
+  await expect(page.locator('.explorer__panel-content')).not.toHaveAttribute('inert', '')
 })
 
 test('el catálogo demo llega desde la API y sus filtros actualizan lista y mapa', async ({ page }) => {
@@ -57,6 +73,7 @@ test('el catálogo demo llega desde la API y sus filtros actualizan lista y mapa
   await expect(gymCard(page, 'Titan Training')).toBeVisible()
   await expect(gymCard(page, 'Punto Activo')).toBeVisible()
   await expect(gymCard(page, 'Arena Functional Gym')).toBeVisible()
+  await page.getByRole('button', { name: 'Filtros y orden' }).click()
   await page.getByLabel('Ciudad').selectOption('Salto')
   await expect(gymCard(page, 'Norte Fitness Club')).toBeVisible()
   await expect(gymCard(page, 'GymTrack Centro')).toBeHidden()
@@ -95,6 +112,7 @@ test('el permiso rechazado conserva el catálogo y ofrece la vista general', asy
 test('servicios, estado y marcadores permanecen sincronizados', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/gimnasios')
+  await page.getByRole('button', { name: 'Filtros y orden' }).click()
   await page.getByLabel('Servicio').selectOption('Accesibilidad')
   await expect(gymCard(page, 'Punto Activo')).toBeVisible()
   await expect(page.locator('.gym-marker')).toHaveCount(1)
@@ -103,6 +121,30 @@ test('servicios, estado y marcadores permanecen sincronizados', async ({ page })
   await page.getByRole('button', { name: 'Limpiar filtros' }).click()
   await page.locator('.gym-marker').first().click()
   await expect(page.locator('.gym-card--selected')).toHaveCount(1)
+})
+
+test('el explorador recuerda filtros plegados y permite arrastrar el bottom sheet', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/gimnasios')
+  await page.getByRole('button', { name: 'Filtros y orden' }).click()
+  await page.getByLabel('Ciudad').selectOption('Salto')
+  await page.reload()
+  await expect(page.getByRole('button', { name: 'Ocultar filtros' })).toBeVisible()
+  await expect(page.getByLabel('Ciudad')).toHaveValue('Salto')
+  await expect(gymCard(page, 'Norte Fitness Club')).toBeVisible()
+  await page.getByRole('button', { name: 'Ocultar filtros' }).click()
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.reload()
+  await expect.poll(async () => (await mediumSheetGeometry(page, 'Norte Fitness Club')).visibleMapHeight).toBeGreaterThan(100)
+  await expect.poll(async () => (await mediumSheetGeometry(page, 'Norte Fitness Club')).visibleCardHeight).toBeGreaterThan(80)
+  const handle = page.getByRole('button', { name: 'Expandir lista' })
+  const box = await handle.boundingBox()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2 - 220, { steps: 8 })
+  await page.mouse.up()
+  await expect(page.getByRole('button', { name: 'Reducir lista' })).toBeVisible()
 })
 
 test('los marcadores se agrupan cuando el mapa muestra una región amplia', async ({ page }) => {
