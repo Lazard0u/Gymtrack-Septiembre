@@ -19,6 +19,7 @@ const VerifyEmailView = () => import('../views/VerifyEmailView.vue')
 const ChangePasswordView = () => import('../views/ChangePasswordView.vue')
 const SessionsView = () => import('../views/SessionsView.vue')
 const DashboardView = () => import('../views/DashboardView.vue')
+const MemberScheduleView = () => import('../views/MemberScheduleView.vue')
 const AdminShell = () => import('../layouts/AdminShell.vue')
 const AdminSummaryView = () => import('../views/admin/AdminSummaryView.vue')
 const AdminOperationsView = () => import('../views/admin/AdminOperationsView.vue')
@@ -30,6 +31,7 @@ const AdminSettingsView = () => import('../views/admin/AdminSettingsView.vue')
 const AdminPeopleView = () => import('../views/admin/AdminPeopleView.vue')
 const AdminTrainersView = () => import('../views/admin/AdminTrainersView.vue')
 const AdminMembershipsView = () => import('../views/admin/AdminMembershipsView.vue')
+const AdminScheduleView = () => import('../views/admin/AdminScheduleView.vue')
 const StatusView = () => import('../views/StatusView.vue')
 const GymsView = () => import('../views/GymsView.vue')
 const GymDetailView = () => import('../views/GymDetailView.vue')
@@ -144,6 +146,12 @@ const routes = [
     meta: { requiresAuth: true, requiresVerifiedEmail: true, title: 'Mi panel | GymTrack' },
   },
   {
+    path: '/agenda',
+    name: 'member-schedule',
+    component: MemberScheduleView,
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], requiredPermission: 'classes.read', title: 'Agenda de clases | GymTrack' },
+  },
+  {
     path: '/sesion-expirada', name: 'session-expired', component: StatusView,
     props: { code: '401', title: 'Tu sesión terminó', message: 'Iniciá sesión nuevamente para continuar de forma segura.' },
     meta: { title: 'Sesión expirada | GymTrack' },
@@ -174,8 +182,8 @@ const routes = [
       { path: 'socios', name: 'admin-members', component: AdminPeopleView, props: { kind: 'members' }, meta: { adminLabel: 'Socios', requiredPermission: 'members.read', title: 'Socios | Administración GymTrack' } },
       { path: 'empleados', name: 'admin-staff', component: AdminPeopleView, props: { kind: 'staff' }, meta: { adminLabel: 'Empleados', requiredPermission: 'staff.manage', title: 'Empleados | Administración GymTrack' } },
       { path: 'entrenadores', name: 'admin-trainers', component: AdminTrainersView, meta: { adminLabel: 'Entrenadores', requiredPermission: 'staff.manage', title: 'Entrenadores | Administración GymTrack' } },
-      { path: 'clases', name: 'admin-classes', component: AdminResourceView, props: { resource: 'classes', title: 'Clases', description: 'Agenda recurrente del gimnasio activo con cupos reales de MySQL.', columns: [{ key: 'nombre', label: 'Clase', sortable: true }, { key: 'instructor_nombre', label: 'Instructor' }, { key: 'dia_semana', label: 'Día', sortable: true }, { key: 'hora_inicio', label: 'Inicio', format: 'time', sortable: true }, { key: 'hora_fin', label: 'Fin', format: 'time' }, { key: 'cupo_maximo', label: 'Cupo' }, { key: 'cupos_disponibles', label: 'Disponibles' }, { key: 'activa', label: 'Activa', format: 'boolean' }], filters: [{ key: 'status', label: 'Estado', options: [{ value: '', label: 'Todas' }, { value: 'activa', label: 'Activas' }, { value: 'inactiva', label: 'Inactivas' }] }, { key: 'day', label: 'Día', options: [{ value: '', label: 'Todos' }, { value: 'lunes', label: 'Lunes' }, { value: 'martes', label: 'Martes' }, { value: 'miercoles', label: 'Miércoles' }, { value: 'jueves', label: 'Jueves' }, { value: 'viernes', label: 'Viernes' }, { value: 'sabado', label: 'Sábado' }, { value: 'domingo', label: 'Domingo' }] }], emptyTitle: 'No hay clases', emptyDescription: 'Este gimnasio no tiene clases o los filtros no devuelven resultados.', statusLabel: 'Consulta estable' }, meta: { adminLabel: 'Clases', requiredPermission: 'classes.read', title: 'Clases | Administración GymTrack' } },
-      { path: 'reservas', name: 'admin-reservations', component: AdminResourceView, props: { resource: 'reservations', title: 'Reservas', description: 'Reservas del gimnasio activo sin mezclar registros de otros contextos.', columns: [{ key: 'usuario_nombre', label: 'Socio', sortable: true }, { key: 'usuario_email', label: 'Correo' }, { key: 'clase_nombre', label: 'Clase', sortable: true }, { key: 'dia_semana', label: 'Día' }, { key: 'hora_inicio', label: 'Hora', format: 'time' }, { key: 'estado', label: 'Estado', format: 'status', sortable: true }, { key: 'fecha_reserva', label: 'Registrada', format: 'datetime', sortable: true }], filters: [{ key: 'status', label: 'Estado', options: [{ value: '', label: 'Todos' }, { value: 'confirmada', label: 'Confirmadas' }, { value: 'cancelada', label: 'Canceladas' }, { value: 'asistio', label: 'Asistió' }] }], emptyTitle: 'No hay reservas', emptyDescription: 'No se encontraron reservas para el contexto y los filtros actuales.', statusLabel: 'Consulta estable' }, meta: { adminLabel: 'Reservas', requiredPermission: 'reservations.read', title: 'Reservas | Administración GymTrack' } },
+      { path: 'clases', name: 'admin-classes', component: AdminScheduleView, props: { mode: 'classes' }, meta: { adminLabel: 'Clases', requiredPermission: 'classes.read', title: 'Clases | Administración GymTrack' } },
+      { path: 'reservas', name: 'admin-reservations', component: AdminScheduleView, props: { mode: 'reservations' }, meta: { adminLabel: 'Reservas', requiredPermission: 'reservations.read', title: 'Reservas | Administración GymTrack' } },
       { path: 'membresias', name: 'admin-memberships', component: AdminMembershipsView, meta: { adminLabel: 'Membresías', requiredPermission: 'memberships.read', title: 'Membresías | Administración GymTrack' } },
       { path: 'pagos', name: 'admin-payments', component: AdminResourceView, props: { resource: 'payments', title: 'Pagos', description: 'Transacciones confirmadas registradas en el esquema actual. Los estados avanzados todavía no están disponibles.', columns: [{ key: 'usuario_nombre', label: 'Socio', sortable: true }, { key: 'usuario_email', label: 'Correo' }, { key: 'plan', label: 'Plan' }, { key: 'monto', label: 'Importe', format: 'money', sortable: true }, { key: 'metodo', label: 'Método', sortable: true }, { key: 'estado', label: 'Estado', format: 'status' }, { key: 'fecha_pago', label: 'Fecha', format: 'datetime', sortable: true }], filters: [{ key: 'method', label: 'Método', options: [{ value: '', label: 'Todos' }, { value: 'efectivo', label: 'Efectivo' }, { value: 'transferencia', label: 'Transferencia' }, { value: 'tarjeta', label: 'Tarjeta' }] }], emptyTitle: 'No hay pagos registrados', emptyDescription: 'No existen transacciones confirmadas para este gimnasio y estos filtros.', statusLabel: 'Consulta estable' }, meta: { adminLabel: 'Pagos', requiredPermission: 'payments.read', title: 'Pagos | Administración GymTrack' } },
       { path: 'promociones', name: 'admin-promotions', component: AdminPromotionsView, meta: { adminLabel: 'Promociones', requiredPermission: 'gym.configure', title: 'Promociones | Administración GymTrack' } },

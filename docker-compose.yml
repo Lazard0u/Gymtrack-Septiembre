@@ -19,6 +19,7 @@ services:
       - ./database/migrations/003_phase3_identity_security.sql:/docker-entrypoint-initdb.d/003_phase3_identity_security.sql:ro
       - ./database/migrations/004_phase4_administration.sql:/docker-entrypoint-initdb.d/004_phase4_administration.sql:ro
       - ./database/migrations/005_phase5_tenant_operations.sql:/docker-entrypoint-initdb.d/005_phase5_tenant_operations.sql:ro
+      - ./database/migrations/006_class_schedule_booking_attendance.sql:/docker-entrypoint-initdb.d/006_class_schedule_booking_attendance.sql:ro
       - db_data:/var/lib/mysql
     networks:
       - gymtrack_net

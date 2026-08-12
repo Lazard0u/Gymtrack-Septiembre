@@ -57,13 +57,13 @@ counts="$(query "SELECT CONCAT(
   (SELECT COUNT(*) FROM membresias WHERE is_demo=1), ':',
   (SELECT COUNT(*) FROM reservas WHERE is_demo=1)
 );")"
-assert_equal '5:4:5:3:1:1' "$counts" 'Idempotencia del dataset'
+assert_equal '5:4:5:3:2:1' "$counts" 'Idempotencia del dataset'
 
 hashes="$(query 'SELECT COUNT(*) FROM usuarios WHERE is_demo=1 AND LEFT(password_hash, 4) = CHAR(36, 50, 121, 36);')"
 assert_equal '4' "$hashes" 'Hash bcrypt de usuarios demo'
 
 permission_matrix="$(query "SET NAMES utf8mb4; SELECT GROUP_CONCAT(CONCAT(nombre, ':', total) ORDER BY nombre SEPARATOR ',') FROM (SELECT r.nombre, COUNT(*) AS total FROM rol_permisos rp JOIN roles r ON r.id=rp.rol_id GROUP BY r.nombre) AS permission_counts;")"
-assert_equal 'admin_general:18,dueño:18,empleado:11,socio:8' "$permission_matrix" 'Matriz de capacidades'
+assert_equal 'admin_general:23,dueño:23,empleado:11,socio:8' "$permission_matrix" 'Matriz de capacidades'
 
 public_catalog="$(curl -fsS "$API_BASE_URL/public/gimnasios")"
 assert_equal '5' "$(printf '%s' "$public_catalog" | jq -r '.gimnasios | length')" 'Catálogo público demo'

@@ -90,7 +90,7 @@ onMounted(load)
     <header class="dashboard-nav">
       <div class="container dashboard-nav__inner">
         <RouterLink class="brand" :to="{ name: 'home' }" aria-label="GymTrack, ir al inicio"><img class="brand-mark" :src="brandMark" alt="" width="36" height="36" /><span class="brand-word">Gym<span>Track</span></span></RouterLink>
-        <nav aria-label="Navegación del panel"><RouterLink :to="{ name: 'home' }">Inicio</RouterLink><RouterLink :to="{ name: 'gyms' }">Gimnasios</RouterLink><RouterLink :to="{ name: 'sessions' }">Sesiones</RouterLink><RouterLink v-if="canAccessAdministration" :to="{ name: 'admin-summary' }">Administración</RouterLink></nav>
+        <nav aria-label="Navegación del panel"><RouterLink :to="{ name: 'home' }">Inicio</RouterLink><RouterLink :to="{ name: 'gyms' }">Gimnasios</RouterLink><RouterLink v-if="auth.user?.role === 'socio' && auth.tienePermiso('classes.read')" :to="{ name: 'member-schedule' }">Agenda</RouterLink><RouterLink :to="{ name: 'sessions' }">Seguridad</RouterLink><RouterLink v-if="canAccessAdministration" :to="{ name: 'admin-summary' }">Administración</RouterLink></nav>
         <AppButton variant="ghost" size="sm" @click="logout"><template #icon><IconLogout :size="17" /></template>Salir</AppButton>
       </div>
     </header>
@@ -125,6 +125,7 @@ onMounted(load)
         </section>
 
         <section v-if="canAccessAdministration" class="admin-cta"><div><span class="eyebrow">Administración</span><h2>Operación centralizada por gimnasio.</h2><p>Consultá socios, personal, clases, reservas, membresías y pagos con permisos y contexto activo.</p></div><AppLinkButton :to="{ name: 'admin-summary' }">Abrir administración</AppLinkButton></section>
+        <section v-else-if="auth.tienePermiso('classes.read')" class="admin-cta"><div><h2>Encontrá tu próxima sesión.</h2><p>Consultá la agenda del gimnasio activo, reservá con cupos reales y seguí tu posición en la lista de espera.</p></div><AppLinkButton :to="{ name: 'member-schedule' }">Abrir agenda</AppLinkButton></section>
 
         <section v-if="enabledBetaFeatures.length" class="beta-section" aria-labelledby="beta-heading"><div class="section-title"><div><span class="eyebrow">Funciones opcionales</span><h2 id="beta-heading">Beta, sin acciones falsas.</h2></div></div><div class="beta-grid"><AppCard v-for="feature in enabledBetaFeatures" :key="feature.name"><IconFlask :size="21" /><h3>{{ feature.name }}</h3><p><strong>Funciona:</strong> {{ feature.works }}</p><p><strong>Pendiente:</strong> {{ feature.pending }}</p></AppCard></div></section>
       </template>

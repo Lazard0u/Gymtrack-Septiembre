@@ -75,6 +75,10 @@ assert_status 201 "$(request POST '/admin/membership-plans' "$tmp_dir/plan-creat
 plan_id="$(jq -r '.data.id' "$tmp_dir/plan-created.json")"
 jq -e '.data.version == 1 and .data.estado == "activo"' "$tmp_dir/plan-created.json" >/dev/null
 
+existing_membership_id="$(jq -r --argjson user "$member_id" '.data.items[] | select(.usuario_id == $user and .estado == "activa") | .id' "$tmp_dir/memberships.json" | head -n 1)"
+if [ -n "$existing_membership_id" ]; then
+  assert_status 200 "$(request PATCH "/admin/memberships/$existing_membership_id/status" "$tmp_dir/demo-membership-suspended.json" '{"estado":"suspendida","motivo":"Preparar renovación en prueba automatizada"}')" demo_membership_transition "$tmp_dir/demo-membership-suspended.json"
+fi
 membership_payload="$(jq -nc --argjson user "$member_id" --argjson plan "$plan_id" '{usuario_id:$user,plan_id:$plan,fecha_inicio:"2026-08-06",motivo:"Prueba automatizada de alta"}')"
 assert_status 201 "$(request POST '/admin/memberships' "$tmp_dir/membership-created.json" "$membership_payload")" membership_create "$tmp_dir/membership-created.json"
 membership_id="$(jq -r '.data.id' "$tmp_dir/membership-created.json")"

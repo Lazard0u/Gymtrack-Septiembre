@@ -35,21 +35,22 @@ El proyecto mantiene el stack original: **Vue 3, PHP, MySQL, Docker, Leaflet y O
 - Permisos independientes por gimnasio.
 - Planes de membresía versionados en UYU o USD.
 - Alta, renovación y cambio de estado de membresías.
+- Agenda de clases recurrentes con sesiones fechadas, sedes, entrenadores y cupos reales.
+- Gestión de reservas, lista de espera con promoción automática y control de asistencia.
 - Historial operativo y trazabilidad administrativa.
 - Carga validada de imágenes y documentos fuera del webroot.
 - Archivado lógico de gimnasios sin destruir su historial.
 
 ### Datos de demostración
 
-El proyecto incluye un seeder versionado e idempotente con cinco gimnasios ficticios, perfiles, roles, clases, planes y membresías. Todos los registros quedan identificados como datos demo y pueden eliminarse sin afectar información real.
+El proyecto incluye un seeder versionado e idempotente con cinco gimnasios ficticios, perfiles, roles, clases fechadas, reservas, planes y membresías. Todos los registros quedan identificados como datos demo y pueden eliminarse sin afectar información real.
 
 ## Estado funcional
 
-Los flujos de autenticación, roles, contexto multi-gimnasio, catálogo público, sedes, personas, entrenadores, planes, membresías e invitaciones están implementados y conectados a MySQL.
+Los flujos de autenticación, roles, contexto multi-gimnasio, catálogo público, sedes, personas, entrenadores, planes, membresías, invitaciones, clases, reservas, cupos, lista de espera y asistencia están implementados y conectados a MySQL.
 
 Los siguientes módulos pertenecen a las próximas etapas y no deben interpretarse como operaciones terminadas:
 
-- Clases, cupos, reservas, lista de espera y asistencia.
 - Pagos con Mercado Pago, webhooks y reembolsos.
 - Finanzas, reportes y exportaciones.
 - Sincronización con Google Calendar.
@@ -107,6 +108,8 @@ Servicios disponibles:
 | MySQL | localhost:3306 |
 
 La base se crea automáticamente al iniciar con un volumen nuevo. En bases existentes deben aplicarse, en orden, las migraciones de `database/migrations/`.
+
+La agenda operativa requiere la migración `006_class_schedule_booking_attendance.sql`. Su reversión controlada está disponible en el archivo `.down.sql` correspondiente.
 
 ## Cuenta administrativa
 
@@ -195,6 +198,10 @@ docker compose exec -T backend sh -lc \
 # Integración de la operación multi-gimnasio
 DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
   sh tests/tenant_operations.sh
+
+# Clases, cupos, reservas, espera, asistencia e idempotencia
+DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
+  sh tests/schedule_booking_attendance.sh
 
 # Navegación, responsive, accesibilidad y consola
 docker run --rm --network host \

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 final class DemoDatasetSeeder
 {
-    private const MIGRATION = '005_phase5_tenant_operations';
-    private const VERSION = '1.2.0';
+    private const MIGRATION = '006_class_schedule_booking_attendance';
+    private const VERSION = '1.3.0';
 
     private PDO $pdo;
     private string $datasetName;
@@ -77,13 +77,33 @@ final class DemoDatasetSeeder
                 $datasetId,
                 $userIds['socio.demo@gymtrack.local'],
                 $gymIds['titan-training'],
-                $planIds['titan-training']
+                $planIds['titan-training'],
+                'presentation-socio-titan-membership'
             );
+            $this->upsertMembership(
+                $datasetId,
+                $userIds['socio.demo@gymtrack.local'],
+                $gymIds['gymtrack-centro'],
+                $planIds['gymtrack-centro'],
+                'presentation-socio-centro-membership'
+            );
+            $sessionIds = [];
+            foreach ($this->classes() as $class) {
+                $sessionIds[$class['demo_key']] = $this->upsertClassSession(
+                    $datasetId,
+                    $classIds[$class['demo_key']],
+                    $gymIds['gymtrack-centro'],
+                    $userIds['empleado.demo@gymtrack.local'],
+                    $class
+                );
+            }
             $this->upsertReservation(
                 $datasetId,
                 $userIds['socio.demo@gymtrack.local'],
-                $classIds['presentation-centro-funcional']
+                $classIds['presentation-centro-funcional'],
+                $sessionIds['presentation-centro-funcional']
             );
+            $this->recalculateSessionCounters($sessionIds);
 
             $this->pdo->commit();
             $this->purgeDemoFiles();
@@ -148,6 +168,7 @@ final class DemoDatasetSeeder
         foreach (['gimnasio_sedes'=>'sedes','entrenador_perfiles'=>'entrenadores','entrenador_gimnasios'=>'asignaciones de entrenador','planes_membresia'=>'planes','invitaciones_gimnasio'=>'invitaciones','archivos'=>'archivos'] as $table=>$label) {
             if ($this->tableExists($table)) $tables[$table]=$label;
         }
+        if ($this->tableExists('sesiones_clase')) $tables['sesiones_clase']='sesiones de clase';
 
         echo "Dataset demo '{$this->datasetName}' v" . self::VERSION . ": activo.\n";
         foreach ($tables as $table => $label) {
@@ -164,7 +185,7 @@ final class DemoDatasetSeeder
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM schema_migrations WHERE version = ?');
         $stmt->execute([self::MIGRATION]);
         if ((int) $stmt->fetchColumn() !== 1) {
-            throw new RuntimeException('Falta aplicar database/migrations/005_phase5_tenant_operations.sql.');
+            throw new RuntimeException('Falta aplicar database/migrations/006_class_schedule_booking_attendance.sql.');
         }
     }
 
@@ -389,9 +410,8 @@ final class DemoDatasetSeeder
         return (int) $this->pdo->lastInsertId();
     }
 
-    private function upsertMembership(int $datasetId, int $userId, int $gymId, int $planId): void
+    private function upsertMembership(int $datasetId, int $userId, int $gymId, int $planId, string $demoKey): void
     {
-        $demoKey = 'presentation-socio-titan-membership';
         $stmt = $this->pdo->prepare('SELECT id, is_demo, demo_dataset_id FROM membresias WHERE demo_key = ? LIMIT 1');
         $stmt->execute([$demoKey]);
         $existing = $stmt->fetch();
@@ -419,7 +439,20 @@ final class DemoDatasetSeeder
         $this->upsertMembershipHistory((int)$this->pdo->lastInsertId());
     }
 
-    private function upsertReservation(int $datasetId, int $userId, int $classId): void
+    private function upsertClassSession(int $datasetId,int $classId,int $gymId,int $instructorId,array $class): int
+    {
+        $stmt=$this->pdo->prepare('SELECT id FROM gimnasio_sedes WHERE gimnasio_id=? AND es_principal=1 LIMIT 1');$stmt->execute([$gymId]);$locationId=(int)$stmt->fetchColumn();
+        $days=['lunes'=>1,'martes'=>2,'miercoles'=>3,'jueves'=>4,'viernes'=>5,'sabado'=>6,'domingo'=>7];$today=new DateTimeImmutable('today');$offset=($days[$class['dia']]-(int)$today->format('N')+7)%7;if($offset===0)$offset=7;$date=$today->modify('+'.$offset.' days')->format('Y-m-d');$start=$date.' '.$class['inicio'];$end=$date.' '.$class['fin'];
+        $stmt=$this->pdo->prepare('INSERT INTO sesiones_clase (clase_id,gimnasio_id,sede_id,instructor_id,inicio_en,fin_en,zona_horaria,cupo_maximo,cupos_reservados,espera_total,estado,is_demo,demo_dataset_id) VALUES (?,?,?,?,?,?,?,?,0,0,"programada",1,?) ON DUPLICATE KEY UPDATE sede_id=VALUES(sede_id),instructor_id=VALUES(instructor_id),fin_en=VALUES(fin_en),cupo_maximo=VALUES(cupo_maximo),estado="programada",motivo_cancelacion=NULL,is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)');$stmt->execute([$classId,$gymId,$locationId,$instructorId,$start,$end,'America/Montevideo',$class['cupo'],$datasetId]);
+        $stmt=$this->pdo->prepare('SELECT id FROM sesiones_clase WHERE clase_id=? AND inicio_en=?');$stmt->execute([$classId,$start]);return (int)$stmt->fetchColumn();
+    }
+
+    private function recalculateSessionCounters(array $sessionIds): void
+    {
+        $stmt=$this->pdo->prepare('UPDATE sesiones_clase s SET cupos_reservados=(SELECT COUNT(*) FROM reservas r WHERE r.sesion_clase_id=s.id AND r.estado IN ("confirmada","asistio","no_asistio")),espera_total=(SELECT COUNT(*) FROM reservas r WHERE r.sesion_clase_id=s.id AND r.estado="lista_espera") WHERE s.id=?');foreach($sessionIds as $id)$stmt->execute([$id]);
+    }
+
+    private function upsertReservation(int $datasetId, int $userId, int $classId, int $sessionId): void
     {
         $demoKey = 'presentation-socio-centro-reservation';
         $stmt = $this->pdo->prepare('SELECT id, is_demo, demo_dataset_id FROM reservas WHERE demo_key = ? LIMIT 1');
@@ -430,19 +463,19 @@ final class DemoDatasetSeeder
 
         if ($existing) {
             $stmt = $this->pdo->prepare(
-                'UPDATE reservas SET usuario_id = ?, clase_id = ?, fecha_reserva = ?, estado = ?,
+                'UPDATE reservas SET usuario_id = ?, clase_id = ?, sesion_clase_id = ?, fecha_reserva = ?, confirmada_en = ?, estado = ?, posicion_espera=NULL,
                  is_demo = 1, demo_dataset_id = ? WHERE id = ?'
             );
-            $stmt->execute([$userId, $classId, $reservedAt, 'confirmada', $datasetId, (int) $existing['id']]);
+            $stmt->execute([$userId, $classId, $sessionId, $reservedAt, $reservedAt, 'confirmada', $datasetId, (int) $existing['id']]);
             return;
         }
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO reservas
-             (usuario_id, clase_id, fecha_reserva, estado, demo_key, is_demo, demo_dataset_id)
-             VALUES (?, ?, ?, ?, ?, 1, ?)'
+             (usuario_id, clase_id, sesion_clase_id, fecha_reserva, confirmada_en, estado, demo_key, is_demo, demo_dataset_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)'
         );
-        $stmt->execute([$userId, $classId, $reservedAt, 'confirmada', $demoKey, $datasetId]);
+        $stmt->execute([$userId, $classId, $sessionId, $reservedAt, $reservedAt, 'confirmada', $demoKey, $datasetId]);
     }
 
     private function removeRows(int $datasetId): void
@@ -457,7 +490,7 @@ final class DemoDatasetSeeder
             $stmt = $this->pdo->prepare("DELETE FROM {$phaseTable} WHERE is_demo = 1 AND demo_dataset_id = ?");
             $stmt->execute([$datasetId]);
         }
-        foreach (['reservas','membresias','planes_membresia','clases','usuario_gimnasio_roles','usuarios','gimnasio_sedes','gimnasios'] as $table) {
+        foreach (['reservas','sesiones_clase','membresias','planes_membresia','clases','usuario_gimnasio_roles','usuarios','gimnasio_sedes','gimnasios'] as $table) {
             if (!$this->tableExists($table)) continue;
             $stmt = $this->pdo->prepare("DELETE FROM {$table} WHERE is_demo = 1 AND demo_dataset_id = ?");
             $stmt->execute([$datasetId]);

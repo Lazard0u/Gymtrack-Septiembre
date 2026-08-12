@@ -30,7 +30,7 @@ if ($origenPeticion !== '' && hash_equals($origenPermitido, $origenPeticion)) {
 }
 header('Access-Control-Allow-Credentials: true');
 header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, X-Request-ID');
+header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, X-Request-ID, Idempotency-Key');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
