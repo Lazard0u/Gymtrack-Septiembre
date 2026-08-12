@@ -34,7 +34,7 @@ header('Access-Control-Allow-Headers: Content-Type, X-CSRF-Token, X-Request-ID, 
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; base-uri 'none'");
-header('Permissions-Policy: geolocation=(), camera=(), microphone=()');
+header('Permissions-Policy: geolocation=(self), camera=(), microphone=()');
 header('Content-Type: application/json; charset=UTF-8');
 
 // Correlación segura de cada petición. Se acepta el identificador del cliente

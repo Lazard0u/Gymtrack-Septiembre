@@ -11,6 +11,9 @@ El proyecto mantiene el stack original: **Vue 3, PHP, MySQL, Docker, Leaflet y O
 - Explorar gimnasios almacenados en MySQL.
 - Buscar y filtrar por nombre, ubicación, categoría y servicios.
 - Consultar gimnasios en un mapa interactivo con Leaflet y OpenStreetMap.
+- Solicitar ubicación con consentimiento, calcular distancias localmente y ordenar por cercanía sin guardar coordenadas personales.
+- Filtrar por ciudad, categoría, servicios y estado, con marcadores agrupados y sincronizados con la lista.
+- Usar un panel contraíble en escritorio y un bottom sheet de tres posiciones en móvil.
 - Ver la ficha pública, sedes, horarios, contacto y planes disponibles.
 - Navegar sin desbordamientos desde móviles de 360 px hasta escritorios amplios.
 
@@ -52,6 +55,7 @@ El proyecto incluye un seeder versionado e idempotente con cinco gimnasios ficti
 ## Estado funcional
 
 Los flujos de autenticación, roles, contexto multi-gimnasio, catálogo público, sedes, personas, entrenadores, planes, membresías, invitaciones, clases, reservas, cupos, lista de espera, asistencia, pagos, finanzas y reportes están implementados y conectados a MySQL.
+El mapa público, la geolocalización opcional, las distancias, los filtros y el orden por cercanía también están implementados; la ubicación del visitante permanece en el navegador.
 
 Los siguientes módulos pertenecen a las próximas etapas y no deben interpretarse como operaciones terminadas:
 
@@ -224,6 +228,9 @@ DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
 # Pagos, finanzas, exportaciones, webhook e aislamiento
 DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
   sh tests/payments_finance_reports.sh
+
+# Catálogo geográfico y datos reales del mapa
+sh tests/map_geolocation.sh
 
 # Navegación, responsive, accesibilidad y consola
 docker run --rm --network host \

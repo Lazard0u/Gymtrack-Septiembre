@@ -22,7 +22,7 @@ import ownerImage from '../assets/images/gymtrack-owner-studio.webp'
 
 const memberBenefits = [
   { icon: IconMap2, title: 'Descubrí sin adivinar', text: 'Encontrá gimnasios en el mapa y compará información publicada por cada sede.' },
-  { icon: IconCalendarEvent, title: 'Tu agenda, ordenada', text: 'Consultá clases, cupos y reservas desde un mismo lugar cuando el módulo operativo esté conectado.' },
+  { icon: IconCalendarEvent, title: 'Tu agenda, ordenada', text: 'Consultá clases, cupos, reservas y lista de espera desde un mismo lugar.' },
   { icon: IconHeart, title: 'Una experiencia propia', text: 'Reuní favoritos, membresías, pagos y asistencia dentro de tu perfil.' },
 ]
 
@@ -37,7 +37,7 @@ const capabilities = [
 const questions = [
   { question: '¿Los gimnasios de la presentación son reales?', answer: 'No. Son cinco sedes ficticias identificadas como datos de demostración. Existen en MySQL y pueden eliminarse por dataset sin mezclarse con futuros gimnasios reales.' },
   { question: '¿Puedo crear una cuenta?', answer: 'Sí. El registro actual crea una cuenta de socio. Los flujos específicos para dueños, empleados y entrenadores se incorporarán en las fases de administración y roles.' },
-  { question: '¿Los pagos están habilitados?', answer: 'No todavía. GymTrack no presenta un checkout ficticio: Mercado Pago, los webhooks y la activación segura de membresías continúan en desarrollo.' },
+  { question: '¿Los pagos están habilitados?', answer: 'El historial, los pagos manuales y la validación por webhook están implementados. El checkout con Mercado Pago sólo se habilita cuando el entorno tiene credenciales válidas.' },
   { question: '¿Funciona en el celular?', answer: 'La experiencia pública se adapta desde 360 px, incluye navegación móvil y un panel inferior para explorar el mapa sin scroll horizontal.' },
 ]
 </script>
@@ -113,9 +113,9 @@ const questions = [
 
       <section class="section plans-section" aria-labelledby="plans-title">
         <div class="container plans-grid">
-          <div class="section-heading"><span class="eyebrow">Planes</span><h2 id="plans-title">Elegí con información real.</h2><p>Los planes y precios se publicarán cuando cada gimnasio pueda configurarlos desde administración.</p></div>
+          <div class="section-heading"><span class="eyebrow">Planes</span><h2 id="plans-title">Elegí con información real.</h2><p>Cada gimnasio puede publicar planes versionados con moneda, vigencia y beneficios claros.</p></div>
           <AppCard class="plans-card">
-            <AppEmptyState title="Planes todavía no disponibles" description="Evitamos mostrar precios de ejemplo. Esta sección quedará conectada al catálogo real de membresías.">
+            <AppEmptyState title="Consultá los planes por gimnasio" description="Los precios y beneficios se leen desde MySQL en la ficha de cada gimnasio; no mostramos una tarifa global inventada.">
               <template #icon><IconCreditCard :size="24" /></template>
               <template #action><AppLinkButton :to="{ name: 'plans' }" variant="secondary" size="sm">Ver estado de planes</AppLinkButton></template>
             </AppEmptyState>

@@ -10,7 +10,7 @@ const inputId = computed(() => props.name || `select-${uid}`)
   <label class="field" :for="inputId">
     <span>{{ label }}</span>
     <select :id="inputId" class="field__control" :name="name" :value="modelValue" :disabled="disabled" :aria-invalid="error ? 'true' : undefined" :aria-describedby="hint || error ? `${inputId}-help` : undefined" @change="emit('update:modelValue', $event.target.value)">
-      <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
+      <option v-for="option in options" :key="option.value" :value="option.value" :disabled="option.disabled">{{ option.label }}</option>
     </select>
     <span v-if="error || hint" :id="`${inputId}-help`" :class="['field__help', { 'field__help--error': error }]">{{ error || hint }}</span>
   </label>

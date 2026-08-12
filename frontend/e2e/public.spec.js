@@ -67,6 +67,54 @@ test('el catálogo demo llega desde la API y sus filtros actualizan lista y mapa
   await expect(page.locator('.gym-marker')).toHaveCount(1)
 })
 
+test('la ubicación se solicita con consentimiento y ordena por cercanía sin salir del navegador', async ({ page }) => {
+  await page.context().grantPermissions(['geolocation'], { origin: 'http://127.0.0.1:4173' })
+  await page.context().setGeolocation({ latitude: -34.9046, longitude: -56.1851, accuracy: 35 })
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/gimnasios')
+  await page.getByRole('button', { name: 'Usar mi ubicación' }).click()
+  await expect(page.getByText('Ubicación disponible')).toBeVisible()
+  await expect(page.getByLabel('Ordenar por')).toHaveValue('distance')
+  await expect(gymCard(page, 'GymTrack Centro').getByText(/A \d+ m de tu ubicación/)).toBeVisible()
+  await expect(page.locator('.gym-card').first()).toContainText('GymTrack Centro')
+  await expect(page.locator('.user-location')).toHaveCount(1)
+  await page.getByRole('button', { name: 'Volver a mi ubicación' }).click()
+})
+
+test('el permiso rechazado conserva el catálogo y ofrece la vista general', async ({ page }) => {
+  await page.context().clearPermissions()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto('/gimnasios')
+  await page.getByRole('button', { name: 'Usar mi ubicación' }).click()
+  await expect(page.getByText('Permiso de ubicación rechazado')).toBeVisible()
+  await page.getByRole('button', { name: 'Usar vista general' }).click()
+  await expect(page.getByText('Vista general activa')).toBeVisible()
+  await expect(gymCard(page, 'GymTrack Centro')).toBeAttached()
+})
+
+test('servicios, estado y marcadores permanecen sincronizados', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/gimnasios')
+  await page.getByLabel('Servicio').selectOption('Accesibilidad')
+  await expect(gymCard(page, 'Punto Activo')).toBeVisible()
+  await expect(page.locator('.gym-marker')).toHaveCount(1)
+  await page.getByLabel('Estado').selectOption('open')
+  await expect(page.getByText('No encontramos coincidencias')).toBeVisible()
+  await page.getByRole('button', { name: 'Limpiar filtros' }).click()
+  await page.locator('.gym-marker').first().click()
+  await expect(page.locator('.gym-card--selected')).toHaveCount(1)
+})
+
+test('los marcadores se agrupan cuando el mapa muestra una región amplia', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/gimnasios')
+  await expect(gymCard(page, 'GymTrack Centro')).toBeVisible()
+  const zoomOut = page.locator('.leaflet-control-zoom-out')
+  await zoomOut.click()
+  await zoomOut.click()
+  await expect(page.locator('.gym-cluster')).not.toHaveCount(0)
+})
+
 test('la portada no tiene violaciones automáticas serias o críticas', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
   await page.goto('/')
