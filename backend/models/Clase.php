@@ -16,6 +16,7 @@ class Clase
 
     public function listarTodos(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $sql =
             'SELECT c.id, c.nombre, c.instructor_id, u.nombre AS instructor_nombre,
                     c.dia_semana, c.hora_inicio, c.hora_fin, c.cupo_maximo,
@@ -46,6 +47,7 @@ class Clase
 
     public function listarActivas(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $sql =
             'SELECT c.id, c.nombre, c.instructor_id, u.nombre AS instructor_nombre,
                     c.dia_semana, c.hora_inicio, c.hora_fin, c.cupo_maximo,
@@ -100,6 +102,7 @@ class Clase
         ?int $gimnasioId = null
     ): bool
     {
+        $this->requireGym($gimnasioId);
         $stmt = $this->pdo->prepare(
             'UPDATE clases
              SET nombre = ?, instructor_id = ?, dia_semana = ?, hora_inicio = ?, hora_fin = ?,
@@ -132,6 +135,7 @@ class Clase
 
     public function cancelar(int $id, ?int $gimnasioId = null): bool
     {
+        $this->requireGym($gimnasioId);
         $stmt = $this->pdo->prepare(
             'UPDATE clases SET activa = 0 WHERE id = ? AND (? IS NULL OR gimnasio_id = ?)'
         );
@@ -148,6 +152,7 @@ class Clase
 
     public function estadisticas(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $sql =
             'SELECT
                 COUNT(*) AS clases_totales,
@@ -185,6 +190,7 @@ class Clase
 
     public function buscarPorId(int $id, ?int $demoDatasetId = null, ?int $gimnasioId = null): array|false
     {
+        $this->requireGym($gimnasioId);
         $sql =
             'SELECT id, nombre, instructor_id, dia_semana, hora_inicio, hora_fin, cupo_maximo, cupos_disponibles, activa
              FROM clases WHERE id = ? AND is_demo = ?';
@@ -206,6 +212,7 @@ class Clase
 
     public function listarInscriptos(int $claseId, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $stmt = $this->pdo->prepare(
             'SELECT r.id AS reserva_id, u.id AS usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                     r.fecha_reserva, r.estado
@@ -224,6 +231,7 @@ class Clase
 
     public function contarClasesHoy(?int $demoDatasetId = null, ?int $gimnasioId = null): int
     {
+        $this->requireGym($gimnasioId);
         $dias = [1 => 'lunes', 2 => 'martes', 3 => 'miercoles', 4 => 'jueves', 5 => 'viernes', 6 => 'sabado', 7 => 'domingo'];
         $diaHoy = $dias[(int) date('N')];
 
@@ -248,5 +256,12 @@ class Clase
         $stmt=$this->pdo->prepare('SELECT 1 FROM clases WHERE id=? AND (? IS NULL OR gimnasio_id=?) LIMIT 1');
         $stmt->execute([$id,$gimnasioId,$gimnasioId]);
         return (bool)$stmt->fetchColumn();
+    }
+
+    private function requireGym(?int $gimnasioId): void
+    {
+        if ($gimnasioId === null || $gimnasioId < 1) {
+            throw new LogicException('Clase requiere un contexto de gimnasio explícito.');
+        }
     }
 }

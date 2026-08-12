@@ -16,6 +16,7 @@ class Reserva
 
     public function listarPorRango(string $desde, string $hasta, ?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $sql = 'SELECT r.id, r.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                        r.clase_id, c.nombre AS clase_nombre, c.dia_semana, c.hora_inicio, c.hora_fin,
                        r.fecha_reserva, r.estado
@@ -41,6 +42,7 @@ class Reserva
 
     public function reservar(int $usuarioId, int $claseId, ?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         try {
             $this->pdo->beginTransaction();
 
@@ -137,6 +139,7 @@ class Reserva
 
     public function cancelar(int $id, ?int $usuarioId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         try {
             $this->pdo->beginTransaction();
 
@@ -189,6 +192,7 @@ class Reserva
 
     public function listarPorUsuario(int $usuarioId, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $stmt = $this->pdo->prepare(
             'SELECT r.id, r.clase_id, c.nombre AS clase_nombre, c.dia_semana,
                     c.hora_inicio, c.hora_fin, r.fecha_reserva, r.estado
@@ -204,6 +208,7 @@ class Reserva
 
     public function listarTodas(?int $usuarioId = null, ?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $sql = 'SELECT r.id, r.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                        r.clase_id, c.nombre AS clase_nombre, c.dia_semana, c.hora_inicio, c.hora_fin,
                        r.fecha_reserva, r.estado
@@ -231,5 +236,12 @@ class Reserva
         $stmt->execute($parametros);
 
         return $stmt->fetchAll();
+    }
+
+    private function requireGym(?int $gimnasioId): void
+    {
+        if ($gimnasioId === null || $gimnasioId < 1) {
+            throw new LogicException('Reserva requiere un contexto de gimnasio explícito.');
+        }
     }
 }

@@ -48,7 +48,19 @@ final class Usuario
         $params=[$id,$demoDatasetId===null?0:1];if($demoDatasetId!==null){$sql.=' AND u.demo_dataset_id=?';$params[]=$demoDatasetId;}if($gimnasioId!==null){$sql.=' AND EXISTS(SELECT 1 FROM usuario_gimnasio_roles ugr WHERE ugr.usuario_id=u.id AND ugr.gimnasio_id=? AND ugr.activo=1)';$params[]=$gimnasioId;}$sql.=' LIMIT 1';$stmt=$this->pdo->prepare($sql);$stmt->execute($params);return $stmt->fetch();
     }
 
-    public function cambiarEstado(int $id,int $active): bool { $stmt=$this->pdo->prepare('UPDATE usuarios SET activo=? WHERE id=?');return $stmt->execute([$active,$id]); }
+    public function cambiarEstado(int $id,int $active,int $gimnasioId,?int $demoDatasetId): bool
+    {
+        $stmt=$this->pdo->prepare(
+            'UPDATE usuarios u SET u.activo=?
+             WHERE u.id=? AND u.is_demo=? AND (u.demo_dataset_id <=> ?)
+               AND EXISTS(
+                   SELECT 1 FROM usuario_gimnasio_roles ugr
+                   WHERE ugr.usuario_id=u.id AND ugr.gimnasio_id=? AND ugr.activo=1
+               )'
+        );
+        $stmt->execute([$active,$id,$demoDatasetId===null?0:1,$demoDatasetId,$gimnasioId]);
+        return $stmt->rowCount()===1;
+    }
     public function contarSociosActivos(?int $demoDatasetId=null,?int $gimnasioId=null): int { $sql='SELECT COUNT(*) FROM usuarios u JOIN roles r ON r.id=u.rol_id WHERE r.nombre=? AND u.activo=1 AND u.is_demo=?';$params=[AuthorizationService::SOCIO,$demoDatasetId===null?0:1];if($demoDatasetId!==null){$sql.=' AND u.demo_dataset_id=?';$params[]=$demoDatasetId;}if($gimnasioId!==null){$sql.=' AND EXISTS(SELECT 1 FROM usuario_gimnasio_roles ugr WHERE ugr.usuario_id=u.id AND ugr.gimnasio_id=? AND ugr.activo=1)';$params[]=$gimnasioId;}$stmt=$this->pdo->prepare($sql);$stmt->execute($params);return(int)$stmt->fetchColumn(); }
     public function actualizarPerfil(int $id,string $nombre,?string $telefono): bool { $stmt=$this->pdo->prepare('UPDATE usuarios SET nombre=?,telefono=? WHERE id=?');return$stmt->execute([$nombre,$telefono,$id]); }
 

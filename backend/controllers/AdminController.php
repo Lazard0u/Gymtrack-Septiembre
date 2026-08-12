@@ -69,9 +69,21 @@ class AdminController
         }
 
         $activo = $datos['activo'] ? 1 : 0;
-        $resultado = $this->usuarioModel->cambiarEstado($id, $activo);
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
+        $resultado = $this->usuarioModel->cambiarEstado($id, $activo, $gimnasioId, $this->demoDatasetId());
 
         if ($resultado) {
+            AdminAuditLogger::record(
+                'member.legacy_status.changed',
+                'usuario',
+                'success',
+                AuthMiddleware::obtenerUsuarioId(),
+                $gimnasioId,
+                (string) $id,
+                'Contrato heredado fuera del router',
+                null,
+                ['activo' => $activo]
+            );
             $this->responder(200, [
                 'error'   => false,
                 'mensaje' => 'Estado de la cuenta actualizado.'
@@ -391,8 +403,8 @@ class AdminController
 
     private function verificarAdmin(): void
     {
-        AuthMiddleware::verificarSesion();
         AuthMiddleware::verificarRol(AuthorizationService::ADMIN);
+        AuthMiddleware::requerirContextoGimnasio();
     }
 
     private function demoDatasetId(): ?int

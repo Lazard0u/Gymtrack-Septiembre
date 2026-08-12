@@ -48,7 +48,13 @@ final class MeController
 
     public function clearGym(): void
     {
-        AuthMiddleware::verificarSesion();$csrf=(new SessionManager())->rotateContext(null);$payload=(new UserContextService())->payload(AuthMiddleware::obtenerUsuarioId());
+        AuthMiddleware::verificarSesion();
+        $userId=AuthMiddleware::obtenerUsuarioId();
+        if((new AuthorizationService())->gymAssignments($userId)!==[]){
+            $this->respond(409,['error'=>true,'codigo'=>'gym_context_required','mensaje'=>'Tu cuenta necesita un gimnasio activo. Seleccioná otro gimnasio en lugar de desactivar el contexto.']);
+            return;
+        }
+        $csrf=(new SessionManager())->rotateContext(null);$payload=(new UserContextService())->payload($userId);
         $this->respond(200,['error'=>false,'mensaje'=>'Contexto de gimnasio desactivado.','usuario'=>$payload,'csrf_token'=>$csrf]);
     }
 

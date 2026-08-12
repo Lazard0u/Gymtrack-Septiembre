@@ -29,7 +29,8 @@ class ClasesController
     public function listar(): void
     {
         AuthMiddleware::verificarPermiso('classes.read');
-        $clases = $this->claseModel->listarActivas(AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
+        $clases = $this->claseModel->listarActivas(AuthMiddleware::obtenerDemoDatasetId(), $gimnasioId);
         $this->responder(200, ['error' => false, 'clases' => $clases]);
     }
 
@@ -38,8 +39,14 @@ class ClasesController
      */
     public function todas(): void
     {
+        AuthMiddleware::verificarRoles([
+            AuthorizationService::EMPLEADO,
+            AuthorizationService::DUENO,
+            AuthorizationService::ADMIN,
+        ]);
         AuthMiddleware::verificarPermiso('classes.read');
-        $clases = $this->claseModel->listarTodas(AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
+        $clases = $this->claseModel->listarTodas(AuthMiddleware::obtenerDemoDatasetId(), $gimnasioId);
         $this->responder(200, ['error' => false, 'clases' => $clases]);
     }
 
@@ -49,7 +56,8 @@ class ClasesController
     public function ver(int $id): void
     {
         AuthMiddleware::verificarPermiso('classes.read');
-        $clase = $this->claseModel->buscarPorId($id, AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
+        $clase = $this->claseModel->buscarPorId($id, AuthMiddleware::obtenerDemoDatasetId(), $gimnasioId);
         if (!$clase) {
             $this->responder(404, ['error' => true, 'mensaje' => 'Clase no encontrada.']);
             return;
@@ -174,9 +182,14 @@ class ClasesController
      */
     public function stats(): void
     {
+        AuthMiddleware::verificarRoles([
+            AuthorizationService::EMPLEADO,
+            AuthorizationService::DUENO,
+            AuthorizationService::ADMIN,
+        ]);
         AuthMiddleware::verificarPermiso('classes.read');
-
-        $stats = $this->claseModel->estadisticas(AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
+        $stats = $this->claseModel->estadisticas(AuthMiddleware::obtenerDemoDatasetId(), $gimnasioId);
         $this->responder(200, ['error' => false, 'estadisticas' => $stats]);
     }
 

@@ -144,7 +144,9 @@ $rutas = [
     // Contratos heredados conservados temporalmente por compatibilidad.
     'GET /api/admin/socios'                         => ['AdminController', 'listarSocios'],
     'GET /api/admin/socios/(\d+)'                  => ['AdminController', 'verSocio'],
-    'PUT /api/admin/socios/(\d+)/estado'           => ['AdminController', 'actualizarEstadoSocio'],
+    // La mutación heredada de estado global se retiró del router: no tenía
+    // aislamiento por gimnasio. El contrato moderno /api/admin/members/{id}
+    // conserva las operaciones tenant con auditoría.
 
     'GET /api/admin/membresias'                     => ['AdminController', 'listarMembresias'],
     'POST /api/admin/membresias'                    => ['AdminController', 'crearMembresia'],

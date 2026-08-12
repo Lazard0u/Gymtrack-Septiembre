@@ -16,6 +16,7 @@ class Membresia
 
     public function listarTodos(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $sql =
             'SELECT m.id, m.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                     m.plan, m.fecha_inicio, m.fecha_vencimiento, m.estado, m.precio_pagado, m.creado_en
@@ -64,6 +65,7 @@ class Membresia
 
     public function listarVencidas(?int $demoDatasetId = null, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $sql =
             'SELECT m.id, m.usuario_id, u.nombre AS usuario_nombre, u.email AS usuario_email,
                     m.plan, m.fecha_inicio, m.fecha_vencimiento, m.estado, m.precio_pagado
@@ -89,6 +91,7 @@ class Membresia
 
     public function contarPorVencer(int $dias = 7, ?int $demoDatasetId = null, ?int $gimnasioId = null): int
     {
+        $this->requireGym($gimnasioId);
         $sql =
             'SELECT COUNT(DISTINCT m.usuario_id)
              FROM membresias m
@@ -113,6 +116,7 @@ class Membresia
 
     public function listarPorUsuario(int $usuarioId, ?int $gimnasioId = null): array
     {
+        $this->requireGym($gimnasioId);
         $stmt = $this->pdo->prepare(
             'SELECT id, plan, fecha_inicio, fecha_vencimiento, estado, precio_pagado, creado_en
              FROM membresias
@@ -127,6 +131,7 @@ class Membresia
 
     public function actualizarVencidas(?int $demoDatasetId = null, ?int $gimnasioId = null): int
     {
+        $this->requireGym($gimnasioId);
         $sql =
             'UPDATE membresias
              SET estado = "vencida"
@@ -149,6 +154,7 @@ class Membresia
 
     public function tieneMembresiaActiva(int $usuarioId, ?int $gimnasioId = null): bool
     {
+        $this->requireGym($gimnasioId);
         $stmt = $this->pdo->prepare(
             'SELECT 1
              FROM membresias
@@ -165,6 +171,7 @@ class Membresia
 
     public function obtenerPorUsuario(int $usuarioId, ?int $gimnasioId = null): array|false
     {
+        $this->requireGym($gimnasioId);
         $stmt = $this->pdo->prepare(
             'SELECT id, usuario_id, plan, fecha_inicio, fecha_vencimiento, estado, precio_pagado, creado_en
              FROM membresias
@@ -208,5 +215,12 @@ class Membresia
         $stmt->execute([$usuarioId, $gimnasioId]);
 
         return $stmt->rowCount() > 0;
+    }
+
+    private function requireGym(?int $gimnasioId): void
+    {
+        if ($gimnasioId === null || $gimnasioId < 1) {
+            throw new LogicException('Membresía requiere un contexto de gimnasio explícito.');
+        }
     }
 }

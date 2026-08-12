@@ -27,7 +27,7 @@ class MembresiaController
     {
         AuthMiddleware::verificarPermiso('memberships.read');
         $usuarioId = AuthMiddleware::obtenerUsuarioId();
-        $gimnasioId = AuthMiddleware::obtenerGimnasioContextoId();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
 
         // Actualizar vencidas antes de devolver el estado
         $this->membresiaModel->actualizarVencidas(AuthMiddleware::obtenerDemoDatasetId(), $gimnasioId);
@@ -150,10 +150,15 @@ class MembresiaController
      */
     public function todas(): void
     {
+        AuthMiddleware::verificarRoles([
+            AuthorizationService::EMPLEADO,
+            AuthorizationService::DUENO,
+            AuthorizationService::ADMIN,
+        ]);
         AuthMiddleware::verificarPermiso('memberships.read');
 
         $datasetId = AuthMiddleware::obtenerDemoDatasetId();
-        $gimnasioId = AuthMiddleware::obtenerGimnasioContextoId();
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
         $this->membresiaModel->actualizarVencidas($datasetId, $gimnasioId);
         $membresias = $this->membresiaModel->listarTodas($datasetId, $gimnasioId);
         $this->responder(200, ['error' => false, 'membresias' => $membresias]);

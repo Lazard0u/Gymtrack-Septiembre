@@ -26,6 +26,14 @@ csrf="$(jq -r '.csrf_token' "$tmp_dir/login.json")"
 centro_id="$(jq -r '.usuario.gimnasios[] | select(.nombre=="GymTrack Centro") | .gimnasio_id' "$tmp_dir/login.json")"
 titan_id="$(jq -r '.usuario.gimnasios[] | select(.nombre=="Titan Training") | .gimnasio_id' "$tmp_dir/login.json")"
 
+# Un socio nunca puede convertir permisos de lectura propios en listados
+# operativos globales del gimnasio.
+assert_status 403 "$(curl -sS -b "$tmp_dir/cookies" -o "$tmp_dir/all-bookings.json" -w '%{http_code}' "$API_BASE_URL/reservas/todas")" reservas_globales_denegadas "$tmp_dir/all-bookings.json"
+assert_status 403 "$(curl -sS -b "$tmp_dir/cookies" -o "$tmp_dir/all-memberships.json" -w '%{http_code}' "$API_BASE_URL/membresia/todas")" membresias_globales_denegadas "$tmp_dir/all-memberships.json"
+
+# Las cuentas con asignaciones tenant deben conservar un gimnasio activo.
+assert_status 409 "$(curl -sS -b "$tmp_dir/cookies" -o "$tmp_dir/clear-context.json" -w '%{http_code}' -X DELETE -H "X-CSRF-Token: $csrf" "$API_BASE_URL/me/gym-context")" contexto_obligatorio "$tmp_dir/clear-context.json"
+
 assert_status 200 "$(curl -sS -b "$tmp_dir/cookies" -o "$tmp_dir/classes-centro.json" -w '%{http_code}' "$API_BASE_URL/clases")" clases_centro "$tmp_dir/classes-centro.json"
 class_id="$(jq -r '.clases[0].id // empty' "$tmp_dir/classes-centro.json")"
 [ -n "$class_id" ] || { echo 'El gimnasio Centro debe tener al menos una clase demo.' >&2; exit 1; }

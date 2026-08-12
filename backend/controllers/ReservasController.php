@@ -95,8 +95,8 @@ class ReservasController
     {
         AuthMiddleware::verificarPermiso('reservations.read');
         $usuarioId = AuthMiddleware::obtenerUsuarioId();
-
-        $reservas = $this->reservaModel->listarPorUsuario($usuarioId, AuthMiddleware::obtenerGimnasioContextoId());
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
+        $reservas = $this->reservaModel->listarPorUsuario($usuarioId, $gimnasioId);
         $this->responder(200, ['error' => false, 'reservas' => $reservas]);
     }
 
@@ -106,10 +106,15 @@ class ReservasController
      */
     public function todas(): void
     {
+        AuthMiddleware::verificarRoles([
+            AuthorizationService::EMPLEADO,
+            AuthorizationService::DUENO,
+            AuthorizationService::ADMIN,
+        ]);
         AuthMiddleware::verificarPermiso('reservations.read');
-
+        $gimnasioId = AuthMiddleware::requerirContextoGimnasio();
         $usuarioId = isset($_GET['usuario_id']) ? (int) $_GET['usuario_id'] : null;
-        $reservas  = $this->reservaModel->listarTodas($usuarioId, AuthMiddleware::obtenerDemoDatasetId(), AuthMiddleware::obtenerGimnasioContextoId());
+        $reservas  = $this->reservaModel->listarTodas($usuarioId, AuthMiddleware::obtenerDemoDatasetId(), $gimnasioId);
 
         $this->responder(200, ['error' => false, 'reservas' => $reservas]);
     }
