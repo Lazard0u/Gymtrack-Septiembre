@@ -20,13 +20,14 @@ const ChangePasswordView = () => import('../views/ChangePasswordView.vue')
 const SessionsView = () => import('../views/SessionsView.vue')
 const DashboardView = () => import('../views/DashboardView.vue')
 const MemberScheduleView = () => import('../views/MemberScheduleView.vue')
+const MemberPaymentsView = () => import('../views/MemberPaymentsView.vue')
 const AdminShell = () => import('../layouts/AdminShell.vue')
 const AdminSummaryView = () => import('../views/admin/AdminSummaryView.vue')
 const AdminOperationsView = () => import('../views/admin/AdminOperationsView.vue')
-const AdminResourceView = () => import('../views/admin/AdminResourceView.vue')
-const AdminUnavailableView = () => import('../views/admin/AdminUnavailableView.vue')
 const AdminPromotionsView = () => import('../views/admin/AdminPromotionsView.vue')
 const AdminReportsView = () => import('../views/admin/AdminReportsView.vue')
+const AdminPaymentsView = () => import('../views/admin/AdminPaymentsView.vue')
+const AdminFinanceView = () => import('../views/admin/AdminFinanceView.vue')
 const AdminSettingsView = () => import('../views/admin/AdminSettingsView.vue')
 const AdminPeopleView = () => import('../views/admin/AdminPeopleView.vue')
 const AdminTrainersView = () => import('../views/admin/AdminTrainersView.vue')
@@ -152,6 +153,12 @@ const routes = [
     meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], requiredPermission: 'classes.read', title: 'Agenda de clases | GymTrack' },
   },
   {
+    path: '/pagos',
+    name: 'member-payments',
+    component: MemberPaymentsView,
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], requiredPermission: 'payments.read', title: 'Mis pagos | GymTrack' },
+  },
+  {
     path: '/sesion-expirada', name: 'session-expired', component: StatusView,
     props: { code: '401', title: 'Tu sesión terminó', message: 'Iniciá sesión nuevamente para continuar de forma segura.' },
     meta: { title: 'Sesión expirada | GymTrack' },
@@ -185,9 +192,9 @@ const routes = [
       { path: 'clases', name: 'admin-classes', component: AdminScheduleView, props: { mode: 'classes' }, meta: { adminLabel: 'Clases', requiredPermission: 'classes.read', title: 'Clases | Administración GymTrack' } },
       { path: 'reservas', name: 'admin-reservations', component: AdminScheduleView, props: { mode: 'reservations' }, meta: { adminLabel: 'Reservas', requiredPermission: 'reservations.read', title: 'Reservas | Administración GymTrack' } },
       { path: 'membresias', name: 'admin-memberships', component: AdminMembershipsView, meta: { adminLabel: 'Membresías', requiredPermission: 'memberships.read', title: 'Membresías | Administración GymTrack' } },
-      { path: 'pagos', name: 'admin-payments', component: AdminResourceView, props: { resource: 'payments', title: 'Pagos', description: 'Transacciones confirmadas registradas en el esquema actual. Los estados avanzados todavía no están disponibles.', columns: [{ key: 'usuario_nombre', label: 'Socio', sortable: true }, { key: 'usuario_email', label: 'Correo' }, { key: 'plan', label: 'Plan' }, { key: 'monto', label: 'Importe', format: 'money', sortable: true }, { key: 'metodo', label: 'Método', sortable: true }, { key: 'estado', label: 'Estado', format: 'status' }, { key: 'fecha_pago', label: 'Fecha', format: 'datetime', sortable: true }], filters: [{ key: 'method', label: 'Método', options: [{ value: '', label: 'Todos' }, { value: 'efectivo', label: 'Efectivo' }, { value: 'transferencia', label: 'Transferencia' }, { value: 'tarjeta', label: 'Tarjeta' }] }], emptyTitle: 'No hay pagos registrados', emptyDescription: 'No existen transacciones confirmadas para este gimnasio y estos filtros.', statusLabel: 'Consulta estable' }, meta: { adminLabel: 'Pagos', requiredPermission: 'payments.read', title: 'Pagos | Administración GymTrack' } },
+      { path: 'pagos', name: 'admin-payments', component: AdminPaymentsView, meta: { adminLabel: 'Pagos', requiredPermission: 'payments.read', title: 'Pagos | Administración GymTrack' } },
       { path: 'promociones', name: 'admin-promotions', component: AdminPromotionsView, meta: { adminLabel: 'Promociones', requiredPermission: 'gym.configure', title: 'Promociones | Administración GymTrack' } },
-      { path: 'finanzas', name: 'admin-finance', component: AdminUnavailableView, props: { title: 'Finanzas', description: 'Acceso directo al futuro control financiero del gimnasio.', works: 'La ruta está protegida por finance.read y se encuentra a un clic desde la navegación administrativa.', pending: 'Indicadores, comparaciones, deuda, agrupaciones, filtros y gráficas con datos reales de pagos.', statusLabel: 'En desarrollo' }, meta: { adminLabel: 'Finanzas', requiredPermission: 'finance.read', title: 'Finanzas | Administración GymTrack' } },
+      { path: 'finanzas', name: 'admin-finance', component: AdminFinanceView, meta: { adminLabel: 'Finanzas', requiredPermission: 'finance.read', title: 'Finanzas | Administración GymTrack' } },
       { path: 'reportes', name: 'admin-reports', component: AdminReportsView, meta: { adminLabel: 'Reportes', requiredPermission: 'reports.export', title: 'Reportes | Administración GymTrack' } },
       { path: 'configuracion', name: 'admin-settings', component: AdminSettingsView, meta: { adminLabel: 'Configuración', requiredPermission: 'gym.configure', title: 'Configuración | Administración GymTrack' } },
       { path: 'configuracion/nuevo-gimnasio', name: 'admin-gym-create', component: AdminSettingsView, props: { create: true }, meta: { adminLabel: 'Nuevo gimnasio', requiredPermission: 'gym.configure', title: 'Nuevo gimnasio | Administración GymTrack' } },

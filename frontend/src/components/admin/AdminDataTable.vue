@@ -11,8 +11,8 @@ const emit = defineEmits(['sort', 'page', 'retry', 'row'])
 
 function tone(value) {
   const normalized = String(value ?? '').toLowerCase()
-  if (['activo','activa','confirmada','asistio','publicado','registrado','completado','success'].includes(normalized)) return 'success'
-  if (['vencida','suspendida','cancelada','fallido','failed','denied'].includes(normalized)) return 'danger'
+  if (['activo','activa','confirmada','asistio','publicado','registrado','aprobado','completado','success'].includes(normalized)) return 'success'
+  if (['vencida','vencido','rechazado','suspendida','cancelada','fallido','failed','denied'].includes(normalized)) return 'danger'
   if (['pendiente','temporalmente_cerrado','procesando'].includes(normalized)) return 'warning'
   return 'neutral'
 }

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 final class DemoDatasetSeeder
 {
-    private const MIGRATION = '006_class_schedule_booking_attendance';
-    private const VERSION = '1.3.0';
+    private const MIGRATION = '007_payments_finance_reports';
+    private const VERSION = '1.4.0';
 
     private PDO $pdo;
     private string $datasetName;
@@ -73,20 +73,22 @@ final class DemoDatasetSeeder
                 );
             }
 
-            $this->upsertMembership(
+            $membershipIds=[];
+            $membershipIds['titan']=$this->upsertMembership(
                 $datasetId,
                 $userIds['socio.demo@gymtrack.local'],
                 $gymIds['titan-training'],
                 $planIds['titan-training'],
                 'presentation-socio-titan-membership'
             );
-            $this->upsertMembership(
+            $membershipIds['centro']=$this->upsertMembership(
                 $datasetId,
                 $userIds['socio.demo@gymtrack.local'],
                 $gymIds['gymtrack-centro'],
                 $planIds['gymtrack-centro'],
                 'presentation-socio-centro-membership'
             );
+            $this->upsertPayments($datasetId,$gymIds['gymtrack-centro'],$membershipIds['centro'],$userIds['dueno.demo@gymtrack.local']);
             $sessionIds = [];
             foreach ($this->classes() as $class) {
                 $sessionIds[$class['demo_key']] = $this->upsertClassSession(
@@ -161,6 +163,7 @@ final class DemoDatasetSeeder
             'usuario_gimnasio_roles' => 'asociaciones',
             'clases' => 'clases',
             'membresias' => 'membresías',
+            'pagos' => 'pagos',
             'reservas' => 'reservas',
         ];
         if ($this->tableExists('audit_logs')) $tables['audit_logs'] = 'eventos de auditoría';
@@ -185,7 +188,7 @@ final class DemoDatasetSeeder
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM schema_migrations WHERE version = ?');
         $stmt->execute([self::MIGRATION]);
         if ((int) $stmt->fetchColumn() !== 1) {
-            throw new RuntimeException('Falta aplicar database/migrations/006_class_schedule_booking_attendance.sql.');
+            throw new RuntimeException('Falta aplicar database/migrations/007_payments_finance_reports.sql.');
         }
     }
 
@@ -410,7 +413,7 @@ final class DemoDatasetSeeder
         return (int) $this->pdo->lastInsertId();
     }
 
-    private function upsertMembership(int $datasetId, int $userId, int $gymId, int $planId, string $demoKey): void
+    private function upsertMembership(int $datasetId, int $userId, int $gymId, int $planId, string $demoKey): int
     {
         $stmt = $this->pdo->prepare('SELECT id, is_demo, demo_dataset_id FROM membresias WHERE demo_key = ? LIMIT 1');
         $stmt->execute([$demoKey]);
@@ -426,7 +429,7 @@ final class DemoDatasetSeeder
             );
             $stmt->execute([$userId, $this->memberNumber($gymId,$userId), $gymId, $planId, 'mensual', $start, $end, 'activa', 1490, $datasetId, (int) $existing['id']]);
             $this->upsertMembershipHistory((int)$existing['id']);
-            return;
+            return (int)$existing['id'];
         }
 
         $stmt = $this->pdo->prepare(
@@ -436,7 +439,20 @@ final class DemoDatasetSeeder
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)'
         );
         $stmt->execute([$userId, $this->memberNumber($gymId,$userId), $gymId, $planId, 'mensual', $start, $end, 'activa', 1490, $demoKey, $datasetId]);
-        $this->upsertMembershipHistory((int)$this->pdo->lastInsertId());
+        $id=(int)$this->pdo->lastInsertId();$this->upsertMembershipHistory($id);return $id;
+    }
+
+    private function upsertPayments(int $datasetId,int $gymId,int $membershipId,int $actorId): void
+    {
+        $payments=[];
+        for($months=5;$months>=0;$months--){$date=(new DateTimeImmutable('first day of this month'))->modify('-'.$months.' months')->modify('+'.(5+$months).' days')->format('Y-m-d 12:00:00');$payments[]=['reference'=>'GT-DEMO-INCOME-'.$months,'amount'=>(string)(1190+$months*75),'method'=>['efectivo','transferencia','tarjeta'][$months%3],'status'=>'aprobado','date'=>$date];}
+        $payments[]=['reference'=>'GT-DEMO-PENDING','amount'=>'1290.00','method'=>'mercado_pago','status'=>'pendiente','date'=>null];
+        $payments[]=['reference'=>'GT-DEMO-REJECTED','amount'=>'1290.00','method'=>'tarjeta','status'=>'rechazado','date'=>null];
+        $payments[]=['reference'=>'GT-DEMO-EXPIRED','amount'=>'1290.00','method'=>'mercado_pago','status'=>'vencido','date'=>null];
+        $payments[]=['reference'=>'GT-DEMO-REFUNDED','amount'=>'1290.00','method'=>'transferencia','status'=>'reembolsado','date'=>(new DateTimeImmutable('-2 months'))->format('Y-m-d 12:00:00')];
+        $sql='INSERT INTO pagos (membresia_id,gimnasio_id,monto,moneda,metodo,estado,proveedor,referencia_externa,modo,concepto,fecha_pago,fecha_vencimiento,aprobado_en,rechazado_en,reembolsado_en,is_demo,demo_dataset_id,creado_por,creado_en) VALUES (?,?,?,"UYU",?,?,?, ?,"prueba","Membresía demo",?, ?,?,?,?,1,?,?,?) ON DUPLICATE KEY UPDATE monto=VALUES(monto),metodo=VALUES(metodo),estado=VALUES(estado),fecha_pago=VALUES(fecha_pago),fecha_vencimiento=VALUES(fecha_vencimiento),aprobado_en=VALUES(aprobado_en),rechazado_en=VALUES(rechazado_en),reembolsado_en=VALUES(reembolsado_en),is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)';
+        $stmt=$this->pdo->prepare($sql);
+        foreach($payments as $payment){$provider=$payment['method']==='mercado_pago'?'mercado_pago':'manual';$created=$payment['date']??date('Y-m-d H:i:s');$expires=$payment['status']==='pendiente'?(new DateTimeImmutable('+30 minutes'))->format('Y-m-d H:i:s'):($payment['status']==='vencido'?(new DateTimeImmutable('-1 day'))->format('Y-m-d H:i:s'):null);$approved=in_array($payment['status'],['aprobado','reembolsado'],true)?$payment['date']:null;$rejected=$payment['status']==='rechazado'?$created:null;$refunded=$payment['status']==='reembolsado'?date('Y-m-d H:i:s'):null;$stmt->execute([$membershipId,$gymId,$payment['amount'],$payment['method'],$payment['status'],$provider,$payment['reference'],$payment['date'],$expires,$approved,$rejected,$refunded,$datasetId,$actorId,$created]);$idStmt=$this->pdo->prepare('SELECT id FROM pagos WHERE referencia_externa=?');$idStmt->execute([$payment['reference']]);$paymentId=(int)$idStmt->fetchColumn();$event=$this->pdo->prepare('INSERT IGNORE INTO pago_eventos (pago_id,proveedor,evento_externo_id,tipo,estado_anterior,estado_nuevo,payload_hash,payload_json,request_id) VALUES (?,?,?,"demo.seed",NULL,?,?,?,?)');$payload=json_encode(['dataset'=>$this->datasetName,'reference'=>$payment['reference']],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);$event->execute([$paymentId,$provider,'demo-'.$payment['reference'],$payment['status'],hash('sha256',$payload),$payload,'00000000-0000-4000-8000-000000000007']);}
     }
 
     private function upsertClassSession(int $datasetId,int $classId,int $gymId,int $instructorId,array $class): int
@@ -490,7 +506,7 @@ final class DemoDatasetSeeder
             $stmt = $this->pdo->prepare("DELETE FROM {$phaseTable} WHERE is_demo = 1 AND demo_dataset_id = ?");
             $stmt->execute([$datasetId]);
         }
-        foreach (['reservas','sesiones_clase','membresias','planes_membresia','clases','usuario_gimnasio_roles','usuarios','gimnasio_sedes','gimnasios'] as $table) {
+        foreach (['reservas','sesiones_clase','pagos','membresias','planes_membresia','clases','usuario_gimnasio_roles','usuarios','gimnasio_sedes','gimnasios'] as $table) {
             if (!$this->tableExists($table)) continue;
             $stmt = $this->pdo->prepare("DELETE FROM {$table} WHERE is_demo = 1 AND demo_dataset_id = ?");
             $stmt->execute([$datasetId]);

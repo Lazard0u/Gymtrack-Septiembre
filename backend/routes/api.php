@@ -80,6 +80,8 @@ $rutas = [
     'GET /api/bookings/mine'                        => ['ScheduleController', 'myBookings'],
     'POST /api/class-sessions/(\d+)/book'          => ['ScheduleController', 'memberBook'],
     'DELETE /api/bookings/(\d+)'                  => ['ScheduleController', 'memberCancel'],
+    'GET /api/payments/mine'                        => ['PaymentController', 'memberList'],
+    'POST /api/payments/checkout'                   => ['PaymentController', 'checkout'],
     'GET /api/membresia/mia'         => ['MembresiaController', 'mia'],
     'POST /api/membresia/activar'    => ['MembresiaController', 'activar'],
     'POST /api/membresia/suspender'  => ['MembresiaController', 'suspender'],
@@ -96,8 +98,14 @@ $rutas = [
     'GET /api/admin/classes'                        => ['AdminApiController', 'classes'],
     'GET /api/admin/reservations'                   => ['AdminApiController', 'reservations'],
     'GET /api/admin/memberships'                    => ['AdminApiController', 'memberships'],
-    'GET /api/admin/payments'                       => ['AdminApiController', 'payments'],
+    'GET /api/admin/payments'                       => ['PaymentController', 'adminList'],
+    'GET /api/admin/payments/options'               => ['PaymentController', 'adminOptions'],
+    'POST /api/admin/payments/manual'               => ['PaymentController', 'createManual'],
+    'POST /api/admin/payments/(\d+)/refund'        => ['PaymentController', 'refund'],
+    'GET /api/admin/finance'                        => ['PaymentController', 'finance'],
     'GET /api/admin/exports'                        => ['AdminApiController', 'exports'],
+    'POST /api/admin/exports'                       => ['ReportController', 'generate'],
+    'GET /api/admin/exports/(\d+)/download'        => ['ReportController', 'download'],
     'POST /api/admin/gyms'                          => ['AdminManagementController', 'createGym'],
     'GET /api/admin/gyms/(\d+)'                    => ['AdminManagementController', 'showGym'],
     'PATCH /api/admin/gyms/(\d+)'                  => ['AdminManagementController', 'updateGym'],
@@ -152,6 +160,9 @@ $rutas = [
     'PUT /api/admin/reservas/(\d+)/cancelar'       => ['AdminController', 'cancelarReserva'],
 
     'GET /api/admin/estadisticas'                   => ['AdminController', 'estadisticas'],
+
+    // Webhook público: valida firma y consulta el estado al proveedor antes de persistir.
+    'POST /api/webhooks/mercado-pago'               => ['PaymentController', 'mercadoPagoWebhook'],
 ];
 
 // ── Resolver la ruta ──────────────────────────────────────────

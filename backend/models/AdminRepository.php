@@ -67,13 +67,10 @@ final class AdminRepository
             $stmt->execute([$gymId, $this->demoFlag(), $this->datasetId]);
             return (int) $stmt->fetchColumn();
         });
-        $widgets[] = [
-            'key' => 'pending_payments',
-            'label' => 'Pagos pendientes',
-            'status' => 'unavailable',
-            'value' => null,
-            'detail' => 'El esquema actual registra pagos confirmados, pero todavía no modela estados pendientes.',
-        ];
+        $widgets[] = $this->widget('pending_payments', 'Pagos pendientes', function () use ($gymId): int {
+            $stmt=$this->pdo->prepare('SELECT COUNT(*) FROM pagos WHERE gimnasio_id=? AND estado IN ("pendiente","vencido") AND is_demo=? AND (demo_dataset_id <=> ?)');
+            $stmt->execute([$gymId,$this->demoFlag(),$this->datasetId]);return (int)$stmt->fetchColumn();
+        });
 
         $alerts = [];
         $stmt = $this->pdo->prepare(
@@ -222,7 +219,7 @@ final class AdminRepository
         $sort = $this->sort($query, ['created_at' => 'e.creado_en', 'module' => 'e.modulo', 'status' => 'e.estado'], 'e.creado_en');
         $base = ' FROM exports e LEFT JOIN usuarios u ON u.id=e.usuario_id WHERE ' . implode(' AND ', $where);
         return $this->page(
-            'SELECT e.id,e.tipo,e.modulo,e.estado,e.request_id,e.creado_en,e.completado_en,e.expira_en,u.email usuario_email' . $base . " ORDER BY {$sort}",
+            'SELECT e.id,e.tipo,e.modulo,e.estado,e.archivo_nombre,e.mime_type,e.tamano_bytes,e.error_seguro,e.request_id,e.creado_en,e.completado_en,e.expira_en,IF(e.estado="completado" AND e.expira_en>NOW(),1,0) descargable,u.email usuario_email' . $base . " ORDER BY {$sort}",
             'SELECT COUNT(*)' . $base,
             $params,
             $query

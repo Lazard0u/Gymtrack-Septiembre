@@ -55,9 +55,10 @@ counts="$(query "SELECT CONCAT(
   (SELECT COUNT(*) FROM usuario_gimnasio_roles WHERE is_demo=1), ':',
   (SELECT COUNT(*) FROM clases WHERE is_demo=1), ':',
   (SELECT COUNT(*) FROM membresias WHERE is_demo=1), ':',
+  (SELECT COUNT(*) FROM pagos WHERE is_demo=1), ':',
   (SELECT COUNT(*) FROM reservas WHERE is_demo=1)
 );")"
-assert_equal '5:4:5:3:2:1' "$counts" 'Idempotencia del dataset'
+assert_equal '5:4:5:3:2:10:1' "$counts" 'Idempotencia del dataset'
 
 hashes="$(query 'SELECT COUNT(*) FROM usuarios WHERE is_demo=1 AND LEFT(password_hash, 4) = CHAR(36, 50, 121, 36);')"
 assert_equal '4' "$hashes" 'Hash bcrypt de usuarios demo'

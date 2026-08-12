@@ -10,14 +10,14 @@ import { useAdminStore } from '../../stores/admin'
 const admin = useAdminStore()
 const actionDefinitions = [
   { label: 'Registrar socio', icon: IconUsersPlus, route: 'admin-members', query: { action: 'invite' }, permission: 'members.write', note: 'Invitación y alta operativa' },
-  { label: 'Crear clase', icon: IconCalendarPlus, disabled: true, note: 'Creación de clases próximamente' },
-  { label: 'Registrar pago manual', icon: IconCreditCardPay, disabled: true, note: 'Registro de pagos próximamente' },
-  { label: 'Revisar pagos pendientes', icon: IconReceipt, disabled: true, note: 'Estados de pago avanzados próximamente' },
+  { label: 'Crear clase', icon: IconCalendarPlus, route: 'admin-classes', permission: 'classes.write', note: 'Abrir agenda y crear una clase' },
+  { label: 'Registrar pago manual', icon: IconCreditCardPay, route: 'admin-payments', query: { action: 'manual' }, permission: 'payments.manual', note: 'Confirmación administrativa auditada' },
+  { label: 'Revisar pagos pendientes', icon: IconReceipt, route: 'admin-payments', query: { status: 'pendiente' }, permission: 'payments.read', note: 'Cobros pendientes y vencidos' },
   { label: 'Gestionar membresías', icon: IconIdBadge2, route: 'admin-memberships', permission: 'memberships.read', note: 'Consulta operativa real' },
   { label: 'Consultar reservas', icon: IconReceipt, route: 'admin-reservations', permission: 'reservations.read', note: 'Consulta operativa real' },
   { label: 'Crear promoción', icon: IconGift, disabled: true, beta: true, note: 'Campañas en desarrollo' },
-  { label: 'Descargar Excel', icon: IconDownload, disabled: true, note: 'Exportación próximamente' },
-  { label: 'Descargar PDF', icon: IconFileTypePdf, disabled: true, note: 'Exportación próximamente' },
+  { label: 'Descargar Excel', icon: IconDownload, route: 'admin-reports', query: { module: 'payments', type: 'xlsx' }, permission: 'reports.export', note: 'Reporte real de transacciones' },
+  { label: 'Descargar PDF', icon: IconFileTypePdf, route: 'admin-reports', query: { module: 'finance', type: 'pdf' }, permission: 'reports.export', note: 'Resumen financiero descargable' },
 ]
 const actions = computed(() => actionDefinitions.map((action) => action.permission && !admin.hasPermission(action.permission)
   ? { ...action, route: undefined, query: undefined, disabled: true, note: 'Tu rol no tiene permiso para esta acción' }

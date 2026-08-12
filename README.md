@@ -37,22 +37,24 @@ El proyecto mantiene el stack original: **Vue 3, PHP, MySQL, Docker, Leaflet y O
 - Alta, renovación y cambio de estado de membresías.
 - Agenda de clases recurrentes con sesiones fechadas, sedes, entrenadores y cupos reales.
 - Gestión de reservas, lista de espera con promoción automática y control de asistencia.
+- Registro de pagos manuales auditados y estados pendiente, aprobado, rechazado, vencido, reembolsado o cancelado.
+- Integración desacoplada con Mercado Pago mediante checkout y webhooks firmados.
+- Finanzas con ingresos mensuales, comparación, deuda y agrupaciones reales.
+- Reportes Excel y PDF generados desde MySQL con descargas autorizadas y vencimiento.
 - Historial operativo y trazabilidad administrativa.
 - Carga validada de imágenes y documentos fuera del webroot.
 - Archivado lógico de gimnasios sin destruir su historial.
 
 ### Datos de demostración
 
-El proyecto incluye un seeder versionado e idempotente con cinco gimnasios ficticios, perfiles, roles, clases fechadas, reservas, planes y membresías. Todos los registros quedan identificados como datos demo y pueden eliminarse sin afectar información real.
+El proyecto incluye un seeder versionado e idempotente con cinco gimnasios ficticios, perfiles, roles, clases fechadas, reservas, planes, membresías y transacciones de seis meses. Todos los registros quedan identificados como datos demo y pueden eliminarse sin afectar información real.
 
 ## Estado funcional
 
-Los flujos de autenticación, roles, contexto multi-gimnasio, catálogo público, sedes, personas, entrenadores, planes, membresías, invitaciones, clases, reservas, cupos, lista de espera y asistencia están implementados y conectados a MySQL.
+Los flujos de autenticación, roles, contexto multi-gimnasio, catálogo público, sedes, personas, entrenadores, planes, membresías, invitaciones, clases, reservas, cupos, lista de espera, asistencia, pagos, finanzas y reportes están implementados y conectados a MySQL.
 
 Los siguientes módulos pertenecen a las próximas etapas y no deben interpretarse como operaciones terminadas:
 
-- Pagos con Mercado Pago, webhooks y reembolsos.
-- Finanzas, reportes y exportaciones.
 - Sincronización con Google Calendar.
 - Promociones y notificaciones multicanal.
 - Perfil avanzado, progreso y carné digital del socio.
@@ -110,6 +112,22 @@ Servicios disponibles:
 La base se crea automáticamente al iniciar con un volumen nuevo. En bases existentes deben aplicarse, en orden, las migraciones de `database/migrations/`.
 
 La agenda operativa requiere la migración `006_class_schedule_booking_attendance.sql`. Su reversión controlada está disponible en el archivo `.down.sql` correspondiente.
+
+Pagos, finanzas y reportes requieren `007_payments_finance_reports.sql`. Antes de aplicar o revertir migraciones en una base existente, creá y verificá un respaldo.
+
+## Configurar pagos
+
+Sin credenciales la aplicación permite consultar planes, pagos y finanzas, pero no muestra un checkout funcional. Para habilitar Mercado Pago agregá en `.env`:
+
+```dotenv
+APP_URL=https://api.tu-dominio.com
+PAYMENT_PROVIDER=mercado_pago
+PAYMENT_MODE=test
+MERCADO_PAGO_ACCESS_TOKEN=
+MERCADO_PAGO_WEBHOOK_SECRET=
+```
+
+El webhook debe apuntar a `https://api.tu-dominio.com/api/webhooks/mercado-pago`. Usá credenciales de prueba con `PAYMENT_MODE=test` y credenciales productivas sólo después de configurar HTTPS y validar la firma. Volver a la URL de éxito no aprueba pagos: GymTrack consulta al proveedor y procesa únicamente un webhook firmado.
 
 ## Cuenta administrativa
 
@@ -203,6 +221,10 @@ DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
 DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
   sh tests/schedule_booking_attendance.sh
 
+# Pagos, finanzas, exportaciones, webhook e aislamiento
+DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
+  sh tests/payments_finance_reports.sh
+
 # Navegación, responsive, accesibilidad y consola
 docker run --rm --network host \
   -v "$PWD/frontend:/work" \
@@ -226,6 +248,8 @@ docker run --rm --network host \
 - Archivos privados fuera del webroot.
 - Rate limiting en flujos sensibles.
 - Auditoría con identificadores de solicitud.
+- Referencias externas únicas, idempotencia y eventos de pago.
+- Firma HMAC y consulta directa al proveedor antes de aprobar webhooks.
 - Secretos únicamente mediante variables de entorno.
 
 Para un despliegue real deben configurarse HTTPS, `APP_KEY`, `SESSION_SECURE=true`, correo transaccional, copias de seguridad y credenciales únicas de producción.

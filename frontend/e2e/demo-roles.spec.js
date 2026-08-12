@@ -31,7 +31,7 @@ test.describe('roles y contexto demo', () => {
     })
   }
 
-  test('el panel demo no mezcla cuentas reales ni ofrece mutaciones todavía no implementadas', async ({ page }) => {
+  test('el panel demo no mezcla cuentas reales y distingue acciones estables de funciones beta', async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel('Correo electrónico').fill('admin.demo@gymtrack.local')
     await page.getByLabel('Contraseña').fill(password)
@@ -47,8 +47,9 @@ test.describe('roles y contexto demo', () => {
     await expect(page.getByText('socio.demo@gymtrack.local').first()).toBeVisible()
     await expect(page.getByText('usuario@gmail.com')).toHaveCount(0)
     await page.getByRole('link', { name: 'Resumen' }).first().click()
-    await expect(page.getByRole('button', { name: 'Crear clase' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Registrar pago manual' })).toBeDisabled()
+    await expect(page.getByRole('link', { name: /Crear clase/ })).toHaveAttribute('href', /\/administracion\/clases/)
+    await expect(page.getByRole('link', { name: /Registrar pago manual/ })).toHaveAttribute('href', /\/administracion\/pagos\?action=manual/)
+    await expect(page.getByRole('button', { name: /Crear promoción/ })).toBeDisabled()
     await expect(page.getByRole('link', { name: /Finanzas/ }).first()).toBeVisible()
     await expect(page.getByRole('link', { name: /Reportes/ }).first()).toBeVisible()
   })

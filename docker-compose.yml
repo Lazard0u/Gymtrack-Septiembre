@@ -20,6 +20,7 @@ services:
       - ./database/migrations/004_phase4_administration.sql:/docker-entrypoint-initdb.d/004_phase4_administration.sql:ro
       - ./database/migrations/005_phase5_tenant_operations.sql:/docker-entrypoint-initdb.d/005_phase5_tenant_operations.sql:ro
       - ./database/migrations/006_class_schedule_booking_attendance.sql:/docker-entrypoint-initdb.d/006_class_schedule_booking_attendance.sql:ro
+      - ./database/migrations/007_payments_finance_reports.sql:/docker-entrypoint-initdb.d/007_payments_finance_reports.sql:ro
       - db_data:/var/lib/mysql
     networks:
       - gymtrack_net
@@ -41,6 +42,7 @@ services:
       APP_ENV: ${APP_ENV:-development}
       APP_KEY: ${APP_KEY:-gymtrack-local-development-key-not-for-production}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      APP_URL: ${APP_URL:-http://localhost:8080}
       DB_HOST: db
       DB_PORT: 3306
       DB_DATABASE: ${DB_DATABASE:-gymtrack}
@@ -57,6 +59,10 @@ services:
       MAIL_TRANSPORT: ${MAIL_TRANSPORT:-log}
       MAIL_FROM: ${MAIL_FROM:-no-reply@gymtrack.local}
       MAIL_LOG_PATH: ${MAIL_LOG_PATH:-/tmp/gymtrack-mail/mail.log}
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mercado_pago}
+      PAYMENT_MODE: ${PAYMENT_MODE:-test}
+      MERCADO_PAGO_ACCESS_TOKEN: ${MERCADO_PAGO_ACCESS_TOKEN:-}
+      MERCADO_PAGO_WEBHOOK_SECRET: ${MERCADO_PAGO_WEBHOOK_SECRET:-}
       UPLOAD_STORAGE_PATH: ${UPLOAD_STORAGE_PATH:-/var/lib/gymtrack/uploads}
       SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
       DEMO_DATASET_NAME: ${DEMO_DATASET_NAME:-gymtrack-presentation}
