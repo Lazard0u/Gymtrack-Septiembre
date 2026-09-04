@@ -89,6 +89,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // ── 3. Autoload de clases ─────────────────────────────────────
+// Composer carga PHPMailer y cualquier futura dependencia externa versionada.
+// Se exige el archivo porque Docker ejecuta `composer install` antes de iniciar Apache.
+require_once __DIR__ . '/vendor/autoload.php';
+
 // En lugar de hacer require_once en cada archivo, registramos
 // una función que carga automáticamente la clase que se necesite.
 spl_autoload_register(function (string $clase) {

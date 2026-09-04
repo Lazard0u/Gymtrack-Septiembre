@@ -1,0 +1,15 @@
+{
+  "name": "gymtrack/backend",
+  "description": "API PHP de GymTrack",
+  "type": "project",
+  "license": "proprietary",
+  "require": {
+    "php": "^8.2",
+    "phpmailer/phpmailer": "^7.0"
+  },
+  "config": {
+    "allow-plugins": false,
+    "optimize-autoloader": true,
+    "sort-packages": true
+  }
+}

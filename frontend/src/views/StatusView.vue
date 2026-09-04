@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta StatusView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <template>
   <main class="status-page">
     <router-link to="/" class="brand" aria-label="Ir al inicio de GymTrack">

@@ -1,3 +1,7 @@
+<!--
+  Vista administrativa AdminScheduleView. La ruta comprueba rol y permiso; la vista carga, presenta y modifica el recurso mediante su store.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { IconAdjustmentsHorizontal, IconCalendarPlus, IconChevronLeft, IconChevronRight, IconClipboardCheck, IconClock, IconUsers } from '@tabler/icons-vue'

@@ -1,0 +1,7 @@
+Dockerfile*
+README.md
+*.log
+.git
+.gitignore
+vendor/
+# Reduce el contexto de build y evita copiar archivos locales o secretos a la imagen.

@@ -1,3 +1,7 @@
+/**
+ * Prueba automatizada de auth.spec. Prepara el escenario, ejecuta acciones públicas y verifica resultados sin alterar la lógica de producción.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 import { expect, test } from '@playwright/test'
 
 const password = process.env.DEMO_USER_PASSWORD
@@ -40,4 +44,32 @@ test.describe('identidad segura', () => {
     await page.setViewportSize({ width: 1440, height: 900 })
     await page.goto('/registro')
   })
+})
+
+test('la pantalla explica cada resultado de verificación y limpia el token de la URL', async ({ page }) => {
+  let simulated = { status: 200, body: { error: false, codigo: 'email_verified', mensaje: 'Correo verificado correctamente.' } }
+  await page.route('**/api/auth/email/verify', async (route) => {
+    await route.fulfill({ status: simulated.status, contentType: 'application/json', body: JSON.stringify(simulated.body) })
+  })
+
+  const scenarios = [
+    [200, 'email_verified', 'Correo verificado correctamente.', 'Correo verificado'],
+    [200, 'email_already_verified', 'Tu correo ya estaba verificado.', 'Tu correo ya estaba verificado'],
+    [410, 'email_verification_expired', 'El enlace venció.', 'El enlace venció'],
+    [409, 'email_verification_used', 'Este enlace ya fue utilizado.', 'El enlace ya fue utilizado'],
+    [400, 'email_verification_invalid', 'El enlace no es válido.', 'El enlace no es válido'],
+  ]
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  for (const [status, codigo, mensaje, heading] of scenarios) {
+    simulated = { status, body: { error: status >= 400, codigo, mensaje } }
+    // El valor se crea durante la prueba y nunca representa un token persistido.
+    const temporaryToken = `prueba-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    // El query cambia el documento entre escenarios; el token continúa sólo en el fragmento.
+    await page.goto(`/verificar-email?caso=${codigo}#token=${temporaryToken}`)
+    await expect(page.getByRole('heading', { name: heading })).toBeVisible()
+    await expect.poll(() => page.url()).not.toContain('token=')
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+    expect(overflow).toBeLessThanOrEqual(1)
+  }
 })

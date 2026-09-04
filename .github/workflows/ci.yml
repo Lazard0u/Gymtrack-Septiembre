@@ -1,0 +1,137 @@
+# Integración continua: valida PHP, contratos, frontend, dependencias e imágenes
+# de producción antes de considerar desplegable un cambio.
+name: Calidad continua
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gymtrack-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Vue, unitarias y build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Preparar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Instalar dependencias reproducibles
+        run: npm ci --no-audit --no-fund
+      - name: Auditar dependencias de runtime
+        run: npm audit --omit=dev --audit-level=high
+      - name: Ejecutar pruebas unitarias
+        run: npm run test:run
+      - name: Compilar Vue para producción
+        env:
+          VITE_TURNSTILE_ENABLED: "true"
+          VITE_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+        run: npm run build
+
+  backend:
+    name: PHP y contratos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, pdo_mysql
+          tools: composer:v2
+          coverage: none
+      - name: Instalar y auditar dependencias PHP
+        run: |
+          composer validate --working-dir=backend --strict --no-check-publish
+          composer install --working-dir=backend --no-dev --prefer-dist --no-interaction --no-progress --optimize-autoloader
+          composer audit --working-dir=backend --locked --no-dev
+      - name: Validar sintaxis PHP
+        run: find backend tests -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Validar sintaxis de pruebas de integración
+        run: find tests scripts -type f -name '*.sh' -print0 | xargs -0 -n1 sh -n
+      - name: Ejecutar contratos estáticos
+        run: |
+          for contrato in tests/*_contracts.php tests/contratos_*.php; do
+            [ -f "$contrato" ] || continue
+            php "$contrato"
+          done
+
+  production-config:
+    name: Contrato de despliegue
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Descargar código
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Preparar configuración efímera
+        shell: bash
+        run: |
+          smtp_file="${RUNNER_TEMP}/gymtrack-msmtprc"
+          env_file="${RUNNER_TEMP}/gymtrack-production.env"
+          printf '%s\n' \
+            'defaults' \
+            'tls on' \
+            'auth on' \
+            'account default' \
+            'host smtp.invalid' \
+            'user ci' \
+            'password ci-not-a-real-secret' \
+            'from ci@gymtrack.invalid' > "$smtp_file"
+          chmod 600 "$smtp_file"
+          printf '%s\n' \
+            'APP_ENV=production' \
+            'APP_KEY=7c3ad4b96f524f85a0d2ef1486c9b3719c6b365e' \
+            'FRONTEND_URL=https://gymtrack.invalid' \
+            'APP_URL=https://gymtrack.invalid' \
+            'MYSQL_ROOT_PASSWORD=Root-7dc451ea46a0e82f' \
+            'DB_DATABASE=gymtrack' \
+            'DB_USERNAME=gymtrack_user' \
+            'DB_PASSWORD=App-8e9bd8436937c29d' \
+            'SESSION_SECURE=true' \
+            'TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA' \
+            'TURNSTILE_SITE_KEY=1x00000000000000000000AA' \
+            'MAIL_FROM=ci@gymtrack.invalid' \
+            'GEOCODING_USER_AGENT=GymTrack-CI/1.0 (ci@gymtrack.invalid)' \
+            "SMTP_CONFIG_FILE=$smtp_file" \
+            'PAYMENT_MODE=test' \
+            'MERCADO_PAGO_ACCESS_TOKEN=TEST-00000000000000000000000000000000' \
+            'MERCADO_PAGO_WEBHOOK_SECRET=ci-webhook-secret-00000000' \
+            'SEED_DEMO_DATA=false' \
+            'ALLOW_DEMO_DATA_IN_PRODUCTION=false' \
+            'FEATURE_WHATSAPP=false' \
+            'FEATURE_GOOGLE_CALENDAR_SYNC=false' \
+            'FEATURE_ADVANCED_ANALYTICS=false' \
+            'FEATURE_PERSONAL_RECOMMENDATIONS=false' > "$env_file"
+          chmod 600 "$env_file"
+          echo "GYMTRACK_CI_ENV=$env_file" >> "$GITHUB_ENV"
+      - name: Ejecutar preflight fail-closed
+        run: scripts/production-preflight.sh "$GYMTRACK_CI_ENV"
+      - name: Construir imagen del backend
+        run: docker build --file backend/Dockerfile.prod --tag gymtrack-backend:ci backend
+      - name: Construir imagen del frontend
+        run: >-
+          docker build --file frontend/Dockerfile.prod
+          --build-arg TURNSTILE_PUBLIC_SITE_ID=1x00000000000000000000AA
+          --tag gymtrack-frontend:ci frontend

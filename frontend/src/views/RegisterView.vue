@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta RegisterView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import AuthShell from '../components/auth/AuthShell.vue'
@@ -7,16 +11,17 @@ import AppInput from '../components/ui/AppInput.vue'
 import { useAuthStore } from '../stores/auth'
 import { useSystemStore } from '../stores/system'
 
-const auth=useAuthStore();const system=useSystemStore();const loading=ref(false);const error=ref('');const success=ref('');const fields=ref({})
+// Estos estados separan errores de formulario de un fallo posterior del correo.
+const auth=useAuthStore();const system=useSystemStore();const loading=ref(false);const error=ref('');const success=ref('');const fields=ref({});const mailPending=ref(false)
 const form=reactive({nombre:'',apellido:'',email:'',password:'',password_confirmation:'',terms_accepted:false,privacy_accepted:false,marketing_accepted:false})
 const turnstileEl=ref(null);const turnstileToken=ref('');let widgetId=null;let pollId=null
 
 function renderTurnstile(){if(!system.turnstileEnabled||!window.turnstile||!turnstileEl.value||widgetId!==null)return;widgetId=window.turnstile.render(turnstileEl.value,{sitekey:system.turnstileSiteKey,theme:'dark',callback:(token)=>{turnstileToken.value=token},'expired-callback':()=>{turnstileToken.value=''},'error-callback':()=>{turnstileToken.value='';error.value='No se pudo completar la verificación anti robot.'}})}
 function resetTurnstile(){turnstileToken.value='';if(window.turnstile&&widgetId!==null)window.turnstile.reset(widgetId)}
-async function submit(){if(loading.value)return;error.value='';success.value='';fields.value={}
+async function submit(){if(loading.value)return;error.value='';success.value='';mailPending.value=false;fields.value={}
   if(form.password!==form.password_confirmation){fields.value={password_confirmation:'Las contraseñas no coinciden.'};return}
   if(system.turnstileEnabled&&!turnstileToken.value){error.value='Completá la verificación anti robot.';return}
-  loading.value=true;try{const data=await auth.registro({...form,turnstileToken:turnstileToken.value});success.value=data.mensaje}catch(failure){error.value=failure.message;fields.value=failure.fields||{};resetTurnstile()}finally{loading.value=false}}
+  loading.value=true;try{const data=await auth.registro({...form,turnstileToken:turnstileToken.value});success.value=data.mensaje}catch(failure){if(failure.code==='verification_email_failed'){success.value=failure.message;mailPending.value=true}else{error.value=failure.message;fields.value=failure.fields||{};resetTurnstile()}}finally{loading.value=false}}
 onMounted(async()=>{if(!system.loaded)await system.load();await nextTick();if(system.turnstileEnabled){pollId=window.setInterval(()=>{renderTurnstile();if(widgetId!==null){window.clearInterval(pollId);pollId=null}},250)}})
 onBeforeUnmount(()=>{if(pollId!==null)window.clearInterval(pollId);if(window.turnstile&&widgetId!==null)window.turnstile.remove(widgetId)})
 </script>
@@ -25,7 +30,7 @@ onBeforeUnmount(()=>{if(pollId!==null)window.clearInterval(pollId);if(window.tur
   <AuthShell>
     <template #title>Creá tu cuenta</template><template #description>Registrate como socio. Después podrás vincularte con uno o más gimnasios.</template>
     <AppAlert v-if="error" tone="danger" title="Revisá el registro"><p>{{ error }}</p></AppAlert>
-    <AppAlert v-if="success" tone="success" title="Cuenta creada"><p>{{ success }}</p><p><RouterLink :to="{name:'verify-email',query:{email:form.email}}">Continuar con la verificación</RouterLink></p></AppAlert>
+    <AppAlert v-if="success" :tone="mailPending ? 'warning' : 'success'" :title="mailPending ? 'Cuenta creada, envío pendiente' : 'Cuenta creada'"><p>{{ success }}</p><p><RouterLink :to="{name:'verify-email',query:{email:form.email}}">{{ mailPending ? 'Reintentar el envío' : 'Continuar con la verificación' }}</RouterLink></p></AppAlert>
     <form v-if="!success" class="auth-form" novalidate @submit.prevent="submit">
       <div class="name-grid"><AppInput v-model.trim="form.nombre" label="Nombre" name="given-name" autocomplete="given-name" minlength="2" maxlength="100" required :error="fields.nombre" :disabled="loading"/><AppInput v-model.trim="form.apellido" label="Apellido" name="family-name" autocomplete="family-name" minlength="2" maxlength="100" required :error="fields.apellido" :disabled="loading"/></div>
       <AppInput v-model.trim="form.email" label="Correo electrónico" name="email" type="email" autocomplete="email" inputmode="email" maxlength="150" required :error="fields.email" :disabled="loading"/>

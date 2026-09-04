@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta SessionsView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { onMounted, ref } from 'vue';import {useRouter} from 'vue-router';import {IconDeviceLaptop,IconLogout} from '@tabler/icons-vue';import AuthShell from '../components/auth/AuthShell.vue';import AppAlert from '../components/ui/AppAlert.vue';import AppButton from '../components/ui/AppButton.vue';import AppSkeleton from '../components/ui/AppSkeleton.vue';import {api} from '../services/api';import {useAuthStore} from '../stores/auth'
 const router=useRouter();const auth=useAuthStore();const sessions=ref([]);const loading=ref(true);const error=ref('');const busy=ref('')

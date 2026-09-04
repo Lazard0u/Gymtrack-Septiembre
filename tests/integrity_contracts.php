@@ -1,4 +1,8 @@
 <?php
+/**
+ * Contrato automatizado integrity_contracts. Inspecciona archivos o comportamiento y finaliza con error si se rompe una garantía del proyecto.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 

@@ -1,3 +1,7 @@
+/*
+ * Variables visuales de GymTrack. Colores, espacios, radios y tiempos se
+ * definen una vez para que todos los componentes mantengan la misma identidad.
+ */
 :root {
   color-scheme: dark;
   --font-sans: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;

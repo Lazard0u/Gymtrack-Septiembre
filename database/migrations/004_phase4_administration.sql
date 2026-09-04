@@ -1,4 +1,4 @@
--- GymTrack Fase 4: administración operativa, auditoría y exportaciones.
+-- GymTrack: administración operativa, auditoría y exportaciones.
 -- Idempotente. No crea datos de negocio ni ejecuta exportaciones.
 
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;

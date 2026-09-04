@@ -1,4 +1,4 @@
--- GymTrack Fase 5: tenant operativo, personas, planes y membresías.
+-- GymTrack: tenant operativo, personas, planes y membresías.
 -- Idempotente para MySQL 8.0. Ejecutar únicamente después de un respaldo.
 
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;

@@ -1,11 +1,15 @@
 <?php
+/**
+ * Seeder DemoDatasetSeeder. Crea datos de presentación idempotentes, identificados y separables de los datos reales.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 
 final class DemoDatasetSeeder
 {
-    private const MIGRATION = '007_payments_finance_reports';
-    private const VERSION = '1.4.0';
+    private const REQUIRED_MIGRATION = '010_gimnasios_mapa_sincronizado';
+    private const VERSION = '1.6.0';
 
     private PDO $pdo;
     private string $datasetName;
@@ -106,6 +110,26 @@ final class DemoDatasetSeeder
                 $sessionIds['presentation-centro-funcional']
             );
             $this->recalculateSessionCounters($sessionIds);
+            $promotionId = $this->upsertPromotion(
+                $datasetId,
+                $gymIds['gymtrack-centro'],
+                $userIds['dueno.demo@gymtrack.local']
+            );
+            $this->upsertMarketingConsent($userIds['socio.demo@gymtrack.local']);
+            $this->upsertNotificationPreferences($datasetId, $userIds['socio.demo@gymtrack.local']);
+            $this->upsertDemoNotifications(
+                $datasetId,
+                $promotionId,
+                $gymIds['gymtrack-centro'],
+                $userIds['socio.demo@gymtrack.local']
+            );
+            $this->upsertMemberExperience(
+                $datasetId,
+                $userIds['socio.demo@gymtrack.local'],
+                $userIds['empleado.demo@gymtrack.local'],
+                $gymIds,
+                $classIds
+            );
 
             $this->pdo->commit();
             $this->purgeDemoFiles();
@@ -172,6 +196,12 @@ final class DemoDatasetSeeder
             if ($this->tableExists($table)) $tables[$table]=$label;
         }
         if ($this->tableExists('sesiones_clase')) $tables['sesiones_clase']='sesiones de clase';
+        foreach (['promociones'=>'promociones','promocion_gimnasios'=>'alcances de promoción','notificaciones'=>'notificaciones','notificacion_preferencias'=>'preferencias de notificación','notificacion_envios'=>'entregas de notificación'] as $table=>$label) {
+            if ($this->tableExists($table)) $tables[$table]=$label;
+        }
+        foreach (['socio_preferencias'=>'preferencias del socio','actividades'=>'actividades','socio_gimnasios_favoritos'=>'gimnasios favoritos','socio_actividades_favoritas'=>'actividades favoritas','socio_mediciones'=>'mediciones'] as $table=>$label) {
+            if ($this->tableExists($table)) $tables[$table]=$label;
+        }
 
         echo "Dataset demo '{$this->datasetName}' v" . self::VERSION . ": activo.\n";
         foreach ($tables as $table => $label) {
@@ -186,9 +216,9 @@ final class DemoDatasetSeeder
     private function assertSchema(): void
     {
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM schema_migrations WHERE version = ?');
-        $stmt->execute([self::MIGRATION]);
+        $stmt->execute([self::REQUIRED_MIGRATION]);
         if ((int) $stmt->fetchColumn() !== 1) {
-            throw new RuntimeException('Falta aplicar database/migrations/007_payments_finance_reports.sql.');
+            throw new RuntimeException('Falta aplicar database/migrations/010_gimnasios_mapa_sincronizado.sql.');
         }
     }
 
@@ -267,7 +297,7 @@ final class DemoDatasetSeeder
 
         if ($existing) {
             $stmt = $this->pdo->prepare(
-                'UPDATE gimnasios SET nombre = ?, nombre_legal = ?, descripcion = ?, direccion = ?, ciudad = ?, departamento = ?,
+                'UPDATE gimnasios SET nombre = ?, nombre_legal = ?, descripcion = ?, direccion = ?, ciudad = ?, departamento = ?, pais = "Uruguay",
                  latitud = ?, longitud = ?, zona_horaria = ?, telefono = ?, email = ?, horarios_json = ?,
                  categorias_json = ?, servicios_json = ?, estado = ?, verificacion_estado = ?, imagen_path = ?, demo_scenario_json = ?,
                  is_demo = 1, demo_dataset_id = ? WHERE id = ?'
@@ -278,10 +308,10 @@ final class DemoDatasetSeeder
 
         $stmt = $this->pdo->prepare(
             'INSERT INTO gimnasios
-             (nombre, nombre_legal, slug, descripcion, direccion, ciudad, departamento, latitud, longitud, zona_horaria,
+             (nombre, nombre_legal, slug, descripcion, direccion, ciudad, departamento, pais, latitud, longitud, zona_horaria,
               telefono, email, horarios_json, categorias_json, servicios_json, estado, verificacion_estado, imagen_path,
               demo_scenario_json, is_demo, demo_dataset_id)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)'
+             VALUES (?, ?, ?, ?, ?, ?, ?, "Uruguay", ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)'
         );
         $stmt->execute([
             $gym['nombre'], $gym['nombre_legal'], $gym['slug'], $gym['descripcion'], $gym['direccion'], $gym['ciudad'],
@@ -336,9 +366,9 @@ final class DemoDatasetSeeder
     {
         $stmt=$this->pdo->prepare(
             'INSERT INTO gimnasio_sedes
-             (gimnasio_id,nombre,direccion,ciudad,departamento,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado,is_demo,demo_dataset_id)
-             VALUES (?,"Sede principal",?,?,?,?,?,? ,?,?,?,1,"activa",1,?)
-             ON DUPLICATE KEY UPDATE direccion=VALUES(direccion),ciudad=VALUES(ciudad),departamento=VALUES(departamento),latitud=VALUES(latitud),
+             (gimnasio_id,nombre,direccion,ciudad,departamento,pais,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado,is_demo,demo_dataset_id)
+             VALUES (?,"Sede principal",?,?,?,"Uruguay",?,?,? ,?,?,?,1,"activa",1,?)
+             ON DUPLICATE KEY UPDATE direccion=VALUES(direccion),ciudad=VALUES(ciudad),departamento=VALUES(departamento),pais=VALUES(pais),latitud=VALUES(latitud),
              longitud=VALUES(longitud),zona_horaria=VALUES(zona_horaria),telefono=VALUES(telefono),email=VALUES(email),horarios_json=VALUES(horarios_json),
              es_principal=1,estado="activa",is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
         );
@@ -455,6 +485,308 @@ final class DemoDatasetSeeder
         foreach($payments as $payment){$provider=$payment['method']==='mercado_pago'?'mercado_pago':'manual';$created=$payment['date']??date('Y-m-d H:i:s');$expires=$payment['status']==='pendiente'?(new DateTimeImmutable('+30 minutes'))->format('Y-m-d H:i:s'):($payment['status']==='vencido'?(new DateTimeImmutable('-1 day'))->format('Y-m-d H:i:s'):null);$approved=in_array($payment['status'],['aprobado','reembolsado'],true)?$payment['date']:null;$rejected=$payment['status']==='rechazado'?$created:null;$refunded=$payment['status']==='reembolsado'?date('Y-m-d H:i:s'):null;$stmt->execute([$membershipId,$gymId,$payment['amount'],$payment['method'],$payment['status'],$provider,$payment['reference'],$payment['date'],$expires,$approved,$rejected,$refunded,$datasetId,$actorId,$created]);$idStmt=$this->pdo->prepare('SELECT id FROM pagos WHERE referencia_externa=?');$idStmt->execute([$payment['reference']]);$paymentId=(int)$idStmt->fetchColumn();$event=$this->pdo->prepare('INSERT IGNORE INTO pago_eventos (pago_id,proveedor,evento_externo_id,tipo,estado_anterior,estado_nuevo,payload_hash,payload_json,request_id) VALUES (?,?,?,"demo.seed",NULL,?,?,?,?)');$payload=json_encode(['dataset'=>$this->datasetName,'reference'=>$payment['reference']],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);$event->execute([$paymentId,$provider,'demo-'.$payment['reference'],$payment['status'],hash('sha256',$payload),$payload,'00000000-0000-4000-8000-000000000007']);}
     }
 
+    private function upsertPromotion(int $datasetId, int $gymId, int $actorId): int
+    {
+        $code = 'CENTRO15DEMO';
+        $stmt = $this->pdo->prepare(
+            'SELECT id,is_demo,demo_dataset_id FROM promociones
+             WHERE gimnasio_id=? AND codigo_descuento=? AND eliminado_en IS NULL LIMIT 1'
+        );
+        $stmt->execute([$gymId, $code]);
+        $existing = $stmt->fetch();
+        $this->assertOwnedDemo($existing, $datasetId, 'promoción', $code);
+
+        $start = (new DateTimeImmutable('today -7 days'))->format('Y-m-d 00:00:00');
+        $end = (new DateTimeImmutable('today +21 days'))->format('Y-m-d 23:59:59');
+        $channels = json_encode(['internal', 'email'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+        if ($existing) {
+            $stmt = $this->pdo->prepare(
+                'UPDATE promociones SET nombre=?,descripcion=?,estado="activa",audiencia="socios_activos",
+                 inicio_en=?,fin_en=?,zona_horaria="America/Montevideo",tipo_descuento="porcentaje",
+                 valor_descuento=15.00,moneda="UYU",canales_json=?,creado_por=?,is_demo=1,demo_dataset_id=?,eliminado_en=NULL
+                 WHERE id=?'
+            );
+            $stmt->execute([
+                '15% en tu próxima renovación',
+                'Promoción demostrativa activa para socios de GymTrack Centro.',
+                $start,
+                $end,
+                $channels,
+                $actorId,
+                $datasetId,
+                (int) $existing['id'],
+            ]);
+            $promotionId = (int) $existing['id'];
+        } else {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO promociones
+                 (gimnasio_id,nombre,descripcion,estado,audiencia,inicio_en,fin_en,zona_horaria,tipo_descuento,
+                  valor_descuento,moneda,codigo_descuento,canales_json,version,creado_por,is_demo,demo_dataset_id)
+                 VALUES (?,"15% en tu próxima renovación","Promoción demostrativa activa para socios de GymTrack Centro.",
+                  "activa","socios_activos",?,? ,"America/Montevideo","porcentaje",15.00,"UYU",?,?,1,?,1,?)'
+            );
+            $stmt->execute([$gymId, $start, $end, $code, $channels, $actorId, $datasetId]);
+            $promotionId = (int) $this->pdo->lastInsertId();
+        }
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO promocion_gimnasios (promocion_id,gimnasio_id,is_demo,demo_dataset_id)
+             VALUES (?,?,1,?)
+             ON DUPLICATE KEY UPDATE is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
+        );
+        $stmt->execute([$promotionId, $gymId, $datasetId]);
+        return $promotionId;
+    }
+
+    private function upsertNotificationPreferences(int $datasetId, int $userId): void
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT is_demo,demo_dataset_id FROM notificacion_preferencias WHERE usuario_id=? LIMIT 1'
+        );
+        $stmt->execute([$userId]);
+        $this->assertOwnedDemo($stmt->fetch(), $datasetId, 'preferencias de notificación', (string) $userId);
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO notificacion_preferencias
+             (usuario_id,internal_transactional,internal_marketing,email_transactional,email_marketing,
+              whatsapp_marketing,marketing_unsubscribed_at,is_demo,demo_dataset_id)
+             VALUES (?,1,1,1,0,0,NULL,1,?)
+             ON DUPLICATE KEY UPDATE internal_transactional=1,internal_marketing=1,email_transactional=1,
+              email_marketing=0,whatsapp_marketing=0,marketing_unsubscribed_at=NULL,is_demo=1,
+              demo_dataset_id=VALUES(demo_dataset_id)'
+        );
+        $stmt->execute([$userId, $datasetId]);
+    }
+
+    private function upsertMarketingConsent(int $userId): void
+    {
+        $stmt = $this->pdo->prepare(
+            'SELECT id FROM user_consents
+             WHERE usuario_id=? AND tipo="marketing" AND revocado_en IS NULL
+             ORDER BY id DESC LIMIT 1'
+        );
+        $stmt->execute([$userId]);
+        if ($stmt->fetchColumn() === false) {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO user_consents
+                 (usuario_id,tipo,version_documento,aceptado_en,revocado_en,ip_hash)
+                 VALUES (? ,"marketing","demo-presentation-v1",NOW(),NULL,NULL)'
+            );
+            $stmt->execute([$userId]);
+        }
+        $stmt = $this->pdo->prepare(
+            'UPDATE usuarios
+             SET marketing_consentido_en=COALESCE(marketing_consentido_en,NOW())
+             WHERE id=? AND activo=1 AND is_demo=1'
+        );
+        $stmt->execute([$userId]);
+    }
+
+    private function upsertDemoNotifications(int $datasetId, int $promotionId, int $gymId, int $userId): void
+    {
+        $notificationKey = 'demo:phase9:promotion:centro15:internal';
+        $message = 'Tenés 15% de descuento en tu próxima renovación con el código CENTRO15DEMO.';
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO notificaciones
+             (usuario_id,gimnasio_id,mensaje,titulo,cuerpo,categoria,link_url,leida,leida_en,idempotency_key,is_demo,demo_dataset_id)
+             VALUES (?, ?, ?,"15% en tu próxima renovación",?,"marketing","/dashboard",0,NULL,?,1,?)
+             ON DUPLICATE KEY UPDATE gimnasio_id=VALUES(gimnasio_id),mensaje=VALUES(mensaje),titulo=VALUES(titulo),
+              cuerpo=VALUES(cuerpo),categoria="marketing",link_url=VALUES(link_url),leida=0,leida_en=NULL,
+              is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
+        );
+        $stmt->execute([$userId, $gymId, $message, $message, $notificationKey, $datasetId]);
+        $stmt = $this->pdo->prepare('SELECT id FROM notificaciones WHERE idempotency_key=? LIMIT 1');
+        $stmt->execute([$notificationKey]);
+        $notificationId = (int) $stmt->fetchColumn();
+
+        $payload = json_encode([
+            'promotion_id' => $promotionId,
+            'title' => '15% en tu próxima renovación',
+            'body' => $message,
+            'link_url' => '/dashboard',
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO notificacion_envios
+             (promocion_id,notificacion_id,gimnasio_id,usuario_id,canal,categoria,estado,idempotency_key,
+              intentos,max_intentos,programado_en,payload_json,enviado_en,is_demo,demo_dataset_id)
+             VALUES (?, ?, ?, ?,"internal","marketing","enviado",?,1,3,NOW(),?,NOW(),1,?)
+             ON DUPLICATE KEY UPDATE promocion_id=VALUES(promocion_id),notificacion_id=VALUES(notificacion_id),
+              gimnasio_id=VALUES(gimnasio_id),usuario_id=VALUES(usuario_id),estado="enviado",intentos=1,
+              payload_json=VALUES(payload_json),enviado_en=COALESCE(enviado_en,NOW()),error_codigo=NULL,error_seguro=NULL,
+              is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
+        );
+        $stmt->execute([$promotionId, $notificationId, $gymId, $userId, $notificationKey, $payload, $datasetId]);
+
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO notificacion_envios
+             (promocion_id,notificacion_id,gimnasio_id,usuario_id,canal,categoria,estado,idempotency_key,
+              intentos,max_intentos,programado_en,error_codigo,error_seguro,payload_json,is_demo,demo_dataset_id)
+             VALUES (?,NULL,?, ?,"email","marketing","omitido",?,0,3,NOW(),"preference_disabled",
+              "El socio desactivó el email de marketing.",?,1,?)
+             ON DUPLICATE KEY UPDATE promocion_id=VALUES(promocion_id),gimnasio_id=VALUES(gimnasio_id),
+              usuario_id=VALUES(usuario_id),estado="omitido",intentos=0,error_codigo="preference_disabled",
+              error_seguro="El socio desactivó el email de marketing.",payload_json=VALUES(payload_json),
+              is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
+        );
+        $stmt->execute([$promotionId, $gymId, $userId, 'demo:phase9:promotion:centro15:email', $payload, $datasetId]);
+    }
+
+    private function upsertMemberExperience(
+        int $datasetId,
+        int $memberId,
+        int $employeeId,
+        array $gymIds,
+        array $classIds
+    ): void {
+        $centroId = $gymIds['gymtrack-centro'];
+        $preferredSchedules = json_encode(
+            ['morning','evening'],
+            JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR
+        );
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO socio_preferencias
+             (usuario_id,gimnasio_id,objetivo_asistencias_mes,mostrar_imc_orientativo,
+              horarios_preferidos_json,is_demo,demo_dataset_id)
+             VALUES (?, ?, 10, 1, ?, 1, ?)
+             ON DUPLICATE KEY UPDATE objetivo_asistencias_mes=10,mostrar_imc_orientativo=1,
+              horarios_preferidos_json=VALUES(horarios_preferidos_json),is_demo=1,
+              demo_dataset_id=VALUES(demo_dataset_id)'
+        );
+        $stmt->execute([$memberId,$centroId,$preferredSchedules,$datasetId]);
+
+        foreach ($this->classes() as $class) {
+            $activitySlug = str_replace('presentation-centro-','',$class['demo_key']);
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO actividades
+                 (gimnasio_id,nombre,slug,descripcion,activa,is_demo,demo_dataset_id)
+                 VALUES (?, ?, ?, ?, 1, 1, ?)
+                 ON DUPLICATE KEY UPDATE slug=VALUES(slug),descripcion=VALUES(descripcion),activa=1,is_demo=1,
+                  demo_dataset_id=VALUES(demo_dataset_id)'
+            );
+            $stmt->execute([
+                $centroId,
+                $class['nombre'],
+                $activitySlug,
+                'Actividad de demostración asociada a la agenda de GymTrack Centro.',
+                $datasetId,
+            ]);
+        }
+
+        foreach ([$centroId,$gymIds['titan-training']] as $favoriteGymId) {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO socio_gimnasios_favoritos
+                 (usuario_id,gimnasio_id,is_demo,demo_dataset_id)
+                 VALUES (?, ?, 1, ?)
+                 ON DUPLICATE KEY UPDATE is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
+            );
+            $stmt->execute([$memberId,$favoriteGymId,$datasetId]);
+        }
+
+        $stmt = $this->pdo->prepare(
+            'SELECT id FROM actividades
+             WHERE gimnasio_id=? AND slug="funcional" AND is_demo=1 AND demo_dataset_id=? LIMIT 1'
+        );
+        $stmt->execute([$centroId,$datasetId]);
+        $favoriteActivityId = (int) $stmt->fetchColumn();
+        if ($favoriteActivityId > 0) {
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO socio_actividades_favoritas
+                 (usuario_id,actividad_id,gimnasio_id,is_demo,demo_dataset_id)
+                 VALUES (?, ?, ?, 1, ?)
+                 ON DUPLICATE KEY UPDATE gimnasio_id=VALUES(gimnasio_id),is_demo=1,
+                  demo_dataset_id=VALUES(demo_dataset_id)'
+            );
+            $stmt->execute([$memberId,$favoriteActivityId,$centroId,$datasetId]);
+        }
+
+        $measurements = [
+            ['00000000-0000-4000-8000-000000000101','-60 days','173.00','79.40','Registro inicial de demostración.'],
+            ['00000000-0000-4000-8000-000000000102','-30 days','173.00','78.30','Seguimiento mensual opcional.'],
+            ['00000000-0000-4000-8000-000000000103','today','173.00','77.60','Último registro de demostración.'],
+        ];
+        $stmt = $this->pdo->prepare(
+            'INSERT INTO socio_mediciones
+             (usuario_id,gimnasio_id,fecha_medicion,altura_cm,peso_kg,notas,idempotency_key,
+              is_demo,demo_dataset_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+             ON DUPLICATE KEY UPDATE fecha_medicion=VALUES(fecha_medicion),altura_cm=VALUES(altura_cm),
+              peso_kg=VALUES(peso_kg),notas=VALUES(notas),is_demo=1,
+              demo_dataset_id=VALUES(demo_dataset_id)'
+        );
+        foreach ($measurements as [$key,$relativeDate,$height,$weight,$notes]) {
+            $measuredAt = (new DateTimeImmutable($relativeDate))->format('Y-m-d');
+            $stmt->execute([$memberId,$centroId,$measuredAt,$height,$weight,$notes,$key,$datasetId]);
+        }
+
+        $this->upsertAttendanceHistory(
+            $datasetId,
+            $memberId,
+            $employeeId,
+            $centroId,
+            $classIds['presentation-centro-funcional']
+        );
+    }
+
+    private function upsertAttendanceHistory(
+        int $datasetId,
+        int $memberId,
+        int $employeeId,
+        int $gymId,
+        int $classId
+    ): void {
+        $stmt = $this->pdo->prepare(
+            'SELECT id FROM gimnasio_sedes WHERE gimnasio_id=? AND es_principal=1 LIMIT 1'
+        );
+        $stmt->execute([$gymId]);
+        $locationId = (int) $stmt->fetchColumn();
+        $monthStart = new DateTimeImmutable('first day of this month 07:00:00');
+        $dates = [$monthStart,$monthStart->modify('+7 days'),$monthStart->modify('+14 days')];
+
+        foreach ($dates as $index => $start) {
+            if ($start >= new DateTimeImmutable()) continue;
+            $end = $start->modify('+1 hour');
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO sesiones_clase
+                 (clase_id,gimnasio_id,sede_id,instructor_id,inicio_en,fin_en,zona_horaria,cupo_maximo,
+                  cupos_reservados,espera_total,estado,notas,is_demo,demo_dataset_id,creado_por)
+                 VALUES (?, ?, ?, ?, ?, ?, "America/Montevideo",18,1,0,"finalizada",
+                  "Historial del dataset de presentación",1,?,?)
+                 ON DUPLICATE KEY UPDATE sede_id=VALUES(sede_id),instructor_id=VALUES(instructor_id),
+                  fin_en=VALUES(fin_en),cupos_reservados=1,estado="finalizada",notas=VALUES(notas),
+                  is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
+            );
+            $stmt->execute([
+                $classId,$gymId,$locationId,$employeeId,$start->format('Y-m-d H:i:s'),
+                $end->format('Y-m-d H:i:s'),$datasetId,$employeeId,
+            ]);
+            $stmt = $this->pdo->prepare('SELECT id FROM sesiones_clase WHERE clase_id=? AND inicio_en=?');
+            $stmt->execute([$classId,$start->format('Y-m-d H:i:s')]);
+            $sessionId = (int) $stmt->fetchColumn();
+            $demoKey = sprintf('presentation-socio-centro-attendance-%d',$index + 1);
+            $reservedAt = $start->modify('-2 days')->format('Y-m-d H:i:s');
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO reservas
+                 (usuario_id,clase_id,sesion_clase_id,fecha_reserva,confirmada_en,estado,origen,
+                  demo_key,is_demo,demo_dataset_id)
+                 VALUES (?, ?, ?, ?, ?, "asistio","sistema",?,1,?)
+                 ON DUPLICATE KEY UPDATE clase_id=VALUES(clase_id),sesion_clase_id=VALUES(sesion_clase_id),
+                  fecha_reserva=VALUES(fecha_reserva),confirmada_en=VALUES(confirmada_en),estado="asistio",
+                  origen="sistema",is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)'
+            );
+            $stmt->execute([$memberId,$classId,$sessionId,$reservedAt,$reservedAt,$demoKey,$datasetId]);
+            $stmt = $this->pdo->prepare('SELECT id FROM reservas WHERE demo_key=? LIMIT 1');
+            $stmt->execute([$demoKey]);
+            $reservationId = (int) $stmt->fetchColumn();
+            $stmt = $this->pdo->prepare(
+                'INSERT INTO asistencias (reserva_id,estado,fecha_asist,registrada_por,notas)
+                 VALUES (?,"presente",?,?,"Asistencia de demostración")
+                 ON DUPLICATE KEY UPDATE estado="presente",fecha_asist=VALUES(fecha_asist),
+                  registrada_por=VALUES(registrada_por),notas=VALUES(notas)'
+            );
+            $stmt->execute([$reservationId,$end->format('Y-m-d H:i:s'),$employeeId]);
+        }
+    }
+
     private function upsertClassSession(int $datasetId,int $classId,int $gymId,int $instructorId,array $class): int
     {
         $stmt=$this->pdo->prepare('SELECT id FROM gimnasio_sedes WHERE gimnasio_id=? AND es_principal=1 LIMIT 1');$stmt->execute([$gymId]);$locationId=(int)$stmt->fetchColumn();
@@ -501,9 +833,19 @@ final class DemoDatasetSeeder
             $stmt->execute([$datasetId]);
             $this->pendingFileDeletes = array_values(array_unique(array_merge($this->pendingFileDeletes, $stmt->fetchAll(PDO::FETCH_COLUMN))));
         }
-        foreach (['archivos','invitaciones_gimnasio','entrenador_gimnasios','entrenador_perfiles','audit_logs','exports'] as $phaseTable) {
-            if (!$this->tableExists($phaseTable)) continue;
-            $stmt = $this->pdo->prepare("DELETE FROM {$phaseTable} WHERE is_demo = 1 AND demo_dataset_id = ?");
+        foreach (['notificacion_envios','notificaciones','marketing_unsubscribe_tokens','notificacion_preferencias','promocion_gimnasios','promociones'] as $tablaDatos) {
+            if (!$this->tableExists($tablaDatos)) continue;
+            $stmt = $this->pdo->prepare("DELETE FROM {$tablaDatos} WHERE is_demo = 1 AND demo_dataset_id = ?");
+            $stmt->execute([$datasetId]);
+        }
+        foreach (['socio_actividades_favoritas','socio_gimnasios_favoritos','socio_mediciones','socio_preferencias','actividades'] as $tablaDatos) {
+            if (!$this->tableExists($tablaDatos)) continue;
+            $stmt = $this->pdo->prepare("DELETE FROM {$tablaDatos} WHERE is_demo = 1 AND demo_dataset_id = ?");
+            $stmt->execute([$datasetId]);
+        }
+        foreach (['archivos','invitaciones_gimnasio','entrenador_gimnasios','entrenador_perfiles','audit_logs','exports'] as $tablaDatos) {
+            if (!$this->tableExists($tablaDatos)) continue;
+            $stmt = $this->pdo->prepare("DELETE FROM {$tablaDatos} WHERE is_demo = 1 AND demo_dataset_id = ?");
             $stmt->execute([$datasetId]);
         }
         foreach (['reservas','sesiones_clase','pagos','membresias','planes_membresia','clases','usuario_gimnasio_roles','usuarios','gimnasio_sedes','gimnasios'] as $table) {
@@ -588,7 +930,7 @@ final class DemoDatasetSeeder
             ],
             [
                 'nombre' => 'Arena Functional Gym', 'nombre_legal' => 'Arena Functional Gym Demo SAS', 'slug' => 'arena-functional-gym',
-                'descripcion' => 'Sede demostrativa para presentar comunicación promocional en estado beta.',
+                'descripcion' => 'Sede demostrativa para presentar comunicación promocional y segmentación.',
                 'direccion' => 'Rambla de Muestra 310', 'ciudad' => 'Ciudad de la Costa', 'departamento' => 'Canelones',
                 'latitud' => -34.8353400, 'longitud' => -55.9821300, 'telefono' => '+598 000 000 05',
                 'email' => 'arena@gymtrack.example', 'estado' => 'publicado',
@@ -596,9 +938,9 @@ final class DemoDatasetSeeder
                 'horarios' => ['lunes_viernes' => '06:30–22:30', 'sabado' => '08:00–14:00', 'domingo' => 'Cerrado'],
                 'categorias' => ['Funcional', 'HIIT'], 'servicios' => ['Clases grupales', 'Zona exterior'],
                 'scenario' => [
-                    'key' => 'promotions_beta', 'label' => 'Promociones — Beta',
-                    'works' => 'La promoción puede mostrarse como contenido informativo.',
-                    'pending' => 'Todavía no envía campañas ni aplica descuentos automáticamente.',
+                    'key' => 'promotions_available', 'label' => 'Promociones configurables',
+                    'works' => 'Las campañas respetan audiencia, preferencias y estado de entrega.',
+                    'pending' => 'WhatsApp permanece deshabilitado hasta configurar un proveedor.',
                 ],
             ],
         ];

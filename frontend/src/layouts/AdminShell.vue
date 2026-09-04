@@ -1,13 +1,18 @@
+<!--
+  Layout AdminShell. Mantiene navegación y contexto compartidos mientras Vue Router cambia la vista interna.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { IconBell, IconChevronRight, IconLayoutSidebarLeftCollapse, IconLogout, IconUserCircle } from '@tabler/icons-vue'
+import { IconChevronRight, IconLayoutSidebarLeftCollapse, IconLogout, IconUserCircle } from '@tabler/icons-vue'
 import AdminNavigation from '../components/admin/AdminNavigation.vue'
+import NotificationBell from '../components/notifications/NotificationBell.vue'
+import NotificationCenterDrawer from '../components/notifications/NotificationCenterDrawer.vue'
 import GymContextSelector from '../components/admin/GymContextSelector.vue'
 import AppAlert from '../components/ui/AppAlert.vue'
 import AppBadge from '../components/ui/AppBadge.vue'
 import AppButton from '../components/ui/AppButton.vue'
-import AppDialog from '../components/ui/AppDialog.vue'
 import AppDrawer from '../components/ui/AppDrawer.vue'
 import AppErrorState from '../components/ui/AppErrorState.vue'
 import AppIconButton from '../components/ui/AppIconButton.vue'
@@ -60,7 +65,7 @@ onMounted(initialize)
         </div>
         <div class="admin-header__actions">
           <GymContextSelector @changed="router.push({ name: 'admin-summary' })" />
-          <AppIconButton label="Ver notificaciones" @click="notificationsOpen = true"><IconBell :size="19" /></AppIconButton>
+          <NotificationBell :key="admin.version" @open="notificationsOpen = true" />
           <details class="profile-menu">
             <summary aria-label="Abrir menú de cuenta"><IconUserCircle :size="23" /><span>{{ auth.user?.nombre }}</span></summary>
             <div class="profile-menu__panel"><strong>{{ auth.user?.nombre }} {{ auth.user?.apellido }}</strong><span>{{ auth.user?.email }}</span><RouterLink :to="{ name: 'dashboard' }">Mi panel</RouterLink><button type="button" @click="logout"><IconLogout :size="16" /> Cerrar sesión</button></div>
@@ -81,7 +86,7 @@ onMounted(initialize)
     </div>
 
     <AppDrawer :open="mobileOpen" title="Administración" side="left" @close="mobileOpen = false"><AdminNavigation @navigate="mobileOpen = false" /><template #footer><AppButton variant="secondary" block @click="router.push({ name: 'dashboard' }); mobileOpen = false">Volver a mi panel</AppButton></template></AppDrawer>
-    <AppDialog :open="notificationsOpen" title="Notificaciones" description="Avisos operativos del gimnasio activo." @close="notificationsOpen = false"><p class="notifications-empty">No tenés notificaciones administrativas nuevas.</p><template #footer><AppButton variant="secondary" @click="notificationsOpen = false">Cerrar</AppButton></template></AppDialog>
+    <NotificationCenterDrawer :open="notificationsOpen" @close="notificationsOpen = false" />
   </div>
 </template>
 
@@ -99,7 +104,7 @@ onMounted(initialize)
 .profile-menu { position: relative; }.profile-menu summary { display: flex; min-height: 2.4rem; align-items: center; gap: var(--space-2); border-radius: var(--radius-control); padding: 0 var(--space-2); cursor: pointer; color: var(--text-secondary); font-size: .78rem; list-style: none; }.profile-menu summary::-webkit-details-marker { display: none; }.profile-menu summary:hover { background: var(--surface-2); color: var(--text-primary); }
 .profile-menu__panel { position: absolute; top: calc(100% + var(--space-2)); right: 0; display: grid; width: 15rem; gap: var(--space-2); border: 1px solid var(--border-strong); border-radius: var(--radius-card); padding: var(--space-4); background: var(--surface-raised); box-shadow: var(--shadow-md); }.profile-menu__panel strong { font-size: .82rem; }.profile-menu__panel > span { overflow-wrap: anywhere; color: var(--text-tertiary); font-size: .72rem; }.profile-menu__panel a, .profile-menu__panel button { display: flex; align-items: center; gap: var(--space-2); border: 0; border-radius: var(--radius-control); padding: var(--space-2); background: transparent; color: var(--text-secondary); cursor: pointer; font-size: .78rem; text-align: left; text-decoration: none; }.profile-menu__panel a:hover, .profile-menu__panel button:hover { background: var(--surface-2); color: var(--text-primary); }
 .admin-content { width: min(100%, 96rem); min-height: calc(100vh - 4.25rem); margin-inline: auto; padding: clamp(var(--space-5), 3vw, var(--space-10)); }
-.admin-loading { display: grid; gap: var(--space-5); }.context-gate { display: grid; max-width: 44rem; gap: var(--space-5); margin: clamp(var(--space-10), 8vw, var(--space-20)) auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-dialog); padding: clamp(var(--space-6), 5vw, var(--space-10)); background: var(--surface-1); }.context-gate h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.3rem); }.context-gate > p { margin: 0; color: var(--text-secondary); }.notifications-empty { margin: 0; color: var(--text-secondary); }
+.admin-loading { display: grid; gap: var(--space-5); }.context-gate { display: grid; max-width: 44rem; gap: var(--space-5); margin: clamp(var(--space-10), 8vw, var(--space-20)) auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-dialog); padding: clamp(var(--space-6), 5vw, var(--space-10)); background: var(--surface-1); }.context-gate h1 { margin: 0; font-size: clamp(2rem, 5vw, 3.3rem); }.context-gate > p { margin: 0; color: var(--text-secondary); }
 @media (max-width: 74rem) { .profile-menu summary span { display: none; } }
 @media (max-width: 63.99rem) { .admin-sidebar { display: none; }.admin-workspace { margin-left: 0; }.admin-menu { display: inline-flex; }.breadcrumbs a, .breadcrumbs svg { display: none; } }
 @media (max-width: 47.99rem) { .admin-header { align-items: flex-start; flex-wrap: wrap; padding-block: var(--space-3); }.admin-header__start { min-height: 2.4rem; }.admin-header__actions { width: 100%; justify-content: space-between; }.admin-header__actions > :first-child { min-width: 0; flex: 1; }.admin-content { padding: var(--space-5) var(--space-4) var(--space-10); } }

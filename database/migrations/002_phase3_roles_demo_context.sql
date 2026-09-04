@@ -1,5 +1,6 @@
--- GymTrack fase 3: roles, permisos, contexto mínimo de gimnasio y trazabilidad demo.
+-- GymTrack: roles, permisos, contexto mínimo de gimnasio y trazabilidad demo.
 -- Este archivo es idempotente. No inserta el dataset: sólo prepara el esquema.
+
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
     version      VARCHAR(100) NOT NULL,

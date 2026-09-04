@@ -1,3 +1,7 @@
+<!--
+  Vista administrativa AdminDashboard. La ruta comprueba rol y permiso; la vista carga, presenta y modifica el recurso mediante su store.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <template>
   <div class="admin-dashboard">
     <header class="admin-header">

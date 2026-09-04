@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta GymsView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import PublicHeader from '../components/public/PublicHeader.vue'
 import PublicFooter from '../components/public/PublicFooter.vue'

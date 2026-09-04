@@ -1,0 +1,16 @@
+<svg width="680" height="190" viewBox="0 0 680 190" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Logo de GymTrack para fondo claro</title>
+  <rect width="680" height="190" rx="26" fill="#F3F6F8"/>
+  <g transform="translate(34 31) scale(1.3333)">
+    <rect x="4" y="4" width="88" height="88" rx="20" fill="#0D0D0D"/>
+    <path d="M26 21H56L48 33H31L22 48L31 63H43V52H34L40 42H57V74H25L9 48L26 21Z" fill="url(#metal-blanco)"/>
+    <path d="M57 21H72L86 48L71 74H59L74 48L66 33H57V21Z" fill="url(#metal-azul)"/>
+    <path d="M52 40H68L61 52H52V40Z" fill="#0077FF"/><path d="M68 20H80L86 32H73L68 20Z" fill="#0077FF"/>
+  </g>
+  <text x="198" y="116" fill="#101317" font-family="Manrope, Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="-3">Gym</text>
+  <text x="344" y="116" fill="#0969DA" font-family="Manrope, Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="-3">Track</text>
+  <defs>
+    <linearGradient id="metal-blanco" x1="11" y1="20" x2="58" y2="76" gradientUnits="userSpaceOnUse"><stop stop-color="#FFFFFF"/><stop offset=".48" stop-color="#C8C8C8"/><stop offset="1" stop-color="#FFFFFF"/></linearGradient>
+    <linearGradient id="metal-azul" x1="58" y1="21" x2="84" y2="72" gradientUnits="userSpaceOnUse"><stop stop-color="#38BDF8"/><stop offset=".45" stop-color="#0077FF"/><stop offset="1" stop-color="#00BFFF"/></linearGradient>
+  </defs>
+</svg>

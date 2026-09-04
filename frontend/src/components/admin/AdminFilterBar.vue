@@ -1,3 +1,7 @@
+<!--
+  Componente administrativo AdminFilterBar. Presenta controles operativos y delega persistencia a stores o a la vista contenedora.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { reactive, watch } from 'vue'
 import { IconSearch, IconX } from '@tabler/icons-vue'
@@ -5,7 +9,12 @@ import AppButton from '../ui/AppButton.vue'
 import AppInput from '../ui/AppInput.vue'
 import AppSelect from '../ui/AppSelect.vue'
 
-const props = defineProps({ modelValue: { type: Object, required: true }, filters: { type: Array, default: () => [] }, loading: Boolean })
+const props = defineProps({
+  modelValue: { type: Object, required: true },
+  filters: { type: Array, default: () => [] },
+  loading: Boolean,
+  searchPlaceholder: { type: String, default: 'Nombre, correo o referencia' },
+})
 const emit = defineEmits(['apply', 'clear'])
 const form = reactive({ ...props.modelValue })
 watch(() => props.modelValue, (value) => Object.assign(form, value), { deep: true })
@@ -19,7 +28,7 @@ function clear() {
 
 <template>
   <form class="filter-bar" role="search" @submit.prevent="submit">
-    <AppInput v-model="form.q" label="Buscar" name="admin-search" placeholder="Nombre, correo o referencia" maxlength="100" />
+    <AppInput v-model="form.q" label="Buscar" name="admin-search" :placeholder="searchPlaceholder" maxlength="100" />
     <AppSelect v-for="filter in filters" :key="filter.key" v-model="form[filter.key]" :label="filter.label" :name="`filter-${filter.key}`" :options="filter.options" />
     <div class="filter-bar__actions"><AppButton type="submit" size="sm" :loading="loading"><template #icon><IconSearch :size="16" /></template>Aplicar</AppButton><AppButton type="button" variant="ghost" size="sm" @click="clear"><template #icon><IconX :size="16" /></template>Limpiar</AppButton></div>
   </form>

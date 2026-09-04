@@ -4,6 +4,8 @@ GymTrack es una plataforma web para descubrir gimnasios y gestionar su operació
 
 El proyecto mantiene el stack original: **Vue 3, PHP, MySQL, Docker, Leaflet y OpenStreetMap**.
 
+La documentación académica y técnica completa, junto con el diagrama de arquitectura y el sistema de identidad visual, está en [`Gymtrack_Documentacion.md`](Gymtrack_Documentacion.md).
+
 ## Qué permite hacer
 
 ### Experiencia pública
@@ -44,9 +46,24 @@ El proyecto mantiene el stack original: **Vue 3, PHP, MySQL, Docker, Leaflet y O
 - Integración desacoplada con Mercado Pago mediante checkout y webhooks firmados.
 - Finanzas con ingresos mensuales, comparación, deuda y agrupaciones reales.
 - Reportes Excel y PDF generados desde MySQL con descargas autorizadas y vencimiento.
+- Promociones con audiencia, programación, pausa, finalización, imágenes y métricas reales.
+- Notificaciones internas y por correo con consentimiento, preferencias, reintentos y prevención de duplicados.
+- Verificación administrativa del carné digital del socio mediante un token firmado y de corta duración.
 - Historial operativo y trazabilidad administrativa.
 - Carga validada de imágenes y documentos fuera del webroot.
 - Archivado lógico de gimnasios sin destruir su historial.
+
+### Área del socio
+
+- Resumen personal con próxima clase, membresía, pagos pendientes y progreso mensual.
+- Perfil con fotografía y datos personales.
+- Preferencias de notificación y objetivo mensual de asistencia.
+- Gimnasios y actividades favoritas persistidos en MySQL.
+- Historial de asistencia, membresías, pagos y medidas opcionales.
+- IMC únicamente orientativo, acompañado por una advertencia no diagnóstica.
+- Carné digital con QR firmado, sin datos personales dentro del código.
+- Reservas con acceso manual a Google Calendar y descarga de archivo ICS.
+- Navegación inferior móvil y acciones rápidas adaptadas al rol.
 
 ### Datos de demostración
 
@@ -54,16 +71,18 @@ El proyecto incluye un seeder versionado e idempotente con cinco gimnasios ficti
 
 ## Estado funcional
 
-Los flujos de autenticación, roles, contexto multi-gimnasio, catálogo público, sedes, personas, entrenadores, planes, membresías, invitaciones, clases, reservas, cupos, lista de espera, asistencia, pagos, finanzas y reportes están implementados y conectados a MySQL.
-El mapa público, la geolocalización opcional, las distancias, los filtros y el orden por cercanía también están implementados; la ubicación del visitante permanece en el navegador.
+GymTrack 1.0 tiene implementados y conectados a MySQL los flujos principales de autenticación, roles, contexto multi-gimnasio, catálogo, sedes, personas, entrenadores, planes, membresías, clases, reservas, cupos, lista de espera, asistencia, pagos, finanzas, reportes, promociones, notificaciones y experiencia del socio.
 
-Los siguientes módulos pertenecen a las próximas etapas y no deben interpretarse como operaciones terminadas:
+El mapa público, la geolocalización opcional, las distancias, los filtros, los favoritos y el orden por cercanía están operativos. La ubicación del visitante se procesa sólo en el navegador. Google Calendar funciona mediante enlace manual e ICS; la sincronización automática con OAuth no forma parte del flujo estable.
 
-- Sincronización con Google Calendar.
-- Promociones y notificaciones multicanal.
-- Perfil avanzado, progreso y carné digital del socio.
+Funciones beta opcionales, desactivadas por defecto:
 
-WhatsApp, sincronización automática con Google Calendar, analítica avanzada y recomendaciones personalizadas permanecen detrás de feature flags y se consideran funciones beta opcionales.
+- WhatsApp: existe un adaptador que falla de forma segura; falta configurar un proveedor real.
+- Sincronización automática con Google Calendar: funcionan el enlace manual y el ICS; falta OAuth bidireccional.
+- Analítica avanzada: funcionan las métricas financieras y operativas estables; no se ofrecen predicciones.
+- Recomendaciones personalizadas: funcionan favoritos y preferencias; no hay recomendaciones automatizadas.
+
+Ninguna función beta confirma acciones que no se hayan realizado ni bloquea los flujos estables.
 
 ## Tecnologías
 
@@ -113,11 +132,64 @@ Servicios disponibles:
 | Backend | http://localhost:8080 |
 | MySQL | localhost:3306 |
 
+### Verificación de correo
+
+Las cuentas nuevas se crean con el correo pendiente. PHP genera un token aleatorio de un solo uso, guarda únicamente su hash y envía un enlace construido desde `FRONTEND_URL`. El enlace vence de forma predeterminada en 24 horas y las rutas protegidas permanecen cerradas hasta completar la verificación.
+
+En desarrollo, `MAIL_TRANSPORT=log` funciona como un buzón local privado y permite inspeccionar el último mensaje con `php console.php auth:mail:latest correo@ejemplo.test`. En producción, PHPMailer construye el correo HTML y su alternativa de texto; `MAIL_TRANSPORT=mail` lo entrega al agente SMTP configurado en el contenedor.
+
+```dotenv
+FRONTEND_URL=https://aplicacion.tu-dominio.com
+MAIL_TRANSPORT=mail
+MAIL_FROM=no-reply@tu-dominio.com
+MAIL_FROM_NAME=GymTrack
+EMAIL_VERIFICATION_TTL_SECONDS=86400
+```
+
+Los secretos y credenciales SMTP no se escriben en estas variables: producción recibe la configuración de `msmtp` mediante `SMTP_CONFIG_FILE`, fuera de Git.
+
+PHPMailer se instala de forma reproducible desde `backend/composer.lock`. Docker ejecuta `composer install` al iniciar el backend local y durante la construcción de la imagen de producción. Para instalarlo fuera de Docker:
+
+```bash
+cd backend
+composer install --no-dev --optimize-autoloader
+```
+
+Para enviar directamente con una cuenta personal de Gmail durante la presentación, activá la verificación en dos pasos y generá una contraseña de aplicación. Guardá esa contraseña únicamente en el `.env` local:
+
+```dotenv
+MAIL_TRANSPORT=smtp
+MAIL_FROM=tu-cuenta@gmail.com
+MAIL_FROM_NAME=GymTrack
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=tu-cuenta@gmail.com
+SMTP_PASSWORD=contraseña-de-aplicación
+SMTP_ENCRYPTION=tls
+```
+
+`MAIL_FROM` y `SMTP_USERNAME` deben coincidir, salvo que Gmail tenga configurado un alias autorizado. Después de cambiar el entorno, recreá el backend con `docker compose up -d --force-recreate backend`. Nunca uses la contraseña normal de la cuenta ni publiques el `.env`.
+
 La base se crea automáticamente al iniciar con un volumen nuevo. En bases existentes deben aplicarse, en orden, las migraciones de `database/migrations/`.
 
-La agenda operativa requiere la migración `006_class_schedule_booking_attendance.sql`. Su reversión controlada está disponible en el archivo `.down.sql` correspondiente.
+La agenda operativa requiere la migración `006_class_schedule_booking_attendance.sql`; pagos, finanzas y reportes requieren `007_payments_finance_reports.sql`; promociones, calendario y notificaciones requieren `008_phase9_calendar_promotions_notifications.sql`; el área personal del socio requiere `009_phase10_member_experience.sql`; y el país, los estados operativos y la geocodificación de gimnasios requieren `010_gimnasios_mapa_sincronizado.sql`.
 
-Pagos, finanzas y reportes requieren `007_payments_finance_reports.sql`. Antes de aplicar o revertir migraciones en una base existente, creá y verificá un respaldo.
+Cada migración dispone de una reversión controlada en su archivo `.down.sql`. Antes de aplicar o revertir migraciones en una base existente, creá y verificá un respaldo.
+
+## Mapa y geocodificación
+
+La portada y la sección Gimnasios consultan el mismo catálogo público de MySQL. Sólo aparecen gimnasios verificados con estado activo o cierre temporal y coordenadas válidas. Los registros inactivos, en borrador o archivados quedan fuera tanto de la lista como de los marcadores.
+
+Administración permite buscar una dirección bajo demanda, revisar el resultado en Leaflet y corregir el marcador arrastrándolo antes de guardar. También acepta coordenadas manuales cuando el proveedor no responde. Configuración local:
+
+```dotenv
+GEOCODING_ENABLED=true
+GEOCODING_PROVIDER_URL=https://nominatim.openstreetmap.org/search
+GEOCODING_USER_AGENT="GymTrack/1.0 (correo-real@tu-dominio.com)"
+GEOCODING_CACHE_DAYS=30
+```
+
+La implementación usa un proxy PHP con caché, limita las consultas externas a una por segundo y no ofrece autocompletado. Para una instalación con tráfico significativo debe configurarse un proveedor geográfico contratado o una instancia propia mediante `GEOCODING_PROVIDER_URL`.
 
 ## Configurar pagos
 
@@ -201,8 +273,28 @@ FEATURE_WHATSAPP=false
 FEATURE_GOOGLE_CALENDAR_SYNC=false
 FEATURE_ADVANCED_ANALYTICS=false
 FEATURE_PERSONAL_RECOMMENDATIONS=false
-FEATURE_PROMOTIONS_BETA=false
 ```
+
+Promociones y notificaciones internas o por correo son funciones estables y no dependen de una bandera beta.
+
+## Despliegue de producción
+
+El despliegue estable utiliza imágenes separadas para PHP/Apache y Vue/Nginx, un único origen público, servicios internos no expuestos, contenedores de sólo lectura, volúmenes persistentes, comprobación de migraciones y workers independientes.
+
+1. Creá un archivo `.env.production` fuera de Git con permisos `600` o `640`.
+2. Configurá URLs HTTPS, secretos únicos, Turnstile, correo SMTP, MySQL y Mercado Pago.
+3. Guardá la configuración de `msmtp` en un archivo privado y asigná su ruta a `SMTP_CONFIG_FILE`.
+4. Ejecutá el preflight. Si falta una condición de seguridad, el despliegue se detiene.
+5. Construí e iniciá la composición de producción.
+
+```bash
+chmod 600 .env.production /ruta/privada/msmtprc
+scripts/production-preflight.sh .env.production
+docker compose --env-file .env.production -f docker-compose.prod.yml build
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+```
+
+El archivo de producción exige `SEED_DEMO_DATA=false`, `ALLOW_DEMO_DATA_IN_PRODUCTION=false`, cookies seguras, credenciales no triviales y todas las funciones beta desactivadas. El servicio `schema-check` rechaza el arranque si falta una migración requerida. La terminación TLS debe situarse delante de Nginx y conservar `X-Forwarded-Proto=https`.
 
 ## Pruebas
 
@@ -232,6 +324,22 @@ DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
 # Catálogo geográfico y datos reales del mapa
 sh tests/map_geolocation.sh
 
+# Calendario, promociones, consentimiento y notificaciones
+DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
+  sh tests/promociones_notificaciones.sh
+
+# Perfil, preferencias, favoritos, progreso y carné digital
+DEMO_USER_PASSWORD='valor-definido-en-tu-entorno' \
+  sh tests/miembro_http.sh
+
+# Contratos de producción y seguridad
+php tests/production_infrastructure_contracts.php
+php tests/security_http_status_contracts.php
+php tests/security_concurrency_contracts.php
+
+# Auditoría de dependencias utilizadas en runtime
+docker compose exec -T frontend npm audit --omit=dev --audit-level=high
+
 # Navegación, responsive, accesibilidad y consola
 docker run --rm --network host \
   -v "$PWD/frontend:/work" \
@@ -255,11 +363,13 @@ docker run --rm --network host \
 - Archivos privados fuera del webroot.
 - Rate limiting en flujos sensibles.
 - Auditoría con identificadores de solicitud.
+- Consentimiento versionado y baja publicitaria mediante token de un solo uso.
+- Carnés digitales firmados, acotados por alcance y con vencimiento breve.
 - Referencias externas únicas, idempotencia y eventos de pago.
 - Firma HMAC y consulta directa al proveedor antes de aprobar webhooks.
 - Secretos únicamente mediante variables de entorno.
 
-Para un despliegue real deben configurarse HTTPS, `APP_KEY`, `SESSION_SECURE=true`, correo transaccional, copias de seguridad y credenciales únicas de producción.
+Para un despliegue real deben configurarse terminación HTTPS, copias de seguridad verificadas, monitoreo externo, rotación de secretos y credenciales únicas de producción.
 
 ## Equipo
 

@@ -1,3 +1,7 @@
+<!--
+  Componente de sistema DemoDataNotice. Comunica contexto global sin interferir con las tareas principales.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { computed } from 'vue'
 import { IconDatabase } from '@tabler/icons-vue'

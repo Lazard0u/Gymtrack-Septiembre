@@ -1,5 +1,8 @@
 #!/usr/bin/env sh
 
+# Prueba de integración demo dataset. Prepara datos temporales, llama la API y compara estados y respuestas esperadas.
+# set -eu detiene la ejecución ante el primer fallo o variable obligatoria ausente.
+
 set -eu
 
 DEMO_USER_PASSWORD="${DEMO_USER_PASSWORD:?Definí DEMO_USER_PASSWORD para la prueba}"
@@ -58,13 +61,15 @@ counts="$(query "SELECT CONCAT(
   (SELECT COUNT(*) FROM pagos WHERE is_demo=1), ':',
   (SELECT COUNT(*) FROM reservas WHERE is_demo=1)
 );")"
-assert_equal '5:4:5:3:2:10:1' "$counts" 'Idempotencia del dataset'
+# El escenario actual incluye dos reservas distintas para mostrar un cupo confirmado y otro flujo del socio.
+assert_equal '5:4:5:3:2:10:2' "$counts" 'Idempotencia del dataset'
 
 hashes="$(query 'SELECT COUNT(*) FROM usuarios WHERE is_demo=1 AND LEFT(password_hash, 4) = CHAR(36, 50, 121, 36);')"
 assert_equal '4' "$hashes" 'Hash bcrypt de usuarios demo'
 
 permission_matrix="$(query "SET NAMES utf8mb4; SELECT GROUP_CONCAT(CONCAT(nombre, ':', total) ORDER BY nombre SEPARATOR ',') FROM (SELECT r.nombre, COUNT(*) AS total FROM rol_permisos rp JOIN roles r ON r.id=rp.rol_id GROUP BY r.nombre) AS permission_counts;")"
-assert_equal 'admin_general:23,dueño:23,empleado:11,socio:8' "$permission_matrix" 'Matriz de capacidades'
+# La matriz incorpora los permisos operativos agregados al calendario y a la experiencia del socio.
+assert_equal 'admin_general:25,dueño:25,empleado:12,socio:8' "$permission_matrix" 'Matriz de capacidades'
 
 public_catalog="$(curl -fsS "$API_BASE_URL/public/gimnasios")"
 assert_equal '5' "$(printf '%s' "$public_catalog" | jq -r '.gimnasios | length')" 'Catálogo público demo'
@@ -103,7 +108,9 @@ verify_login() {
 verify_login 'socio.demo@gymtrack.local' socio 2 403
 verify_login 'empleado.demo@gymtrack.local' empleado 1 403
 verify_login 'dueno.demo@gymtrack.local' dueño 2 403
-verify_login 'admin.demo@gymtrack.local' admin_general 5 200
+# El administrador general tiene cinco gimnasios disponibles, pero debe elegir uno antes
+# de consultar datos operativos; 409 expresa esa selección pendiente y 403 sigue reservado a falta de permiso.
+verify_login 'admin.demo@gymtrack.local' admin_general 5 409
 
 seed_command --remove
 assert_equal '0' "$(query "SELECT COUNT(*) FROM demo_datasets WHERE nombre='$DEMO_DATASET_NAME';")" 'Eliminación del dataset'

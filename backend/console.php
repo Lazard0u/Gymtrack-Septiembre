@@ -1,8 +1,15 @@
 <?php
+/**
+ * Consola de mantenimiento de GymTrack. Despacha comandos explícitos para datos demo, correo local, limpieza y roles.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
+
+// La consola comparte las dependencias instaladas por Composer con la API HTTP.
+require_once __DIR__ . '/vendor/autoload.php';
 
 spl_autoload_register(function(string $class): void {
     foreach(['config','models','services','seeders'] as $directory){$path=__DIR__."/{$directory}/{$class}.php";if(is_file($path)){require_once $path;return;}}
@@ -15,6 +22,9 @@ try {
         $seeder=new DemoDatasetSeeder();match($option){'--reset'=>$seeder->seed(true),'--remove'=>$seeder->remove(),'--status'=>$seeder->status(),default=>$seeder->seed(false)};exit(0);
     }
     if($command==='auth:cleanup'){$limits=(new RateLimiter())->cleanup();$tokens=(new TokenService())->cleanup();echo "Limpieza completa: {$limits} límites y {$tokens} tokens eliminados.\n";exit(0);}
+    if($command==='notifications:dispatch'){
+        $limit=max(1,min(1000,(int)($option?:100)));$promotionId=isset($argv[3])?max(1,(int)$argv[3]):null;$allDatasets=strtolower((string)(getenv('APP_ENV')?:'production'))!=='production';$result=(new NotificationDispatcher(null,$allDatasets))->dispatch($limit,$promotionId);echo json_encode($result,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n";exit(0);
+    }
     if($command==='auth:mail:latest'){
         if((getenv('APP_ENV')?:'production')==='production')throw new RuntimeException('El buzón local no puede consultarse en producción.');
         $email=strtolower(trim($option));if(!filter_var($email,FILTER_VALIDATE_EMAIL))throw new RuntimeException('Indicá un correo válido.');$file=(string)(getenv('MAIL_LOG_PATH')?:'/tmp/gymtrack-mail/mail.log');
@@ -34,5 +44,5 @@ try {
         else{$stmt=$pdo->prepare('SELECT id FROM gimnasios WHERE slug=?');$stmt->execute([$gymSlug]);$gymId=$stmt->fetchColumn();if(!$gymId)throw new RuntimeException('Gimnasio no encontrado.');$pdo->prepare('INSERT INTO usuario_gimnasio_roles(usuario_id,gimnasio_id,rol_id,activo) VALUES(?,?,?,1) ON DUPLICATE KEY UPDATE activo=1')->execute([(int)$userId,(int)$gymId,(int)$roleId]);}
         $pdo->prepare('UPDATE role_migration_report SET rol_nuevo=?,estado="resuelto",detalle="Resuelto por CLI",resuelto_en=NOW() WHERE usuario_id=?')->execute([$role,(int)$userId]);echo "Rol resuelto sin usar IDs rígidos.\n";exit(0);
     }
-    fwrite(STDERR,"Comandos:\n  seed:demo [--reset|--remove|--status]\n  auth:cleanup\n  auth:mail:latest <email>\n  roles:report\n  roles:ambiguous\n  roles:resolve <email> <socio|empleado|dueño|admin_general> [gym_slug]\n");exit(2);
+    fwrite(STDERR,"Comandos:\n  seed:demo [--reset|--remove|--status]\n  auth:cleanup\n  auth:mail:latest <email>\n  notifications:dispatch [limite] [promocion_id]\n  roles:report\n  roles:ambiguous\n  roles:resolve <email> <socio|empleado|dueño|admin_general> [gym_slug]\n");exit(2);
 } catch(Throwable $error){fwrite(STDERR,"No se pudo completar {$command}: {$error->getMessage()}\n");exit(1);}

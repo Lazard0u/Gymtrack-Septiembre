@@ -1,3 +1,7 @@
+<!--
+  Componente administrativo AdminQuickActions. Presenta controles operativos y delega persistencia a stores o a la vista contenedora.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { computed } from 'vue'
 import {
@@ -10,12 +14,13 @@ import { useAdminStore } from '../../stores/admin'
 const admin = useAdminStore()
 const actionDefinitions = [
   { label: 'Registrar socio', icon: IconUsersPlus, route: 'admin-members', query: { action: 'invite' }, permission: 'members.write', note: 'Invitación y alta operativa' },
+  { label: 'Verificar carné', icon: IconIdBadge2, route: 'admin-member-card-verify', permission: 'members.read', note: 'Validación temporal para controlar ingresos' },
   { label: 'Crear clase', icon: IconCalendarPlus, route: 'admin-classes', permission: 'classes.write', note: 'Abrir agenda y crear una clase' },
   { label: 'Registrar pago manual', icon: IconCreditCardPay, route: 'admin-payments', query: { action: 'manual' }, permission: 'payments.manual', note: 'Confirmación administrativa auditada' },
   { label: 'Revisar pagos pendientes', icon: IconReceipt, route: 'admin-payments', query: { status: 'pendiente' }, permission: 'payments.read', note: 'Cobros pendientes y vencidos' },
   { label: 'Gestionar membresías', icon: IconIdBadge2, route: 'admin-memberships', permission: 'memberships.read', note: 'Consulta operativa real' },
   { label: 'Consultar reservas', icon: IconReceipt, route: 'admin-reservations', permission: 'reservations.read', note: 'Consulta operativa real' },
-  { label: 'Crear promoción', icon: IconGift, disabled: true, beta: true, note: 'Campañas en desarrollo' },
+  { label: 'Crear promoción', icon: IconGift, route: 'admin-promotions', query: { action: 'create' }, permission: 'promotions.write', note: 'Definir audiencia, canales y fechas' },
   { label: 'Descargar Excel', icon: IconDownload, route: 'admin-reports', query: { module: 'payments', type: 'xlsx' }, permission: 'reports.export', note: 'Reporte real de transacciones' },
   { label: 'Descargar PDF', icon: IconFileTypePdf, route: 'admin-reports', query: { module: 'finance', type: 'pdf' }, permission: 'reports.export', note: 'Resumen financiero descargable' },
 ]

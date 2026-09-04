@@ -1,0 +1,5 @@
+# Los recursos visuales no deben compararse como texto ni generar falsos positivos de espacios.
+*.ico binary
+*.pdf binary
+*.png binary
+*.webp binary

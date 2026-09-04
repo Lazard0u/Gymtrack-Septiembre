@@ -1,3 +1,7 @@
+<!--
+  Estructura visual AuthShell compartida por las pantallas de identidad y acceso.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import brandMark from '../../assets/gymtrack-mark.svg'
 import heroImage from '../../assets/images/gymtrack-hero-training.webp'

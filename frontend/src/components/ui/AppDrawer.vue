@@ -1,5 +1,9 @@
+<!--
+  Componente visual reutilizable AppDrawer. Props y slots forman su API; emite eventos al padre sin guardar datos de negocio.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
-import { ref, toRef } from 'vue'
+import { getCurrentInstance, ref, toRef } from 'vue'
 import { IconX } from '@tabler/icons-vue'
 import { useFocusTrap } from '../../composables/useFocusTrap'
 import AppIconButton from './AppIconButton.vue'
@@ -8,15 +12,16 @@ const props = defineProps({ open: Boolean, title: { type: String, required: true
 const emit = defineEmits(['close'])
 const panel = ref(null)
 const close = () => emit('close')
-useFocusTrap(toRef(props, 'open'), panel, close)
+const titleId = `app-drawer-title-${getCurrentInstance().uid}`
+const { isTopLayer, stackIndex } = useFocusTrap(toRef(props, 'open'), panel, close)
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="drawer">
-      <div v-if="open" class="drawer" role="presentation" @mousedown.self="close">
-        <aside ref="panel" :class="['drawer__panel', `drawer__panel--${side}`]" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'" tabindex="-1">
-          <header class="drawer__header"><h2 id="drawer-title">{{ title }}</h2><AppIconButton label="Cerrar menú" @click="close"><IconX :size="20" /></AppIconButton></header>
+      <div v-if="open" class="drawer" role="presentation" :style="{ zIndex: `calc(var(--z-overlay) + ${stackIndex})` }" @mousedown.self="close">
+        <aside ref="panel" :class="['drawer__panel', `drawer__panel--${side}`]" role="dialog" :aria-modal="isTopLayer || undefined" :aria-hidden="!isTopLayer || undefined" :inert="!isTopLayer || undefined" :aria-labelledby="titleId" tabindex="-1">
+          <header class="drawer__header"><h2 :id="titleId">{{ title }}</h2><AppIconButton label="Cerrar menú" @click="close"><IconX :size="20" /></AppIconButton></header>
           <div class="drawer__body"><slot /></div>
           <footer v-if="$slots.footer" class="drawer__footer"><slot name="footer" /></footer>
         </aside>

@@ -1,3 +1,7 @@
+/*
+ * Reglas globales de GymTrack. Normalizan el documento y aplican tipografía,
+ * foco, fondos y utilidades compartidas antes de los estilos de cada componente.
+ */
 *,
 *::before,
 *::after {
@@ -194,6 +198,17 @@ h3 {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-property: none !important;
+  }
+
+  :where(a, button, input, select, textarea, [role='button']) {
+    transition-property: color, background-color, border-color, opacity, box-shadow !important;
+    transition-duration: 80ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  :where(a, button, [role='button']):hover {
+    transform: none !important;
   }
 }

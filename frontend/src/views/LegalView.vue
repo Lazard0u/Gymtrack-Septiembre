@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta LegalView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { computed } from 'vue'
 import PublicHeader from '../components/public/PublicHeader.vue'
@@ -9,7 +13,7 @@ const props = defineProps({ kind: { type: String, required: true } })
 
 const content = {
   privacy: { eyebrow: 'Privacidad', title: 'Privacidad y uso de datos', description: 'Resumen provisional de los principios que guían GymTrack.', sections: [['Datos necesarios', 'GymTrack debe solicitar únicamente la información necesaria para prestar cada función y explicar para qué se usa.'], ['Control del usuario', 'Las preferencias, el consentimiento comercial y la opción de dejar de recibir publicidad formarán parte del perfil.'], ['Seguridad', 'Los secretos no se exponen al frontend y los datos operativos deben quedar separados por gimnasio.']] },
-  terms: { eyebrow: 'Términos', title: 'Condiciones de uso', description: 'Base informativa pendiente de revisión legal antes de producción.', sections: [['Alcance', 'GymTrack conecta a socios y gimnasios. Cada sede será responsable de la exactitud de sus horarios, planes y condiciones publicadas.'], ['Pagos', 'Una membresía solo podrá activarse después de confirmar el pago mediante el proveedor y su webhook validado.'], ['Disponibilidad', 'Las funciones se habilitan por fases y la interfaz indica de forma honesta cuando un módulo aún no está conectado.']] },
+  terms: { eyebrow: 'Términos', title: 'Condiciones de uso', description: 'Base informativa pendiente de revisión legal antes de producción.', sections: [['Alcance', 'GymTrack conecta a socios y gimnasios. Cada sede será responsable de la exactitud de sus horarios, planes y condiciones publicadas.'], ['Pagos', 'Una membresía solo podrá activarse después de confirmar el pago mediante el proveedor y su webhook validado.'], ['Disponibilidad', 'Las funciones pueden habilitarse mediante configuración y la interfaz indica de forma honesta cuando un módulo aún no está conectado.']] },
   accessibility: { eyebrow: 'Accesibilidad', title: 'Una experiencia utilizable por más personas', description: 'Criterios aplicados en la interfaz pública de GymTrack.', sections: [['Teclado y foco', 'La navegación, los menús y los diálogos deben funcionar sin mouse y conservar un foco visible.'], ['Movimiento', 'Las transiciones respetan la preferencia de movimiento reducido del sistema.'], ['Lectura', 'La jerarquía semántica, el contraste y los mensajes de estado se revisan en los anchos principales.']] },
   contact: { eyebrow: 'Contacto', title: 'Hablemos cuando el canal esté listo', description: 'El canal definitivo de soporte todavía debe configurarse.', sections: [['Soporte', 'No publicamos una dirección de correo o un teléfono de demostración. El canal verificado se incorporará antes de producción.'], ['Incidencias', 'Los errores deben registrarse de forma segura, sin mostrar secretos ni detalles internos a quien usa la plataforma.']] },
 }

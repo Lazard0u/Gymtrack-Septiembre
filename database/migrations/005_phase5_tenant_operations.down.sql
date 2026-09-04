@@ -1,4 +1,4 @@
--- Rollback controlado de Fase 5. Destructivo: requiere respaldo y ventana de mantenimiento.
+-- Rollback controlado de la migración 005. Destructivo: requiere respaldo y ventana de mantenimiento.
 SET FOREIGN_KEY_CHECKS=0;
 ALTER TABLE membresias DROP FOREIGN KEY fk_membresia_plan;
 ALTER TABLE membresias DROP INDEX idx_membresias_numero_socio;

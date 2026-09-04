@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta ChangePasswordView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { reactive, ref } from 'vue';import {useRouter} from 'vue-router';import AuthShell from '../components/auth/AuthShell.vue';import AppAlert from '../components/ui/AppAlert.vue';import AppButton from '../components/ui/AppButton.vue';import AppInput from '../components/ui/AppInput.vue';import {api} from '../services/api';import {useAuthStore} from '../stores/auth'
 const router=useRouter();const auth=useAuthStore();const form=reactive({current_password:'',password:'',password_confirmation:'',logout_other_sessions:true});const loading=ref(false);const error=ref('');const success=ref('')

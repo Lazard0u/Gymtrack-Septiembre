@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta ForGymsView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { IconChartLine, IconLock, IconSettings, IconUsersGroup } from '@tabler/icons-vue'
 import PublicHeader from '../components/public/PublicHeader.vue'
@@ -14,7 +18,7 @@ const pillars = [
 </script>
 
 <template>
-  <div class="public-page"><PublicHeader /><main><section class="container owner-hero"><AppPageHeader eyebrow="Para gimnasios" title="La gestión diaria, donde la esperás." description="GymTrack 1.0 está pensado para que administración, finanzas y reportes no queden escondidos." /><div class="owner-hero__image"><img :src="ownerImage" alt="Responsable de un gimnasio planificando la operación" width="1122" height="1402" /></div></section><section class="pillars"><div class="container pillars__grid"><article v-for="pillar in pillars" :key="pillar.title"><component :is="pillar.icon" :size="24" /><h2>{{ pillar.title }}</h2><p>{{ pillar.text }}</p></article></div></section><section class="container owner-cta"><div><IconUsersGroup :size="28" /><h2>El alta operativa se habilitará por fases.</h2><p>Hoy podés crear una cuenta de socio o ingresar con una cuenta existente. No presentamos un onboarding de gimnasio que todavía no guarda datos.</p></div><div class="owner-cta__actions"><AppLinkButton :to="{ name: 'registro' }">Crear cuenta</AppLinkButton><AppLinkButton :to="{ name: 'login' }" variant="secondary">Ingresar</AppLinkButton></div></section></main><PublicFooter /></div>
+  <div class="public-page"><PublicHeader /><main><section class="container owner-hero"><AppPageHeader eyebrow="Para gimnasios" title="La gestión diaria, donde la esperás." description="GymTrack 1.0 mantiene administración, finanzas y reportes visibles y conectados a la operación real." /><div class="owner-hero__image"><img :src="ownerImage" alt="Responsable de un gimnasio planificando la operación" width="1122" height="1402" /></div></section><section class="pillars"><div class="container pillars__grid"><article v-for="pillar in pillars" :key="pillar.title"><component :is="pillar.icon" :size="24" /><h2>{{ pillar.title }}</h2><p>{{ pillar.text }}</p></article></div></section><section class="container owner-cta"><div><IconUsersGroup :size="28" /><h2>Solicitá el alta de tu gimnasio.</h2><p>La solicitud se guarda y queda pendiente de revisión. Después, el equipo se incorpora mediante invitaciones con vencimiento y permisos por gimnasio.</p></div><div class="owner-cta__actions"><AppLinkButton :to="{ name: 'owner-register' }">Solicitar cuenta de dueño</AppLinkButton><AppLinkButton :to="{ name: 'login' }" variant="secondary">Ingresar</AppLinkButton></div></section></main><PublicFooter /></div>
 </template>
 
 <style scoped>

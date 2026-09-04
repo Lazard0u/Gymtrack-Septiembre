@@ -1,4 +1,8 @@
 <?php
+/**
+ * Servicio ApiResponder. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 
@@ -34,7 +38,14 @@ final class ApiResponder
 
     private static function send(int $status, array $payload): never
     {
-        http_response_code($status);
+        // Apache convierte algunos códigos no registrados por PHP, como 419,
+        // en 500 si sólo se usa http_response_code(). La línea explícita conserva
+        // el contrato de sesión expirada en rutas administrativas y públicas.
+        if ($status === 419) {
+            header('HTTP/1.1 419 Page Expired');
+        } else {
+            http_response_code($status);
+        }
         echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }

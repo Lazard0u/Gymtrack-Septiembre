@@ -1,7 +1,11 @@
+<!--
+  Componente visual reutilizable AppInput. Props y slots forman su API; emite eventos al padre sin guardar datos de negocio.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { computed, useId } from 'vue'
 
-const props = defineProps({ modelValue: { type: [String, Number], default: '' }, label: { type: String, required: true }, type: { type: String, default: 'text' }, placeholder: { type: String, default: '' }, hint: { type: String, default: '' }, error: { type: String, default: '' }, name: { type: String, default: '' }, autocomplete: { type: String, default: '' }, minlength: { type: [Number, String], default: undefined }, maxlength: { type: [Number, String], default: undefined }, inputmode: { type: String, default: undefined }, required: Boolean, disabled: Boolean })
+const props = defineProps({ modelValue: { type: [String, Number], default: '' }, label: { type: String, required: true }, type: { type: String, default: 'text' }, placeholder: { type: String, default: '' }, hint: { type: String, default: '' }, error: { type: String, default: '' }, name: { type: String, default: '' }, autocomplete: { type: String, default: '' }, minlength: { type: [Number, String], default: undefined }, maxlength: { type: [Number, String], default: undefined }, min: { type: [Number, String], default: undefined }, max: { type: [Number, String], default: undefined }, step: { type: [Number, String], default: undefined }, inputmode: { type: String, default: undefined }, required: Boolean, disabled: Boolean })
 const emit = defineEmits(['update:modelValue'])
 const uid = useId()
 const inputId = computed(() => props.name || `input-${uid}`)
@@ -10,7 +14,7 @@ const inputId = computed(() => props.name || `input-${uid}`)
 <template>
   <label class="field" :for="inputId">
     <span class="field__label">{{ label }}<span v-if="required" aria-hidden="true"> *</span></span>
-    <input :id="inputId" class="field__control" :class="{ 'field__control--error': error }" :name="name" :type="type" :value="modelValue" :placeholder="placeholder" :autocomplete="autocomplete" :minlength="minlength" :maxlength="maxlength" :inputmode="inputmode" :required="required" :disabled="disabled" :aria-invalid="error ? 'true' : undefined" :aria-describedby="hint || error ? `${inputId}-help` : undefined" @input="emit('update:modelValue', $event.target.value)" />
+    <input :id="inputId" class="field__control" :class="{ 'field__control--error': error }" :name="name" :type="type" :value="modelValue" :placeholder="placeholder" :autocomplete="autocomplete" :minlength="minlength" :maxlength="maxlength" :min="min" :max="max" :step="step" :inputmode="inputmode" :required="required" :disabled="disabled" :aria-invalid="error ? 'true' : undefined" :aria-describedby="hint || error ? `${inputId}-help` : undefined" @input="emit('update:modelValue', $event.target.value)" />
     <span v-if="error || hint" :id="`${inputId}-help`" :class="['field__help', { 'field__help--error': error }]">{{ error || hint }}</span>
   </label>
 </template>

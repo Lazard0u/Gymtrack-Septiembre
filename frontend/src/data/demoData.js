@@ -1,3 +1,7 @@
+/**
+ * Datos auxiliares de demoData. Se conserva por compatibilidad; los datos operativos y gimnasios públicos provienen de MySQL.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 export const gyms = [
   {
     id: 1,

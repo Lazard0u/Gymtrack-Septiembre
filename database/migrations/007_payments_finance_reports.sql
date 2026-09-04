@@ -1,4 +1,4 @@
--- GymTrack Fase 7: pagos verificables, finanzas y reportes descargables.
+-- GymTrack: pagos verificables, finanzas y reportes descargables.
 -- Idempotente para MySQL 8.0. Ejecutar después de 006 y de un respaldo verificado.
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 

@@ -1,4 +1,8 @@
 <?php
+/**
+ * Acceso a datos Gimnasio. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 
@@ -20,7 +24,9 @@ final class Gimnasio
                     (SELECT COUNT(*) FROM membresias m WHERE m.gimnasio_id = g.id AND m.estado = 'activa') AS membresias_activas
              FROM gimnasios g
              WHERE g.estado IN ('publicado', 'temporalmente_cerrado')
+               AND g.verificacion_estado = 'verificado'
                AND g.archivado_en IS NULL
+               AND g.latitud BETWEEN -90 AND 90 AND g.longitud BETWEEN -180 AND 180
                AND g.is_demo = ?";
         $params = [$datasetActivo === null ? 0 : 1];
         if ($datasetActivo !== null) {
@@ -43,7 +49,9 @@ final class Gimnasio
                     (SELECT COUNT(*) FROM membresias m WHERE m.gimnasio_id = g.id AND m.estado = 'activa') AS membresias_activas
              FROM gimnasios g
              WHERE g.id = ? AND g.estado IN ('publicado', 'temporalmente_cerrado')
+               AND g.verificacion_estado = 'verificado'
                AND g.archivado_en IS NULL
+               AND g.latitud BETWEEN -90 AND 90 AND g.longitud BETWEEN -180 AND 180
                AND g.is_demo = ?";
         $params = [$id, $datasetActivo === null ? 0 : 1];
         if ($datasetActivo !== null) {
@@ -67,7 +75,10 @@ final class Gimnasio
                     (SELECT COUNT(*) FROM membresias m WHERE m.gimnasio_id = g.id AND m.estado = 'activa') AS membresias_activas
              FROM gimnasios g
              WHERE g.slug = ? AND g.estado IN ('publicado', 'temporalmente_cerrado')
-               AND g.archivado_en IS NULL AND g.is_demo = ?";
+               AND g.verificacion_estado = 'verificado'
+               AND g.archivado_en IS NULL
+               AND g.latitud BETWEEN -90 AND 90 AND g.longitud BETWEEN -180 AND 180
+               AND g.is_demo = ?";
         $params = [$slug, $datasetActivo === null ? 0 : 1];
         if ($datasetActivo !== null) {
             $sql .= ' AND g.demo_dataset_id = ?';
@@ -79,7 +90,7 @@ final class Gimnasio
         if (!$gym) return false;
         $normalized = $this->normalizar($gym);
         $stmt = $this->pdo->prepare(
-            'SELECT id,nombre,direccion,ciudad,departamento,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado
+            'SELECT id,nombre,direccion,ciudad,departamento,pais,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado
              FROM gimnasio_sedes WHERE gimnasio_id=? AND estado="activa" AND is_demo=? AND (demo_dataset_id <=> ?) ORDER BY es_principal DESC,nombre'
         );
         $stmt->execute([(int) $gym['id'], $datasetActivo === null ? 0 : 1, $datasetActivo['id'] ?? null]);
@@ -124,6 +135,7 @@ final class Gimnasio
             'direccion' => $gym['direccion'],
             'ciudad' => $gym['ciudad'],
             'departamento' => $gym['departamento'],
+            'pais' => $gym['pais'],
             'latitud' => (float) $gym['latitud'],
             'longitud' => (float) $gym['longitud'],
             'zona_horaria' => $gym['zona_horaria'],

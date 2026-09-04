@@ -1,4 +1,8 @@
 <?php
+/**
+ * Acceso a datos ReportRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 

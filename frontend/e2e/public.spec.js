@@ -1,3 +1,7 @@
+/**
+ * Prueba automatizada de public.spec. Prepara el escenario, ejecuta acciones públicas y verifica resultados sin alterar la lógica de producción.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 import { expect, test } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
@@ -19,23 +23,34 @@ for (const width of widths) {
     await page.setViewportSize({ width, height: width < 768 ? 800 : 900 })
     await page.goto('/', { waitUntil: 'domcontentloaded' })
     await expect(page.getByRole('heading', { name: 'Tu gimnasio, en un solo lugar.' })).toBeVisible()
-    await expect(gymCard(page, 'GymTrack Centro')).toBeVisible()
+    await expect(page.locator('.hero-gym-card')).toBeVisible()
     await page.locator('[aria-label="Cargando mapa"]').waitFor({ state: 'detached', timeout: 9_000 }).catch(() => {})
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(1)
   })
 }
 
-test('navegación pública y menú móvil son operables', async ({ page }) => {
+test('la navegación pública móvil es fija, operable y no tapa el contenido', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
-  await page.goto('/')
-  await page.getByRole('button', { name: 'Abrir menú' }).click()
-  await expect(page.getByRole('dialog', { name: 'Menú' })).toBeVisible()
-  await page.keyboard.press('Escape')
-  await expect(page.getByRole('dialog', { name: 'Menú' })).toBeHidden()
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  const mobileNav = page.getByRole('navigation', { name: 'Navegación principal móvil' })
+  await expect(mobileNav).toBeVisible()
+  await expect(mobileNav.getByRole('link')).toHaveCount(5)
+  await expect(page.getByRole('link', { name: 'Crear cuenta' }).first()).toBeVisible()
   await page.getByRole('link', { name: 'Explorar gimnasios' }).click()
   await expect(page).toHaveURL(/\/gimnasios$/)
   await expect(page.getByRole('heading', { name: 'Explorá el mapa. Elegí con contexto.' })).toBeVisible()
+})
+
+test('el hero presenta el mapa, la búsqueda y la ficha seleccionada sin la tarjeta Constancia', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('region', { name: 'Mapa interactivo de gimnasios de GymTrack' })).toBeVisible()
+  await expect(page.getByLabel('Buscar barrio, ciudad o gimnasio')).toBeVisible()
+  await expect(page.getByText('Constancia', { exact: true })).toHaveCount(0)
+  await page.getByLabel('Buscar barrio, ciudad o gimnasio').fill('Titan')
+  await expect(page.locator('.hero-gym-card')).toContainText('Titan Training')
+  await expect(page.locator('.gym-marker')).toHaveCount(1)
 })
 
 test('el explorador responde como panel en escritorio y bottom sheet en móvil', async ({ page }) => {
@@ -73,6 +88,8 @@ test('el catálogo demo llega desde la API y sus filtros actualizan lista y mapa
   await expect(gymCard(page, 'Titan Training')).toBeVisible()
   await expect(gymCard(page, 'Punto Activo')).toBeVisible()
   await expect(gymCard(page, 'Arena Functional Gym')).toBeVisible()
+  await expect(page.locator('.gym-card .badge--info', { hasText: 'Demostración' })).toHaveCount(5)
+  await expect(page.getByText('5 ubicaciones visibles')).toBeVisible()
   await page.getByRole('button', { name: 'Filtros y orden' }).click()
   await page.getByLabel('Ciudad').selectOption('Salto')
   await expect(gymCard(page, 'Norte Fitness Club')).toBeVisible()

@@ -1,3 +1,7 @@
+<!--
+  Componente administrativo AdminDataTable. Presenta controles operativos y delega persistencia a stores o a la vista contenedora.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { IconArrowDown, IconArrowUp, IconChevronLeft, IconChevronRight } from '@tabler/icons-vue'
 import AppBadge from '../ui/AppBadge.vue'

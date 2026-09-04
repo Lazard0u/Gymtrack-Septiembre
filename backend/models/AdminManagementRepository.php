@@ -1,10 +1,14 @@
 <?php
+/**
+ * Acceso a datos AdminManagementRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 
 final class AdminManagementRepository
 {
-    private const MANAGEABLE_PERMISSIONS=['members.read','members.write','classes.read','classes.write','reservations.read','reservations.write','attendance.write','memberships.read','memberships.write','payments.read','payments.manual','finance.read','reports.export'];
+    private const MANAGEABLE_PERMISSIONS=['members.read','members.write','classes.read','classes.write','reservations.read','reservations.write','attendance.write','memberships.read','memberships.write','payments.read','payments.manual','finance.read','reports.export','promotions.read','promotions.write'];
     private PDO $pdo;
     private ?int $datasetId;
 
@@ -17,7 +21,7 @@ final class AdminManagementRepository
     public function gym(int $gymId): ?array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id,nombre,nombre_legal,slug,descripcion,direccion,ciudad,departamento,latitud,longitud,zona_horaria,
+            'SELECT id,nombre,nombre_legal,slug,descripcion,direccion,ciudad,departamento,pais,latitud,longitud,zona_horaria,
                     telefono,email,horarios_json,categorias_json,servicios_json,estado,verificacion_estado,imagen_path,is_demo,demo_dataset_id,creado_en,actualizado_en
              FROM gimnasios WHERE id=? AND is_demo=? AND (demo_dataset_id <=> ?) AND archivado_en IS NULL LIMIT 1'
         );
@@ -38,18 +42,23 @@ final class AdminManagementRepository
     public function createGym(array $data, int $actorId, string $actorRole): array
     {
         $slug = $this->uniqueSlug($data['nombre']);
+        $verification = $actorRole === AuthorizationService::ADMIN ? $data['verificacion_estado'] : 'pendiente';
+        $state = $actorRole === AuthorizationService::ADMIN ? $data['estado'] : 'borrador';
+        if ($state === 'publicado' && $verification !== 'verificado') {
+            ApiResponder::error(422, 'gym_not_verified', 'El gimnasio debe estar verificado antes de publicarse.', ['estado' => 'Marcá la verificación como aprobada.']);
+        }
         $this->pdo->beginTransaction();
         try {
             $stmt = $this->pdo->prepare(
                 'INSERT INTO gimnasios
-                 (nombre,nombre_legal,slug,descripcion,direccion,ciudad,departamento,latitud,longitud,zona_horaria,telefono,email,
+                 (nombre,nombre_legal,slug,descripcion,direccion,ciudad,departamento,pais,latitud,longitud,zona_horaria,telefono,email,
                   horarios_json,categorias_json,servicios_json,estado,verificacion_estado,imagen_path,is_demo,demo_dataset_id)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
             );
             $stmt->execute([
-                $data['nombre'],$data['nombre_legal'],$slug,$data['descripcion'],$data['direccion'],$data['ciudad'],$data['departamento'],
+                $data['nombre'],$data['nombre_legal'],$slug,$data['descripcion'],$data['direccion'],$data['ciudad'],$data['departamento'],$data['pais'],
                 $data['latitud'],$data['longitud'],$data['zona_horaria'],$data['telefono'],$data['email'],
-                $this->json($data['horarios']),$this->json($data['categorias']),$this->json($data['servicios']),'borrador','pendiente',null,
+                $this->json($data['horarios']),$this->json($data['categorias']),$this->json($data['servicios']),$state,$verification,null,
                 $this->demoFlag(),$this->datasetId,
             ]);
             $gymId = (int) $this->pdo->lastInsertId();
@@ -74,11 +83,11 @@ final class AdminManagementRepository
         $this->pdo->beginTransaction();
         try {
             $stmt = $this->pdo->prepare(
-                'UPDATE gimnasios SET nombre=?,nombre_legal=?,descripcion=?,direccion=?,ciudad=?,departamento=?,latitud=?,longitud=?,zona_horaria=?,
+                'UPDATE gimnasios SET nombre=?,nombre_legal=?,descripcion=?,direccion=?,ciudad=?,departamento=?,pais=?,latitud=?,longitud=?,zona_horaria=?,
                  telefono=?,email=?,horarios_json=?,categorias_json=?,servicios_json=?,estado=?,verificacion_estado=? WHERE id=? AND is_demo=? AND (demo_dataset_id <=> ?)'
             );
             $stmt->execute([
-                $data['nombre'],$data['nombre_legal'],$data['descripcion'],$data['direccion'],$data['ciudad'],$data['departamento'],$data['latitud'],
+                $data['nombre'],$data['nombre_legal'],$data['descripcion'],$data['direccion'],$data['ciudad'],$data['departamento'],$data['pais'],$data['latitud'],
                 $data['longitud'],$data['zona_horaria'],$data['telefono'],$data['email'],$this->json($data['horarios']),$this->json($data['categorias']),
                 $this->json($data['servicios']),$state,$verification,$gymId,$this->demoFlag(),$this->datasetId,
             ]);
@@ -116,7 +125,7 @@ final class AdminManagementRepository
     public function locations(int $gymId): array
     {
         $stmt = $this->pdo->prepare(
-            'SELECT id,gimnasio_id,nombre,direccion,ciudad,departamento,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado,creado_en,actualizado_en
+            'SELECT id,gimnasio_id,nombre,direccion,ciudad,departamento,pais,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado,creado_en,actualizado_en
              FROM gimnasio_sedes WHERE gimnasio_id=? AND is_demo=? AND (demo_dataset_id <=> ?) ORDER BY es_principal DESC,nombre'
         );
         $stmt->execute([$gymId,$this->demoFlag(),$this->datasetId]);
@@ -138,14 +147,14 @@ final class AdminManagementRepository
         $duplicate=$this->pdo->prepare('SELECT COUNT(*) FROM gimnasio_sedes WHERE gimnasio_id=? AND nombre=? AND id<>? AND is_demo=? AND (demo_dataset_id <=> ?)');$duplicate->execute([$gymId,$data['nombre'],$locationId,$this->demoFlag(),$this->datasetId]);
         if((int)$duplicate->fetchColumn()>0)ApiResponder::error(409,'location_name_exists','Ya existe una sede con ese nombre.',['nombre'=>'Usá un nombre diferente.']);
         $stmt = $this->pdo->prepare(
-            'UPDATE gimnasio_sedes SET nombre=?,direccion=?,ciudad=?,departamento=?,latitud=?,longitud=?,zona_horaria=?,telefono=?,email=?,horarios_json=?,estado=?
+            'UPDATE gimnasio_sedes SET nombre=?,direccion=?,ciudad=?,departamento=?,pais=?,latitud=?,longitud=?,zona_horaria=?,telefono=?,email=?,horarios_json=?,estado=?
              WHERE id=? AND gimnasio_id=? AND is_demo=? AND (demo_dataset_id <=> ?)'
         );
-        $stmt->execute([$data['nombre'],$data['direccion'],$data['ciudad'],$data['departamento'],$data['latitud'],$data['longitud'],$data['zona_horaria'],
+        $stmt->execute([$data['nombre'],$data['direccion'],$data['ciudad'],$data['departamento'],$data['pais'],$data['latitud'],$data['longitud'],$data['zona_horaria'],
             $data['telefono'],$data['email'],$this->json($data['horarios']),$data['estado'],$locationId,$gymId,$this->demoFlag(),$this->datasetId]);
         if ((bool) $before['es_principal']) {
-            $stmt = $this->pdo->prepare('UPDATE gimnasios SET direccion=?,ciudad=?,departamento=?,latitud=?,longitud=?,zona_horaria=?,telefono=?,email=?,horarios_json=? WHERE id=?');
-            $stmt->execute([$data['direccion'],$data['ciudad'],$data['departamento'],$data['latitud'],$data['longitud'],$data['zona_horaria'],$data['telefono'],$data['email'],$this->json($data['horarios']),$gymId]);
+            $stmt = $this->pdo->prepare('UPDATE gimnasios SET direccion=?,ciudad=?,departamento=?,pais=?,latitud=?,longitud=?,zona_horaria=?,telefono=?,email=?,horarios_json=? WHERE id=?');
+            $stmt->execute([$data['direccion'],$data['ciudad'],$data['departamento'],$data['pais'],$data['latitud'],$data['longitud'],$data['zona_horaria'],$data['telefono'],$data['email'],$this->json($data['horarios']),$gymId]);
         }
         return ['before' => $before, 'after' => $this->location($gymId, $locationId)];
     }
@@ -330,7 +339,7 @@ final class AdminManagementRepository
         $this->pdo->beginTransaction();try{$this->pdo->prepare('UPDATE membresias SET estado=? WHERE id=? AND gimnasio_id=?')->execute([$status,$membershipId,$gymId]);$this->pdo->prepare('INSERT INTO membresia_historial (membresia_id,estado_anterior,estado_nuevo,motivo,actor_usuario_id) VALUES (?,?,?,?,?)')->execute([$membershipId,$before['estado'],$status,$reason,$actorId]);$this->pdo->commit();return ['before'=>$before,'after'=>$this->membership($gymId,$membershipId)];}catch(Throwable $error){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $error;}
     }
 
-    private function insertLocation(int $gymId,array $data): void{$stmt=$this->pdo->prepare('INSERT INTO gimnasio_sedes (gimnasio_id,nombre,direccion,ciudad,departamento,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado,is_demo,demo_dataset_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');$stmt->execute([$gymId,$data['nombre'],$data['direccion'],$data['ciudad'],$data['departamento'],$data['latitud'],$data['longitud'],$data['zona_horaria'],$data['telefono'],$data['email'],$this->json($data['horarios']),!empty($data['es_principal'])?1:0,$data['estado']??'activa',$this->demoFlag(),$this->datasetId]);}
+    private function insertLocation(int $gymId,array $data): void{$stmt=$this->pdo->prepare('INSERT INTO gimnasio_sedes (gimnasio_id,nombre,direccion,ciudad,departamento,pais,latitud,longitud,zona_horaria,telefono,email,horarios_json,es_principal,estado,is_demo,demo_dataset_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');$stmt->execute([$gymId,$data['nombre'],$data['direccion'],$data['ciudad'],$data['departamento'],$data['pais'],$data['latitud'],$data['longitud'],$data['zona_horaria'],$data['telefono'],$data['email'],$this->json($data['horarios']),!empty($data['es_principal'])?1:0,$data['estado']??'activa',$this->demoFlag(),$this->datasetId]);}
     private function location(int $gymId,int $id): ?array{$stmt=$this->pdo->prepare('SELECT * FROM gimnasio_sedes WHERE id=? AND gimnasio_id=? AND is_demo=? AND (demo_dataset_id <=> ?)');$stmt->execute([$id,$gymId,$this->demoFlag(),$this->datasetId]);$row=$stmt->fetch();return $row?$this->normalizeLocation($row):null;}
     private function primaryLocation(int $gymId): ?array{$stmt=$this->pdo->prepare('SELECT * FROM gimnasio_sedes WHERE gimnasio_id=? AND es_principal=1 LIMIT 1');$stmt->execute([$gymId]);$row=$stmt->fetch();return $row?$this->normalizeLocation($row):null;}
     private function normalizeLocation(array $row): array{$row['id']=(int)$row['id'];$row['gimnasio_id']=(int)$row['gimnasio_id'];$row['latitud']=(float)$row['latitud'];$row['longitud']=(float)$row['longitud'];$row['es_principal']=(bool)$row['es_principal'];$row['horarios']=json_decode((string)$row['horarios_json'],true)?:[];unset($row['horarios_json']);return $row;}

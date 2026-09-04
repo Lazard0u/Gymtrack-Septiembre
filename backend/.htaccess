@@ -1,3 +1,5 @@
+# Dirige rutas virtuales al front controller index.php. Los archivos o
+# directorios reales se sirven directamente para no pasar trabajo innecesario a PHP.
 RewriteEngine On
 
 RewriteCond %{REQUEST_FILENAME} !-f

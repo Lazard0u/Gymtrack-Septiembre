@@ -1,3 +1,7 @@
+/**
+ * Prueba automatizada de PublicHeader.spec. Prepara el escenario, ejecuta acciones públicas y verifica resultados sin alterar la lógica de producción.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
@@ -11,24 +15,21 @@ const routes = [
   { path: '/login', name: 'login', component: { template: '<div />' } },
   { path: '/registro', name: 'registro', component: { template: '<div />' } },
   { path: '/dashboard', name: 'dashboard', component: { template: '<div />' } },
+  { path: '/administracion/resumen', name: 'admin-summary', component: { template: '<div />' } },
 ]
 
 describe('PublicHeader', () => {
-  it('abre el menú móvil, enfoca su contenido y cierra con Escape', async () => {
+  it('expone la navegación móvil principal y mantiene visible el registro', async () => {
     const router = createRouter({ history: createMemoryHistory(), routes })
     await router.push('/')
     await router.isReady()
     const wrapper = mount(PublicHeader, { attachTo: document.body, global: { plugins: [createPinia(), router] } })
-    const trigger = wrapper.get('[aria-label="Abrir menú"]')
-    trigger.element.focus()
-    await trigger.trigger('click')
-    expect(document.querySelector('[role="dialog"]')).not.toBeNull()
-    expect(document.activeElement?.closest('[role="dialog"]')).not.toBeNull()
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
-    await wrapper.vm.$nextTick()
-    await new Promise((resolve) => window.setTimeout(resolve, 250))
-    expect(document.querySelector('[role="dialog"]')).toBeNull()
-    expect(document.activeElement).toBe(trigger.element)
+    const mobileNav = wrapper.get('nav[aria-label="Navegación principal móvil"]')
+    expect(mobileNav.findAll('a')).toHaveLength(5)
+    expect(mobileNav.text()).toContain('Inicio')
+    expect(mobileNav.text()).toContain('Gimnasios')
+    expect(mobileNav.text()).toContain('Planes')
+    expect(wrapper.text()).toContain('Crear cuenta')
     wrapper.unmount()
   })
 })

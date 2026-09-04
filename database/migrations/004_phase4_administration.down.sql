@@ -1,4 +1,4 @@
--- Rollback controlado de la Fase 4.
+-- Rollback controlado de la migración 004.
 -- Requiere respaldo previo porque elimina únicamente historial administrativo.
 
 DELETE FROM schema_migrations WHERE version='004_phase4_administration';

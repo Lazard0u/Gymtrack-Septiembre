@@ -1,4 +1,4 @@
--- GymTrack fase 1: restricciones urgentes para instalaciones existentes.
+-- GymTrack: restricciones de integridad para instalaciones existentes.
 -- Ejecutar sobre la base seleccionada después de un backup verificado.
 
 CREATE TABLE IF NOT EXISTS schema_migrations (
@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Deshabilita cuentas cuyo password_hash no usa un formato reconocido por password_verify().
--- Deben reactivarse únicamente mediante seed_admin.php o un futuro flujo de recuperación.
+-- Deben reactivarse únicamente mediante seed_admin.php o un flujo autorizado de recuperación.
 UPDATE usuarios
 SET activo = 0
 WHERE password_hash NOT LIKE '$2y$%'

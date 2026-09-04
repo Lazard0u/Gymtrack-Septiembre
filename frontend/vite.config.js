@@ -1,3 +1,4 @@
+/** Configura compilación, pruebas unitarias y proxy local de /api hacia PHP. */
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 

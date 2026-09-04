@@ -1,4 +1,8 @@
 <?php
+/**
+ * Acceso a datos SystemContext. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 
@@ -27,7 +31,6 @@ final class SystemContext
                 'google_calendar_sync' => $this->flag('FEATURE_GOOGLE_CALENDAR_SYNC'),
                 'advanced_analytics' => $this->flag('FEATURE_ADVANCED_ANALYTICS'),
                 'personal_recommendations' => $this->flag('FEATURE_PERSONAL_RECOMMENDATIONS'),
-                'promotions_beta' => $this->flag('FEATURE_PROMOTIONS_BETA'),
             ],
         ];
     }

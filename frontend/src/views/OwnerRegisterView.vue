@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta OwnerRegisterView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { nextTick,onBeforeUnmount,onMounted,reactive,ref } from 'vue';import AuthShell from '../components/auth/AuthShell.vue';import AppAlert from '../components/ui/AppAlert.vue';import AppButton from '../components/ui/AppButton.vue';import AppInput from '../components/ui/AppInput.vue';import {useAuthStore} from '../stores/auth';import {useSystemStore} from '../stores/system'
 const auth=useAuthStore();const system=useSystemStore();const loading=ref(false);const error=ref('');const success=ref('');const fields=ref({});const form=reactive({nombre:'',apellido:'',email:'',gym_name:'',message:'',password:'',password_confirmation:'',terms_accepted:false,privacy_accepted:false,marketing_accepted:false});const turnstileEl=ref(null);const token=ref('');let widget=null;let poll=null

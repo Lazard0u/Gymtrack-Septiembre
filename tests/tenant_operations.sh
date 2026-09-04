@@ -1,9 +1,12 @@
 #!/usr/bin/env sh
+
+# Prueba de integración tenant operations. Prepara datos temporales, llama la API y compara estados y respuestas esperadas.
+# set -eu detiene la ejecución ante el primer fallo o variable obligatoria ausente.
 set -eu
 
 API_BASE_URL="${API_BASE_URL:-http://localhost:8080/api}"
 DEMO_USER_PASSWORD="${DEMO_USER_PASSWORD:?Definí DEMO_USER_PASSWORD para validar la operación multi-gimnasio}"
-INVITED_USER_PASSWORD="${PHASE5_INVITED_USER_PASSWORD:-$DEMO_USER_PASSWORD}"
+CONTRASENA_USUARIO_INVITADO="${CONTRASENA_USUARIO_INVITADO:-$DEMO_USER_PASSWORD}"
 DEMO_DATASET_NAME="${DEMO_DATASET_NAME:-gymtrack-presentation}"
 tmp_dir="$(mktemp -d /tmp/gymtrack-tenant-operations.XXXXXX)"
 
@@ -35,9 +38,11 @@ csrf="$(jq -r '.csrf_token' "$tmp_dir/login.json")"
 assert_status 200 "$(request GET '/admin/context' "$tmp_dir/context.json")" context "$tmp_dir/context.json"
 gym_id="$(jq -r '.data.gyms[] | select(.nombre=="GymTrack Centro") | .gimnasio_id' "$tmp_dir/context.json")"
 other_gym_id="$(jq -r '.data.gyms[] | select(.nombre=="Titan Training") | .gimnasio_id' "$tmp_dir/context.json")"
-new_gym_payload='{"nombre":"Gimnasio Contrato Tenant","nombre_legal":"Gimnasio Contrato Tenant Demo SAS","descripcion":"Tenant temporal creado para validar el alta administrativa.","direccion":"Avenida Ficticia 515","ciudad":"Montevideo","departamento":"Montevideo","latitud":"-34.9100000","longitud":"-56.1700000","zona_horaria":"America/Montevideo","telefono":"+598 0000 0515","email":"tenant-contract@example.test","horarios":["Lunes a viernes 07:00–21:00"],"categorias":["Fitness"],"servicios":["Vestuarios"],"estado":"publicado","verificacion_estado":"verificado"}'
+new_gym_payload='{"nombre":"Gimnasio Contrato Tenant","nombre_legal":"Gimnasio Contrato Tenant Demo SAS","descripcion":"Tenant temporal creado para validar el alta administrativa.","direccion":"Avenida Ficticia 515","ciudad":"Montevideo","departamento":"Montevideo","pais":"Uruguay","latitud":"-34.9100000","longitud":"-56.1700000","zona_horaria":"America/Montevideo","telefono":"+598 0000 0515","email":"tenant-contract@example.test","horarios":["Lunes a viernes 07:00–21:00"],"categorias":["Fitness"],"servicios":["Vestuarios"],"estado":"publicado","verificacion_estado":"verificado"}'
 assert_status 201 "$(request POST '/admin/gyms' "$tmp_dir/gym-created.json" "$new_gym_payload")" gym_create_without_context "$tmp_dir/gym-created.json"
-jq -e '.data.estado == "borrador" and .data.verificacion_estado == "pendiente" and .data.slug == "gimnasio-contrato-tenant"' "$tmp_dir/gym-created.json" >/dev/null
+jq -e '.data.estado == "publicado" and .data.verificacion_estado == "verificado" and .data.slug == "gimnasio-contrato-tenant" and .data.pais == "Uruguay"' "$tmp_dir/gym-created.json" >/dev/null
+assert_status 200 "$(curl -sS -o "$tmp_dir/public-after-create.json" -w '%{http_code}' "$API_BASE_URL/public/gimnasios")" public_after_create "$tmp_dir/public-after-create.json"
+jq -e '.gimnasios[] | select(.slug == "gimnasio-contrato-tenant" and .latitud == -34.91 and .longitud == -56.17)' "$tmp_dir/public-after-create.json" >/dev/null
 select_payload="$(jq -nc --argjson gym "$gym_id" '{gym_id:$gym,reason:"Prueba automatizada de operación tenant"}')"
 assert_status 200 "$(request POST '/admin/context/select' "$tmp_dir/selected.json" "$select_payload")" select_context "$tmp_dir/selected.json"
 csrf="$(jq -r '.data.csrf_token' "$tmp_dir/selected.json")"
@@ -103,16 +108,16 @@ assert_status 201 "$(request POST '/admin/invitations' "$tmp_dir/invitation-to-a
 mail_body="$(docker compose exec -T backend php console.php auth:mail:latest "$accepted_email")"
 invitation_token="$(printf '%s\n' "$mail_body" | sed -n 's#.*\/invitacion/##p' | tail -n 1)"
 [ -n "$invitation_token" ] || { echo 'No se encontró el token en el correo local.' >&2; exit 1; }
-acceptance_payload="$(jq -nc --arg token "$invitation_token" --arg password "$INVITED_USER_PASSWORD" '{token:$token,nombre:"Persona",apellido:"Invitada",telefono:"+598 0000 0777",password:$password,terminos:true,privacidad:true}')"
+acceptance_payload="$(jq -nc --arg token "$invitation_token" --arg password "$CONTRASENA_USUARIO_INVITADO" '{token:$token,nombre:"Persona",apellido:"Invitada",telefono:"+598 0000 0777",password:$password,terminos:true,privacidad:true}')"
 assert_status 201 "$(curl -sS -o "$tmp_dir/invitation-accepted.json" -w '%{http_code}' -H 'Content-Type: application/json' --data "$acceptance_payload" "$API_BASE_URL/invitations/accept")" invitation_accept "$tmp_dir/invitation-accepted.json"
 jq -e '.data.type == "socio" and .data.user_id > 0' "$tmp_dir/invitation-accepted.json" >/dev/null
 assert_status 410 "$(curl -sS -o "$tmp_dir/invitation-reused.json" -w '%{http_code}' -H 'Content-Type: application/json' --data "$acceptance_payload" "$API_BASE_URL/invitations/accept")" invitation_single_use "$tmp_dir/invitation-reused.json"
 jq -e '.codigo == "invitation_invalid"' "$tmp_dir/invitation-reused.json" >/dev/null
-accepted_login="$(jq -nc --arg email "$accepted_email" --arg password "$INVITED_USER_PASSWORD" '{email:$email,password:$password}')"
+accepted_login="$(jq -nc --arg email "$accepted_email" --arg password "$CONTRASENA_USUARIO_INVITADO" '{email:$email,password:$password}')"
 assert_status 200 "$(curl -sS -o "$tmp_dir/accepted-login.json" -w '%{http_code}' -H 'Content-Type: application/json' --data "$accepted_login" "$API_BASE_URL/auth/login")" accepted_user_login "$tmp_dir/accepted-login.json"
 jq -e '.usuario.email == "tenant.aceptada@example.test" and .usuario.role == "socio"' "$tmp_dir/accepted-login.json" >/dev/null
 
-location_payload='{"nombre":"Sede Contrato","direccion":"Calle Ficticia 505","ciudad":"Montevideo","departamento":"Montevideo","latitud":"-34.9050000","longitud":"-56.1800000","zona_horaria":"America/Montevideo","telefono":"+598 0000 0505","email":"sede-contrato@example.test","horarios":["Lunes a viernes 08:00–20:00"],"estado":"activa"}'
+location_payload='{"nombre":"Sede Contrato","direccion":"Calle Ficticia 505","ciudad":"Montevideo","departamento":"Montevideo","pais":"Uruguay","latitud":"-34.9050000","longitud":"-56.1800000","zona_horaria":"America/Montevideo","telefono":"+598 0000 0505","email":"sede-contrato@example.test","horarios":["Lunes a viernes 08:00–20:00"],"estado":"activa"}'
 assert_status 201 "$(request POST "/admin/gyms/$gym_id/locations" "$tmp_dir/location-created.json" "$location_payload")" location_create "$tmp_dir/location-created.json"
 location_id="$(jq -r '.data.id' "$tmp_dir/location-created.json")"
 jq -e '.data.nombre == "Sede Contrato" and .data.es_principal == false' "$tmp_dir/location-created.json" >/dev/null
@@ -134,8 +139,19 @@ new_gym_id="$(jq -r '.data.id' "$tmp_dir/gym-created.json")"
 archive_context_payload="$(jq -nc --argjson gym "$new_gym_id" '{gym_id:$gym,reason:"Archivar tenant de prueba automatizada"}')"
 assert_status 200 "$(request POST '/admin/context/select' "$tmp_dir/archive-context.json" "$archive_context_payload")" archive_context "$tmp_dir/archive-context.json"
 csrf="$(jq -r '.data.csrf_token' "$tmp_dir/archive-context.json")"
+assert_status 200 "$(request GET "/admin/gyms/$new_gym_id" "$tmp_dir/new-gym-before-status.json")" new_gym_before_status "$tmp_dir/new-gym-before-status.json"
+inactive_payload="$(jq '.data | {nombre,nombre_legal,descripcion,direccion,ciudad,departamento,pais,latitud,longitud,zona_horaria,telefono,email,horarios,categorias,servicios,estado,verificacion_estado} | .nombre="Gimnasio Contrato Actualizado" | .direccion="Avenida Ficticia 919" | .estado="inactivo" | .latitud="-34.9200000" | .longitud="-56.1900000"' "$tmp_dir/new-gym-before-status.json")"
+assert_status 200 "$(request PATCH "/admin/gyms/$new_gym_id" "$tmp_dir/new-gym-inactive.json" "$inactive_payload")" new_gym_inactive "$tmp_dir/new-gym-inactive.json"
+assert_status 200 "$(curl -sS -o "$tmp_dir/public-after-inactive.json" -w '%{http_code}' "$API_BASE_URL/public/gimnasios")" public_after_inactive "$tmp_dir/public-after-inactive.json"
+jq -e --argjson gym "$new_gym_id" '([.gimnasios[].id] | index($gym)) == null' "$tmp_dir/public-after-inactive.json" >/dev/null
+published_payload="$(printf '%s' "$inactive_payload" | jq '.estado="publicado"')"
+assert_status 200 "$(request PATCH "/admin/gyms/$new_gym_id" "$tmp_dir/new-gym-republished.json" "$published_payload")" new_gym_republished "$tmp_dir/new-gym-republished.json"
+assert_status 200 "$(curl -sS -o "$tmp_dir/public-after-move.json" -w '%{http_code}' "$API_BASE_URL/public/gimnasios")" public_after_move "$tmp_dir/public-after-move.json"
+jq -e --argjson gym "$new_gym_id" '.gimnasios[] | select(.id == $gym and .nombre == "Gimnasio Contrato Actualizado" and .direccion == "Avenida Ficticia 919" and .latitud == -34.92 and .longitud == -56.19)' "$tmp_dir/public-after-move.json" >/dev/null
 assert_status 200 "$(request DELETE "/admin/gyms/$new_gym_id" "$tmp_dir/gym-archived.json" '{"motivo":"Finalización de prueba automatizada"}')" gym_archive "$tmp_dir/gym-archived.json"
 jq -e '.data.archived == true' "$tmp_dir/gym-archived.json" >/dev/null || { echo 'La respuesta no confirmó el archivo lógico.' >&2; cat "$tmp_dir/gym-archived.json" >&2; exit 1; }
+assert_status 200 "$(curl -sS -o "$tmp_dir/public-after-archive.json" -w '%{http_code}' "$API_BASE_URL/public/gimnasios")" public_after_archive "$tmp_dir/public-after-archive.json"
+jq -e --argjson gym "$new_gym_id" '([.gimnasios[].id] | index($gym)) == null' "$tmp_dir/public-after-archive.json" >/dev/null
 assert_status 200 "$(request GET '/admin/context' "$tmp_dir/context-after-archive.json")" context_after_archive "$tmp_dir/context-after-archive.json"
 jq -e --argjson gym "$new_gym_id" '.data.active_gym_id == null and ([.data.gyms[].gimnasio_id] | index($gym)) == null' "$tmp_dir/context-after-archive.json" >/dev/null || { echo 'El gimnasio archivado siguió visible en el contexto.' >&2; cat "$tmp_dir/context-after-archive.json" >&2; exit 1; }
 

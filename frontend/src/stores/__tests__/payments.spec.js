@@ -1,3 +1,7 @@
+/**
+ * Prueba automatizada de payments.spec. Prepara el escenario, ejecuta acciones públicas y verifica resultados sin alterar la lógica de producción.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { api } from '../../services/api'

@@ -1,3 +1,7 @@
+/**
+ * Store Pinia de schedule. Centraliza estado reactivo, llamadas a la API y errores para que las vistas compartan una única fuente de datos.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../services/api'
@@ -168,6 +172,25 @@ export const useScheduleStore = defineStore('schedule', () => {
     return response.data.data
   }
 
+  async function calendar(bookingId) {
+    const response = await api.get(`/bookings/${bookingId}/calendar`)
+    if (!response.ok || response.data?.error) return failure(response, 'No se pudo preparar el evento de calendario.')
+    return response.data.data
+  }
+
+  async function downloadIcs(bookingId) {
+    const response = await api.download(`/bookings/${bookingId}/calendar.ics`)
+    if (!response.ok) return failure(response, 'No se pudo descargar el archivo ICS.')
+    const url = URL.createObjectURL(response.data)
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `gymtrack-reserva-${bookingId}.ics`
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    URL.revokeObjectURL(url)
+  }
+
   function reset() {
     controller?.abort()
     sessions.value = []
@@ -180,6 +203,6 @@ export const useScheduleStore = defineStore('schedule', () => {
     sessions, pagination, range, options, roster, bookings, status, optionsStatus, rosterStatus,
     bookingsStatus, rosterError, bookingsError, error, requestId, totals, loadAdmin, loadMember, loadOptions, createClass,
     updateSession, cancelSession, loadRoster, adminBook, adminCancel, markAttendance,
-    loadMyBookings, memberBook, memberCancel, reset,
+    loadMyBookings, memberBook, memberCancel, calendar, downloadIcs, reset,
   }
 })

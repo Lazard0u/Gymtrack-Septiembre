@@ -1,3 +1,7 @@
+<!--
+  Vista administrativa AdminPeopleView. La ruta comprueba rol y permiso; la vista carga, presenta y modifica el recurso mediante su store.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -41,6 +45,7 @@ const filters = [{ key: 'status', label: 'Estado', options: [{ value: '', label:
 const permissionOptions = [
   ['members.read', 'Consultar socios'], ['members.write', 'Gestionar socios'], ['classes.read', 'Consultar clases'], ['classes.write', 'Gestionar clases'], ['reservations.read', 'Consultar reservas'], ['reservations.write', 'Gestionar reservas'], ['attendance.write', 'Registrar asistencia'], ['memberships.read', 'Consultar membresías'], ['memberships.write', 'Gestionar membresías'], ['payments.read', 'Consultar pagos'], ['payments.manual', 'Registrar pagos manuales'],
   ['finance.read', 'Consultar finanzas'], ['reports.export', 'Exportar reportes'],
+  ['promotions.read', 'Consultar promociones'], ['promotions.write', 'Gestionar promociones'],
 ]
 const visibleInvitations = computed(() => management.invitations.filter((item) => item.tipo === (isMembers.value ? 'socio' : 'empleado')))
 

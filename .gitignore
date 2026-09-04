@@ -30,3 +30,4 @@ Thumbs.db
 # GitHub conserva únicamente el README principal del proyecto.
 *.md
 !/README.md
+!/Gymtrack_Documentacion.md

@@ -1,4 +1,7 @@
 #!/usr/bin/env sh
+
+# Prueba de integración map geolocation. Prepara datos temporales, llama la API y compara estados y respuestas esperadas.
+# set -eu detiene la ejecución ante el primer fallo o variable obligatoria ausente.
 set -eu
 
 API_BASE_URL="${API_BASE_URL:-http://localhost:8080/api}"

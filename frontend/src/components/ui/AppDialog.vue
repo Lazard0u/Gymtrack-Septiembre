@@ -1,5 +1,9 @@
+<!--
+  Componente visual reutilizable AppDialog. Props y slots forman su API; emite eventos al padre sin guardar datos de negocio.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
-import { ref, toRef } from 'vue'
+import { getCurrentInstance, ref, toRef } from 'vue'
 import { IconX } from '@tabler/icons-vue'
 import { useFocusTrap } from '../../composables/useFocusTrap'
 import AppIconButton from './AppIconButton.vue'
@@ -8,16 +12,19 @@ const props = defineProps({ open: Boolean, title: { type: String, required: true
 const emit = defineEmits(['close'])
 const panel = ref(null)
 const close = () => emit('close')
-useFocusTrap(toRef(props, 'open'), panel, close)
+const instanceId = getCurrentInstance().uid
+const titleId = `app-dialog-title-${instanceId}`
+const descriptionId = `app-dialog-description-${instanceId}`
+const { isTopLayer, stackIndex } = useFocusTrap(toRef(props, 'open'), panel, close)
 </script>
 
 <template>
   <Teleport to="body">
     <Transition name="dialog">
-      <div v-if="open" class="dialog" role="presentation" @mousedown.self="close">
-        <section ref="panel" class="dialog__panel" role="dialog" aria-modal="true" :aria-labelledby="'dialog-title'" :aria-describedby="description ? 'dialog-description' : undefined" tabindex="-1">
+      <div v-if="open" class="dialog" role="presentation" :style="{ zIndex: `calc(var(--z-overlay) + ${stackIndex})` }" @mousedown.self="close">
+        <section ref="panel" class="dialog__panel" role="dialog" :aria-modal="isTopLayer || undefined" :aria-hidden="!isTopLayer || undefined" :inert="!isTopLayer || undefined" :aria-labelledby="titleId" :aria-describedby="description ? descriptionId : undefined" tabindex="-1">
           <header class="dialog__header">
-            <div><h2 id="dialog-title">{{ title }}</h2><p v-if="description" id="dialog-description">{{ description }}</p></div>
+            <div><h2 :id="titleId">{{ title }}</h2><p v-if="description" :id="descriptionId">{{ description }}</p></div>
             <AppIconButton label="Cerrar diálogo" @click="close"><IconX :size="20" /></AppIconButton>
           </header>
           <div class="dialog__body"><slot /></div>

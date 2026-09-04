@@ -1,3 +1,7 @@
+<!--
+  Componente público PublicFooter. Forma parte de la navegación o exploración accesible sin requerir una sesión.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import brandMark from '../../assets/gymtrack-mark.svg'
 </script>
@@ -12,7 +16,7 @@ import brandMark from '../../assets/gymtrack-mark.svg'
       <nav aria-label="Producto"><strong>Producto</strong><RouterLink :to="{ name: 'gyms' }">Gimnasios</RouterLink><RouterLink :to="{ name: 'plans' }">Planes</RouterLink><RouterLink :to="{ name: 'for-gyms' }">Para gimnasios</RouterLink></nav>
       <nav aria-label="Información legal"><strong>Información</strong><RouterLink :to="{ name: 'privacy' }">Privacidad</RouterLink><RouterLink :to="{ name: 'terms' }">Términos</RouterLink><RouterLink :to="{ name: 'accessibility' }">Accesibilidad</RouterLink><RouterLink :to="{ name: 'contact' }">Contacto</RouterLink></nav>
     </div>
-    <div class="container site-footer__bottom"><span>© {{ new Date().getFullYear() }} GymTrack</span><span>Versión 1.0 en construcción por fases</span></div>
+    <div class="container site-footer__bottom"><span>© {{ new Date().getFullYear() }} GymTrack</span><span>Versión 1.0 · funciones beta identificadas</span></div>
   </footer>
 </template>
 

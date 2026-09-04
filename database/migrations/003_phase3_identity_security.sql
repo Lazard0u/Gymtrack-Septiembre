@@ -1,4 +1,4 @@
--- GymTrack Fase 3: identidad, autorización y sesiones seguras.
+-- GymTrack: identidad, autorización y sesiones seguras.
 -- Idempotente para MySQL 8.0. Ejecutar únicamente después de un respaldo.
 
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;

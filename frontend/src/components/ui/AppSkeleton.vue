@@ -1,3 +1,7 @@
+<!--
+  Componente visual reutilizable AppSkeleton. Props y slots forman su API; emite eventos al padre sin guardar datos de negocio.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 defineProps({ width: { type: String, default: '100%' }, height: { type: String, default: '1rem' }, rounded: Boolean })
 </script>

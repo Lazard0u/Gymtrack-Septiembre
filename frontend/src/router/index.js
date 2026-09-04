@@ -21,6 +21,10 @@ const SessionsView = () => import('../views/SessionsView.vue')
 const DashboardView = () => import('../views/DashboardView.vue')
 const MemberScheduleView = () => import('../views/MemberScheduleView.vue')
 const MemberPaymentsView = () => import('../views/MemberPaymentsView.vue')
+const MemberProfileView = () => import('../views/MemberProfileView.vue')
+const MemberPreferencesView = () => import('../views/MemberPreferencesView.vue')
+const MemberActivityView = () => import('../views/MemberActivityView.vue')
+const MemberCardView = () => import('../views/MemberCardView.vue')
 const AdminShell = () => import('../layouts/AdminShell.vue')
 const AdminSummaryView = () => import('../views/admin/AdminSummaryView.vue')
 const AdminOperationsView = () => import('../views/admin/AdminOperationsView.vue')
@@ -32,6 +36,7 @@ const AdminSettingsView = () => import('../views/admin/AdminSettingsView.vue')
 const AdminPeopleView = () => import('../views/admin/AdminPeopleView.vue')
 const AdminTrainersView = () => import('../views/admin/AdminTrainersView.vue')
 const AdminMembershipsView = () => import('../views/admin/AdminMembershipsView.vue')
+const AdminMemberCardVerifyView = () => import('../views/admin/AdminMemberCardVerifyView.vue')
 const AdminScheduleView = () => import('../views/admin/AdminScheduleView.vue')
 const StatusView = () => import('../views/StatusView.vue')
 const GymsView = () => import('../views/GymsView.vue')
@@ -159,6 +164,30 @@ const routes = [
     meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], requiredPermission: 'payments.read', title: 'Mis pagos | GymTrack' },
   },
   {
+    path: '/perfil',
+    name: 'member-profile',
+    component: MemberProfileView,
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], title: 'Mi perfil | GymTrack' },
+  },
+  {
+    path: '/preferencias',
+    name: 'member-preferences',
+    component: MemberPreferencesView,
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], title: 'Preferencias | GymTrack' },
+  },
+  {
+    path: '/progreso',
+    name: 'member-activity',
+    component: MemberActivityView,
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], title: 'Mi progreso | GymTrack' },
+  },
+  {
+    path: '/carne',
+    name: 'member-card',
+    component: MemberCardView,
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], title: 'Carné digital | GymTrack' },
+  },
+  {
     path: '/sesion-expirada', name: 'session-expired', component: StatusView,
     props: { code: '401', title: 'Tu sesión terminó', message: 'Iniciá sesión nuevamente para continuar de forma segura.' },
     meta: { title: 'Sesión expirada | GymTrack' },
@@ -187,13 +216,14 @@ const routes = [
       { path: 'resumen', name: 'admin-summary', component: AdminSummaryView, meta: { adminLabel: 'Resumen', title: 'Resumen administrativo | GymTrack' } },
       { path: 'gestion-operativa', name: 'admin-operations', component: AdminOperationsView, meta: { adminLabel: 'Gestión operativa', title: 'Gestión operativa | GymTrack' } },
       { path: 'socios', name: 'admin-members', component: AdminPeopleView, props: { kind: 'members' }, meta: { adminLabel: 'Socios', requiredPermission: 'members.read', title: 'Socios | Administración GymTrack' } },
+      { path: 'verificar-carne', name: 'admin-member-card-verify', component: AdminMemberCardVerifyView, meta: { adminLabel: 'Verificar carné', requiredPermission: 'members.read', title: 'Verificar carné | Administración GymTrack' } },
       { path: 'empleados', name: 'admin-staff', component: AdminPeopleView, props: { kind: 'staff' }, meta: { adminLabel: 'Empleados', requiredPermission: 'staff.manage', title: 'Empleados | Administración GymTrack' } },
       { path: 'entrenadores', name: 'admin-trainers', component: AdminTrainersView, meta: { adminLabel: 'Entrenadores', requiredPermission: 'staff.manage', title: 'Entrenadores | Administración GymTrack' } },
       { path: 'clases', name: 'admin-classes', component: AdminScheduleView, props: { mode: 'classes' }, meta: { adminLabel: 'Clases', requiredPermission: 'classes.read', title: 'Clases | Administración GymTrack' } },
       { path: 'reservas', name: 'admin-reservations', component: AdminScheduleView, props: { mode: 'reservations' }, meta: { adminLabel: 'Reservas', requiredPermission: 'reservations.read', title: 'Reservas | Administración GymTrack' } },
       { path: 'membresias', name: 'admin-memberships', component: AdminMembershipsView, meta: { adminLabel: 'Membresías', requiredPermission: 'memberships.read', title: 'Membresías | Administración GymTrack' } },
       { path: 'pagos', name: 'admin-payments', component: AdminPaymentsView, meta: { adminLabel: 'Pagos', requiredPermission: 'payments.read', title: 'Pagos | Administración GymTrack' } },
-      { path: 'promociones', name: 'admin-promotions', component: AdminPromotionsView, meta: { adminLabel: 'Promociones', requiredPermission: 'gym.configure', title: 'Promociones | Administración GymTrack' } },
+      { path: 'promociones', name: 'admin-promotions', component: AdminPromotionsView, meta: { adminLabel: 'Promociones', requiredPermission: 'promotions.read', title: 'Promociones | Administración GymTrack' } },
       { path: 'finanzas', name: 'admin-finance', component: AdminFinanceView, meta: { adminLabel: 'Finanzas', requiredPermission: 'finance.read', title: 'Finanzas | Administración GymTrack' } },
       { path: 'reportes', name: 'admin-reports', component: AdminReportsView, meta: { adminLabel: 'Reportes', requiredPermission: 'reports.export', title: 'Reportes | Administración GymTrack' } },
       { path: 'configuracion', name: 'admin-settings', component: AdminSettingsView, meta: { adminLabel: 'Configuración', requiredPermission: 'gym.configure', title: 'Configuración | Administración GymTrack' } },

@@ -1,3 +1,4 @@
+/** Configura pruebas E2E: navegador, servidor previo, capturas y tiempos máximos. */
 import { defineConfig } from '@playwright/test'
 
 export default defineConfig({

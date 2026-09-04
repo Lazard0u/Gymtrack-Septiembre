@@ -1,0 +1,14 @@
+node_modules
+dist
+artifacts
+e2e
+tests
+coverage
+playwright-report
+test-results
+*.bak
+*.log
+.git
+.gitignore
+README.md
+# Omite dependencias y resultados generados: la imagen los construye desde cero.

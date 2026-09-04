@@ -1,4 +1,8 @@
 <?php
+/**
+ * Acceso a datos PaymentRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 
@@ -112,9 +116,147 @@ final class PaymentRepository
 
     public function refund(int $gymId,int $paymentId,int $actorId,string $reason,string $key,PaymentProviderInterface $provider): array
     {
-        $payment=$this->payment($gymId,$paymentId);if(!$payment)ApiResponder::error(404,'payment_not_found','El pago no pertenece al gimnasio activo.');$check=$this->pdo->prepare('SELECT id FROM pago_reembolsos WHERE pago_id=? AND idempotency_key=?');$check->execute([$paymentId,$key]);if($check->fetchColumn())return $payment;if($payment['estado']!=='aprobado')ApiResponder::error(409,'payment_not_refundable','Sólo se puede reembolsar un pago aprobado.');
-        $providerReference=null;if($payment['proveedor']==='mercado_pago'){$metadata=json_decode((string)($payment['metadata_json']??'{}'),true)?:[];$providerId=(string)($metadata['provider_payment_id']??'');if($providerId==='')ApiResponder::error(409,'provider_payment_missing','El pago aún no tiene una referencia confirmada del proveedor.');$remote=$provider->refund($providerId,(float)$payment['monto'],$key);$providerReference=$remote['id'];}
-        $this->pdo->beginTransaction();try{$stmt=$this->pdo->prepare('INSERT INTO pago_reembolsos (pago_id,monto,estado,referencia_externa,idempotency_key,motivo,solicitado_por,completado_en) VALUES (?, ?,"aprobado",?,?,?,?,NOW())');$stmt->execute([$paymentId,$payment['monto'],$providerReference,$key,$reason,$actorId]);$this->pdo->prepare('UPDATE pagos SET estado="reembolsado",reembolsado_en=NOW() WHERE id=? AND gimnasio_id=?')->execute([$paymentId,$gymId]);$this->event($paymentId,(string)$payment['proveedor'],$providerReference,'refund.approved','aprobado','reembolsado',['reason'=>$reason]);$this->pdo->commit();return $this->payment($gymId,$paymentId)??[];}catch(Throwable $error){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $error;}
+        $this->pdo->beginTransaction();
+        try {
+            // El bloqueo del pago serializa solicitudes con claves distintas. La fila
+            // pendiente se crea antes de contactar al proveedor para que sólo una
+            // petición pueda producir el efecto externo.
+            $payment = $this->payment($gymId, $paymentId, true);
+            if (!$payment) {
+                $this->pdo->rollBack();
+                ApiResponder::error(404, 'payment_not_found', 'El pago no pertenece al gimnasio activo.');
+            }
+
+            $existingStmt = $this->pdo->prepare(
+                'SELECT id,estado,motivo FROM pago_reembolsos WHERE pago_id=? AND idempotency_key=? LIMIT 1 FOR UPDATE'
+            );
+            $existingStmt->execute([$paymentId, $key]);
+            $existing = $existingStmt->fetch();
+            $resumePending = false;
+            if ($existing) {
+                if ($existing['estado'] === 'aprobado') {
+                    $this->pdo->commit();
+                    return $payment;
+                }
+                if ($existing['estado'] === 'rechazado') {
+                    $this->pdo->commit();
+                    ApiResponder::error(409, 'refund_previously_failed', 'Este intento de reembolso falló. Iniciá uno nuevo con otra clave.');
+                }
+                // La misma clave puede reintentar un efecto de resultado desconocido.
+                // Mercado Pago recibe esa clave y evita efectuar el reintegro dos veces.
+                $refundId = (int) $existing['id'];
+                $reason = (string) $existing['motivo'];
+                $resumePending = true;
+            }
+
+            if (!$resumePending && $payment['estado'] !== 'aprobado') {
+                $this->pdo->rollBack();
+                ApiResponder::error(409, 'payment_not_refundable', 'Sólo se puede reembolsar un pago aprobado.');
+            }
+
+            if (!$resumePending) {
+                $activeStmt = $this->pdo->prepare(
+                    'SELECT id FROM pago_reembolsos WHERE pago_id=? AND estado IN ("pendiente","aprobado") LIMIT 1 FOR UPDATE'
+                );
+                $activeStmt->execute([$paymentId]);
+                if ($activeStmt->fetchColumn()) {
+                    $this->pdo->commit();
+                    ApiResponder::error(409, 'refund_already_requested', 'El pago ya tiene un reembolso solicitado.');
+                }
+
+                $insert = $this->pdo->prepare(
+                    'INSERT INTO pago_reembolsos
+                        (pago_id,monto,estado,idempotency_key,motivo,solicitado_por)
+                     VALUES (?, ?,"pendiente",?,?,?)'
+                );
+                $insert->execute([$paymentId, $payment['monto'], $key, $reason, $actorId]);
+                $refundId = (int) $this->pdo->lastInsertId();
+            }
+
+            $providerId = null;
+            if ($payment['proveedor'] === 'mercado_pago') {
+                $metadata = json_decode((string) ($payment['metadata_json'] ?? '{}'), true) ?: [];
+                $providerId = trim((string) ($metadata['provider_payment_id'] ?? ''));
+                if ($providerId === '') {
+                    $this->pdo->rollBack();
+                    ApiResponder::error(409, 'provider_payment_missing', 'El pago aún no tiene una referencia confirmada del proveedor.');
+                }
+            }
+            $this->pdo->commit();
+        } catch (Throwable $error) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $error;
+        }
+
+        $providerReference = null;
+        try {
+            if ($providerId !== null) {
+                $remote = $provider->refund($providerId, (float) $payment['monto'], $key);
+                $providerReference = trim((string) ($remote['id'] ?? ''));
+                $providerStatus = strtolower(trim((string) ($remote['status'] ?? '')));
+                if ($providerReference === '' || $providerStatus !== 'approved') {
+                    throw new RuntimeException('El proveedor aún no confirmó el reembolso.');
+                }
+            }
+        } catch (Throwable $error) {
+            // Un timeout no demuestra que el proveedor haya rechazado la operación.
+            // La fila queda pendiente y la misma clave puede consultar/reintentar el
+            // efecto idempotente sin duplicar el dinero devuelto.
+            error_log(sprintf('[GymTrack refund] provider_error payment=%d refund=%d', $paymentId, $refundId));
+            throw $error;
+        }
+
+        $this->pdo->beginTransaction();
+        try {
+            $lockedPayment = $this->payment($gymId, $paymentId, true);
+            if (!$lockedPayment) {
+                throw new RuntimeException('El pago dejó de estar disponible durante el reembolso.');
+            }
+            $refundStmt = $this->pdo->prepare(
+                'SELECT estado FROM pago_reembolsos WHERE id=? AND pago_id=? FOR UPDATE'
+            );
+            $refundStmt->execute([$refundId, $paymentId]);
+            $refundState = $refundStmt->fetchColumn();
+            if ($refundState === 'aprobado') {
+                $this->pdo->commit();
+                return $lockedPayment;
+            }
+            if ($refundState !== 'pendiente') {
+                throw new RuntimeException('El reembolso no conserva un estado finalizable.');
+            }
+
+            $complete = $this->pdo->prepare(
+                'UPDATE pago_reembolsos
+                 SET estado="aprobado",referencia_externa=?,completado_en=NOW()
+                 WHERE id=? AND estado="pendiente"'
+            );
+            $complete->execute([$providerReference, $refundId]);
+            if ($complete->rowCount() !== 1) {
+                throw new RuntimeException('El reembolso fue procesado por otra solicitud.');
+            }
+            $this->pdo->prepare(
+                'UPDATE pagos SET estado="reembolsado",reembolsado_en=COALESCE(reembolsado_en,NOW())
+                 WHERE id=? AND gimnasio_id=? AND estado IN ("aprobado","reembolsado")'
+            )->execute([$paymentId, $gymId]);
+            $this->event(
+                $paymentId,
+                (string) $payment['proveedor'],
+                $providerReference,
+                'refund.approved',
+                (string) $lockedPayment['estado'],
+                'reembolsado',
+                ['reason' => $reason, 'id' => $providerReference]
+            );
+            $this->pdo->commit();
+            return $this->payment($gymId, $paymentId) ?? [];
+        } catch (Throwable $error) {
+            if ($this->pdo->inTransaction()) {
+                $this->pdo->rollBack();
+            }
+            throw $error;
+        }
     }
 
     public function reportRows(int $gymId,string $module,array $filters): array
@@ -134,7 +276,7 @@ final class PaymentRepository
         if(($membership['membresia_estado']??$membership['estado']??'')==='activa')return;$start=new DateTimeImmutable(substr($paidAt,0,10));$end=$start->modify('+'.(int)($membership['duracion_dias']??30).' days');$id=(int)($membership['membresia_id']??$membership['id']);$old=(string)($membership['membresia_estado']??$membership['estado']??'pendiente_pago');$this->pdo->prepare('UPDATE membresias SET estado="activa",fecha_inicio=?,fecha_vencimiento=? WHERE id=?')->execute([$start->format('Y-m-d'),$end->format('Y-m-d'),$id]);$this->pdo->prepare('INSERT INTO membresia_historial (membresia_id,estado_anterior,estado_nuevo,motivo,actor_usuario_id) VALUES (?, ?,"activa",?,?)')->execute([$id,$old,$reason,$actor]);
     }
 
-    private function payment(int $gymId,int $id): ?array{$stmt=$this->pdo->prepare('SELECT p.*,m.usuario_id,m.estado membresia_estado,COALESCE(pm.nombre,m.plan) plan,COALESCE(pm.duracion_dias,30) duracion_dias,u.email usuario_email,CONCAT_WS(" ",u.nombre,u.apellido) usuario_nombre FROM pagos p JOIN membresias m ON m.id=p.membresia_id JOIN usuarios u ON u.id=m.usuario_id LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE p.id=? AND p.gimnasio_id=? AND p.is_demo=? AND (p.demo_dataset_id <=> ?)');$stmt->execute([$id,$gymId,$this->demoFlag(),$this->datasetId]);$row=$stmt->fetch();return $row?:null;}
+    private function payment(int $gymId,int $id,bool $lock=false): ?array{$sql='SELECT p.*,m.usuario_id,m.estado membresia_estado,COALESCE(pm.nombre,m.plan) plan,COALESCE(pm.duracion_dias,30) duracion_dias,u.email usuario_email,CONCAT_WS(" ",u.nombre,u.apellido) usuario_nombre FROM pagos p JOIN membresias m ON m.id=p.membresia_id JOIN usuarios u ON u.id=m.usuario_id LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE p.id=? AND p.gimnasio_id=? AND p.is_demo=? AND (p.demo_dataset_id <=> ?)'.($lock?' FOR UPDATE':'');$stmt=$this->pdo->prepare($sql);$stmt->execute([$id,$gymId,$this->demoFlag(),$this->datasetId]);$row=$stmt->fetch();return $row?:null;}
     private function paymentByKey(int $gymId,string $key,bool $lock=false): ?array{$sql='SELECT id FROM pagos WHERE gimnasio_id=? AND idempotency_key=?'.($lock?' FOR UPDATE':'');$stmt=$this->pdo->prepare($sql);$stmt->execute([$gymId,$key]);$id=$stmt->fetchColumn();return $id?$this->payment($gymId,(int)$id):null;}
     private function checkoutPayload(array $payment): array{$metadata=json_decode((string)($payment['metadata_json']??'{}'),true)?:[];return ['payment'=>$payment,'checkout_url'=>$metadata['checkout_url']??null];}
     private function providerState(string $current,string $incoming): string

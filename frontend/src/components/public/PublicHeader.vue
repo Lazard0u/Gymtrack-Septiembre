@@ -1,17 +1,19 @@
+<!--
+  Componente público PublicHeader. Forma parte de la navegación o exploración accesible sin requerir una sesión.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { IconMenu2 } from '@tabler/icons-vue'
+import { IconUserCircle } from '@tabler/icons-vue'
 import { useAuthStore } from '../../stores/auth'
 import AppButton from '../ui/AppButton.vue'
-import AppDrawer from '../ui/AppDrawer.vue'
-import AppIconButton from '../ui/AppIconButton.vue'
 import AppLinkButton from '../ui/AppLinkButton.vue'
+import PublicBottomNav from './PublicBottomNav.vue'
 import brandMark from '../../assets/gymtrack-mark.svg'
 
 const router = useRouter()
 const auth = useAuthStore()
-const menuOpen = ref(false)
 const hasSession = computed(() => auth.estaAutenticado)
 
 const links = [
@@ -21,13 +23,8 @@ const links = [
   { label: 'Para gimnasios', to: { name: 'for-gyms' } },
 ]
 
-function closeMenu() {
-  menuOpen.value = false
-}
-
 async function logout() {
   await auth.logout()
-  closeMenu()
   await router.push({ name: 'home' })
 }
 </script>
@@ -55,25 +52,13 @@ async function logout() {
         </template>
       </div>
 
-      <AppIconButton class="mobile-trigger" label="Abrir menú" @click="menuOpen = true"><IconMenu2 :size="22" /></AppIconButton>
+      <div class="mobile-actions-compact">
+        <AppLinkButton v-if="!hasSession" :to="{ name: 'registro' }" size="sm">Crear cuenta</AppLinkButton>
+        <RouterLink v-else class="mobile-profile" :to="{ name: auth.user?.role === 'socio' ? 'member-profile' : 'dashboard' }" aria-label="Abrir mi cuenta"><IconUserCircle :size="23" /></RouterLink>
+      </div>
     </div>
-
-    <AppDrawer :open="menuOpen" title="Menú" @close="closeMenu">
-      <nav class="mobile-nav" aria-label="Navegación móvil">
-        <RouterLink v-for="link in links" :key="link.label" :to="link.to" @click="closeMenu">{{ link.label }}</RouterLink>
-      </nav>
-      <template #footer>
-        <div class="mobile-actions" v-if="hasSession">
-          <AppLinkButton :to="{ name: 'dashboard' }" variant="secondary" block @click="closeMenu">Mi panel</AppLinkButton>
-          <AppButton variant="ghost" block @click="logout">Cerrar sesión</AppButton>
-        </div>
-        <div class="mobile-actions" v-else>
-          <AppLinkButton :to="{ name: 'login' }" variant="secondary" block @click="closeMenu">Ingresar</AppLinkButton>
-          <AppLinkButton :to="{ name: 'registro' }" block @click="closeMenu">Crear cuenta</AppLinkButton>
-        </div>
-      </template>
-    </AppDrawer>
   </header>
+  <PublicBottomNav />
 </template>
 
 <style scoped>
@@ -84,8 +69,14 @@ async function logout() {
 .desktop-nav a, .mobile-nav a { color: var(--text-secondary); font-size: .86rem; font-weight: 650; text-decoration: none; transition: color var(--duration-fast); }
 .desktop-nav a:hover, .desktop-nav a.router-link-active, .mobile-nav a:hover, .mobile-nav a.router-link-active { color: var(--text-primary); }
 .desktop-actions { display: flex; align-items: center; gap: var(--space-2); }
-.mobile-trigger { display: none; margin-left: auto; }
-.mobile-nav { display: grid; }.mobile-nav a { border-bottom: 1px solid var(--border-subtle); padding: var(--space-4) var(--space-2); font-size: 1rem; }
-.mobile-actions { display: grid; gap: var(--space-3); }
-@media (max-width: 63.99rem) { .desktop-nav, .desktop-actions { display: none; }.mobile-trigger { display: inline-grid; } }
+.mobile-actions-compact { display: none; margin-left: auto; }
+.mobile-profile { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: var(--radius-control); color: var(--text-secondary); text-decoration: none; }
+@media (max-width: 63.99rem) {
+  .desktop-nav, .desktop-actions { display: none; }
+  .mobile-actions-compact { display: flex; align-items: center; }
+  .mobile-actions-compact :deep(.link-button) { min-height: 3rem; }
+  :global(.public-shell), :global(.public-page) { padding-bottom: calc(4.25rem + env(safe-area-inset-bottom)); }
+}
+@media (hover: hover) and (pointer: fine) { .mobile-profile:hover { background: var(--surface-2); color: var(--text-primary); } }
+@media (prefers-reduced-transparency: reduce) { .site-header { background: var(--bg-canvas); backdrop-filter: none; } }
 </style>

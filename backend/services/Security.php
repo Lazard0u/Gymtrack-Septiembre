@@ -1,4 +1,8 @@
 <?php
+/**
+ * Servicio Security. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
+ * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ */
 
 declare(strict_types=1);
 
@@ -26,7 +30,19 @@ final class Security
 
     public static function ip(): string
     {
-        return trim((string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown'));
+        $remote = trim((string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+        $trustProxy = filter_var(getenv('TRUST_PROXY_HEADERS') ?: 'false', FILTER_VALIDATE_BOOL);
+        if ($trustProxy) {
+            // Producción sólo expone PHP detrás del Nginx de la red privada. Nginx
+            // reemplaza X-Real-IP, así que nunca se acepta una cadena reenviada por
+            // el cliente ni un valor que no sea una dirección IP válida.
+            $proxied = trim((string) ($_SERVER['HTTP_X_REAL_IP'] ?? ''));
+            if (filter_var($proxied, FILTER_VALIDATE_IP) !== false) {
+                return $proxied;
+            }
+        }
+
+        return filter_var($remote, FILTER_VALIDATE_IP) !== false ? $remote : 'unknown';
     }
 
     public static function ipHash(): string

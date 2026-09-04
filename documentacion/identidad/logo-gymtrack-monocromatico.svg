@@ -1,0 +1,10 @@
+<svg width="680" height="190" viewBox="0 0 680 190" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title">
+  <title id="title">Logo monocromático de GymTrack</title>
+  <g transform="translate(34 31) scale(1.3333)" fill="#101317">
+    <rect x="4" y="4" width="88" height="88" rx="20" fill="none" stroke="#101317" stroke-width="6"/>
+    <path d="M26 21H56L48 33H31L22 48L31 63H43V52H34L40 42H57V74H25L9 48L26 21Z"/>
+    <path d="M57 21H72L86 48L71 74H59L74 48L66 33H57V21Z"/>
+    <path d="M52 40H68L61 52H52V40Z"/><path d="M68 20H80L86 32H73L68 20Z"/>
+  </g>
+  <text x="198" y="116" fill="#101317" font-family="Manrope, Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="-3">GymTrack</text>
+</svg>

@@ -1,6 +1,10 @@
+<!--
+  Componente visual reutilizable AppTextarea. Props y slots forman su API; emite eventos al padre sin guardar datos de negocio.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import { computed, useId } from 'vue'
-const props = defineProps({ modelValue: { type: String, default: '' }, label: { type: String, required: true }, name: { type: String, default: '' }, rows: { type: Number, default: 4 }, hint: { type: String, default: '' }, error: { type: String, default: '' }, disabled: Boolean })
+const props = defineProps({ modelValue: { type: String, default: '' }, label: { type: String, required: true }, name: { type: String, default: '' }, rows: { type: Number, default: 4 }, hint: { type: String, default: '' }, error: { type: String, default: '' }, maxlength: { type: [Number, String], default: undefined }, required: Boolean, disabled: Boolean })
 const emit = defineEmits(['update:modelValue'])
 const uid = useId()
 const inputId = computed(() => props.name || `textarea-${uid}`)
@@ -9,7 +13,7 @@ const inputId = computed(() => props.name || `textarea-${uid}`)
 <template>
   <label class="field" :for="inputId">
     <span>{{ label }}</span>
-    <textarea :id="inputId" class="field__control" :name="name" :rows="rows" :value="modelValue" :disabled="disabled" :aria-invalid="error ? 'true' : undefined" :aria-describedby="hint || error ? `${inputId}-help` : undefined" @input="emit('update:modelValue', $event.target.value)" />
+    <textarea :id="inputId" class="field__control" :name="name" :rows="rows" :value="modelValue" :maxlength="maxlength" :required="required" :disabled="disabled" :aria-invalid="error ? 'true' : undefined" :aria-describedby="hint || error ? `${inputId}-help` : undefined" @input="emit('update:modelValue', $event.target.value)" />
     <span v-if="error || hint" :id="`${inputId}-help`" :class="['field__help', { 'field__help--error': error }]">{{ error || hint }}</span>
   </label>
 </template>

@@ -1,3 +1,7 @@
+/**
+ * Store Pinia de adminResources. Centraliza estado reactivo, llamadas a la API y errores para que las vistas compartan una única fuente de datos.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 
@@ -45,10 +49,8 @@ function createResourceStore(id, endpoint) {
 
 export const useAdminMembersStore = createResourceStore('admin-members', '/admin/members')
 export const useAdminStaffStore = createResourceStore('admin-staff', '/admin/staff')
-export const useAdminClassesStore = createResourceStore('admin-classes', '/admin/classes')
 export const useAdminReservationsStore = createResourceStore('admin-reservations', '/admin/reservations')
 export const useAdminMembershipsStore = createResourceStore('admin-memberships', '/admin/memberships')
-export const useAdminPaymentsStore = createResourceStore('admin-payments', '/admin/payments')
 export const useAdminActivityStore = createResourceStore('admin-activity', '/admin/activity')
 export const useAdminExportsStore = createResourceStore('admin-exports', '/admin/exports')
 

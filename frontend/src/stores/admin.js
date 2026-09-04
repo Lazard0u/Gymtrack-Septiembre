@@ -1,9 +1,15 @@
+/**
+ * Store Pinia de admin. Centraliza estado reactivo, llamadas a la API y errores para que las vistas compartan una única fuente de datos.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../services/api'
 import { useAuthStore } from './auth'
 import { resetAdminDomainStores } from './adminResources'
 import { useAdminManagementStore } from './adminManagement'
+import { useNotificationsStore } from './notifications'
+import { usePromotionsStore } from './promotions'
 
 export const useAdminStore = defineStore('administration', () => {
   const status = ref('idle')
@@ -69,6 +75,8 @@ export const useAdminStore = defineStore('administration', () => {
     }
     resetAdminDomainStores()
     useAdminManagementStore().reset()
+    useNotificationsStore().reset()
+    usePromotionsStore().reset()
     summaryController?.abort()
     summary.value = { widgets: [], alerts: [] }
     const auth = useAuthStore()

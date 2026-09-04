@@ -1,3 +1,7 @@
+/**
+ * Store Pinia de system. Centraliza estado reactivo, llamadas a la API y errores para que las vistas compartan una única fuente de datos.
+ * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
+ */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../services/api'
@@ -13,7 +17,6 @@ export const useSystemStore = defineStore('system', () => {
     google_calendar_sync: false,
     advanced_analytics: false,
     personal_recommendations: false,
-    promotions_beta: false,
   })
 
   const betaFeatures = computed(() => Object.entries(features.value)

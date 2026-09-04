@@ -1,3 +1,7 @@
+<!--
+  Vista de ruta HomeView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
+  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
+-->
 <script setup>
 import {
   IconArrowRight,
@@ -17,7 +21,6 @@ import GymExplorer from '../components/public/GymExplorer.vue'
 import AppCard from '../components/ui/AppCard.vue'
 import AppEmptyState from '../components/ui/AppEmptyState.vue'
 import AppLinkButton from '../components/ui/AppLinkButton.vue'
-import heroImage from '../assets/images/gymtrack-hero-training.webp'
 import ownerImage from '../assets/images/gymtrack-owner-studio.webp'
 
 const memberBenefits = [
@@ -36,7 +39,7 @@ const capabilities = [
 
 const questions = [
   { question: '¿Los gimnasios de la presentación son reales?', answer: 'No. Son cinco sedes ficticias identificadas como datos de demostración. Existen en MySQL y pueden eliminarse por dataset sin mezclarse con futuros gimnasios reales.' },
-  { question: '¿Puedo crear una cuenta?', answer: 'Sí. El registro actual crea una cuenta de socio. Los flujos específicos para dueños, empleados y entrenadores se incorporarán en las fases de administración y roles.' },
+  { question: '¿Puedo crear una cuenta?', answer: 'Sí. Podés registrarte como socio o enviar una solicitud para gestionar un gimnasio. Empleados y entrenadores ingresan mediante invitaciones protegidas del gimnasio.' },
   { question: '¿Los pagos están habilitados?', answer: 'El historial, los pagos manuales y la validación por webhook están implementados. El checkout con Mercado Pago sólo se habilita cuando el entorno tiene credenciales válidas.' },
   { question: '¿Funciona en el celular?', answer: 'La experiencia pública se adapta desde 360 px, incluye navegación móvil y un panel inferior para explorar el mapa sin scroll horizontal.' },
 ]
@@ -60,20 +63,15 @@ const questions = [
             <p class="hero__note"><IconShieldCheck :size="17" aria-hidden="true" /> Los datos ficticios se identifican siempre como demostración.</p>
           </div>
 
-          <div class="hero__visual">
-            <img :src="heroImage" alt="Persona preparando una barra con pesas en un gimnasio" width="1536" height="1024" fetchpriority="high" />
-            <div class="hero__caption"><span>Constancia</span><strong>Una experiencia que acompaña el entrenamiento real.</strong></div>
+          <div class="hero__map">
+            <GymExplorer variant="hero" compact-heading />
           </div>
         </div>
       </section>
 
-      <section class="section explorer-section">
-        <div class="container"><GymExplorer /></div>
-      </section>
-
       <section class="section member-section" aria-labelledby="member-title">
         <div class="container">
-          <div class="section-heading"><span class="eyebrow">Para socios</span><h2 id="member-title">Menos pantallas sueltas. Más continuidad.</h2><p>La versión 1.0 reunirá las decisiones importantes antes, durante y después de entrenar.</p></div>
+          <div class="section-heading"><span class="eyebrow">Para socios</span><h2 id="member-title">Menos pantallas sueltas. Más continuidad.</h2><p>La versión 1.0 reúne las decisiones importantes antes, durante y después de entrenar.</p></div>
           <div class="benefits-grid">
             <AppCard v-for="benefit in memberBenefits" :key="benefit.title" class="benefit-card">
               <component :is="benefit.icon" :size="24" stroke-width="1.7" aria-hidden="true" />
@@ -89,7 +87,7 @@ const questions = [
           <div class="owner-copy">
             <span class="eyebrow">Para dueños</span>
             <h2 id="owner-title">La operación visible, no escondida.</h2>
-            <p>Administración tendrá un acceso directo a socios, equipo, clases, reservas, membresías, pagos, finanzas y reportes.</p>
+            <p>Administración ofrece acceso directo a socios, equipo, clases, reservas, membresías, pagos, finanzas y reportes.</p>
             <ul>
               <li><IconUsersGroup :size="19" />Gestión diaria en una estructura predecible.</li>
               <li><IconChartLine :size="19" />Finanzas y reportes a un clic.</li>
@@ -102,7 +100,7 @@ const questions = [
 
       <section id="funciones" class="section capabilities-section" aria-labelledby="capabilities-title">
         <div class="container">
-          <div class="section-heading"><span class="eyebrow">Sistema completo</span><h2 id="capabilities-title">Una base para toda la experiencia.</h2><p>Estas capacidades forman parte del alcance de GymTrack 1.0 y se habilitarán por fases, conectadas a datos reales.</p></div>
+          <div class="section-heading"><span class="eyebrow">Sistema completo</span><h2 id="capabilities-title">Una base para toda la experiencia.</h2><p>Estas capacidades están disponibles en GymTrack 1.0 y se conectan a datos reales. Las integraciones beta se identifican por separado.</p></div>
           <div class="capabilities-grid">
             <article v-for="capability in capabilities" :key="capability.title" :class="['capability', `capability--${capability.area}`]">
               <component :is="capability.icon" :size="24" stroke-width="1.7" aria-hidden="true" /><div><h3>{{ capability.title }}</h3><p>{{ capability.text }}</p></div>
@@ -150,10 +148,9 @@ const questions = [
 <style scoped>
 .public-shell { min-height: 100vh; background: var(--bg-canvas); }
 .hero { overflow: hidden; border-bottom: 1px solid var(--border-subtle); }
-.hero__grid { display: grid; min-height: min(47rem, calc(100vh - var(--header-height))); grid-template-columns: minmax(0, .95fr) minmax(28rem, 1.05fr); align-items: center; gap: clamp(var(--space-8), 6vw, var(--space-16)); padding-block: clamp(var(--space-12), 7vw, var(--space-20)); }
+.hero__grid { display: grid; min-height: min(43rem, calc(100svh - var(--header-height))); grid-template-columns: minmax(19rem, .82fr) minmax(28rem, 1.18fr); align-items: center; gap: clamp(var(--space-8), 4vw, var(--space-12)); padding-block: clamp(var(--space-8), 5vw, var(--space-12)); }
 .hero__copy { position: relative; z-index: 2; animation: intro-copy 600ms var(--ease-out) both; }.hero h1 { max-width: 10ch; margin-bottom: var(--space-6); }.hero__copy > p { max-width: 38rem; color: var(--text-secondary); font-size: clamp(1rem, 2vw, 1.2rem); }.hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-8); }.hero__note { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-5) 0 0; color: var(--text-tertiary) !important; font-size: .78rem !important; }
-.hero__visual { position: relative; min-height: 36rem; overflow: hidden; border: 1px solid var(--border-subtle); border-radius: var(--radius-dialog); background: var(--surface-1); box-shadow: var(--shadow-lg); animation: intro-visual 700ms 80ms var(--ease-out) both; }.hero__visual::after { position: absolute; inset: 0; content: ''; background: var(--image-scrim); pointer-events: none; }.hero__visual img { width: 100%; height: 100%; min-height: 36rem; object-fit: cover; object-position: 61% center; }.hero__caption { position: absolute; inset-inline: var(--space-6); bottom: var(--space-6); z-index: 1; display: grid; gap: var(--space-1); }.hero__caption span { color: var(--info); font-size: .7rem; font-weight: 750; letter-spacing: .12em; text-transform: uppercase; }.hero__caption strong { max-width: 27rem; font-size: clamp(1rem, 2vw, 1.25rem); }
-.explorer-section { background: var(--bg-subtle); }
+.hero__map { min-width: 0; animation: intro-visual 700ms 80ms var(--ease-out) both; }
 .section-heading { max-width: 45rem; margin-bottom: var(--space-10); }.section-heading h2 { margin-bottom: var(--space-4); }.section-heading > p { max-width: 42rem; margin: 0; color: var(--text-secondary); }
 .member-section { border-top: 1px solid var(--border-subtle); }.benefits-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }.benefit-card :deep(svg) { margin-bottom: var(--space-8); color: var(--info); }.benefit-card h3 { margin-bottom: var(--space-3); }.benefit-card p { margin: 0; color: var(--text-secondary); font-size: .9rem; }
 .owner-section { border-block: 1px solid var(--border-subtle); background: var(--bg-subtle); }.owner-grid { display: grid; grid-template-columns: minmax(18rem, .8fr) minmax(0, 1.2fr); align-items: center; gap: clamp(var(--space-8), 8vw, 7rem); }.owner-visual { position: relative; min-height: 36rem; overflow: hidden; border-radius: var(--radius-dialog); }.owner-visual img { width: 100%; height: 100%; min-height: 36rem; object-fit: cover; }.owner-copy h2 { max-width: 12ch; margin-bottom: var(--space-5); }.owner-copy > p { max-width: 38rem; color: var(--text-secondary); }.owner-copy ul { display: grid; gap: var(--space-3); margin: var(--space-8) 0; padding: 0; list-style: none; }.owner-copy li { display: flex; align-items: center; gap: var(--space-3); color: var(--text-secondary); font-size: .9rem; }.owner-copy li svg { flex: 0 0 auto; color: var(--info); }
@@ -164,13 +161,13 @@ const questions = [
 @keyframes intro-copy { from { opacity: 0; transform: translateY(12px); } }@keyframes intro-visual { from { opacity: 0; transform: translateY(18px) scale(.99); } }
 
 @media (max-width: 63.99rem) {
-  .hero__grid { min-height: auto; grid-template-columns: 1fr; }.hero__copy { padding-top: var(--space-6); }.hero__visual { min-height: 30rem; }.hero__visual img { min-height: 30rem; }
+  .hero__grid { min-height: auto; grid-template-columns: 1fr; }.hero__copy { padding-top: var(--space-6); }
   .owner-grid { gap: var(--space-8); }.capabilities-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.capability--wide { grid-column: span 1; }.plans-grid, .faq-grid { grid-template-columns: 1fr; gap: var(--space-8); }
   .final-cta__inner { align-items: flex-start; flex-direction: column; }
 }
 
 @media (max-width: 47.99rem) {
-  .hero__grid { gap: var(--space-8); padding-block: var(--space-10); }.hero h1 { font-size: clamp(2.65rem, 14vw, 4.25rem); }.hero__actions { align-items: stretch; flex-direction: column; }.hero__visual, .hero__visual img { min-height: 25rem; }.hero__visual { margin-inline: -.25rem; }.hero__caption { inset-inline: var(--space-4); bottom: var(--space-4); }
+  .hero__grid { gap: var(--space-5); padding-block: var(--space-6) var(--space-8); }.hero h1 { max-width: 12ch; margin-bottom: var(--space-4); font-size: clamp(2.4rem, 11vw, 3.2rem); }.hero__copy > p { font-size: .96rem; }.hero__actions { display: grid; grid-template-columns: 1fr; margin-top: var(--space-5); }.hero__note { display: none; }.hero__map { margin-inline: -.25rem; }
   .benefits-grid, .owner-grid, .capabilities-grid { grid-template-columns: 1fr; }.owner-visual, .owner-visual img { min-height: 27rem; max-height: 34rem; }.owner-visual { order: 2; }.capability { min-height: 11rem; }.plans-grid { gap: var(--space-6); }.final-cta__actions { width: 100%; align-items: stretch; flex-direction: column; }
 }
 </style>
