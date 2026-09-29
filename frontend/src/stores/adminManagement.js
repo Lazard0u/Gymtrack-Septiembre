@@ -1,7 +1,3 @@
-/**
- * Store Pinia de adminManagement. Centraliza estado reactivo, llamadas a la API y errores para que las vistas compartan una única fuente de datos.
- * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
- */
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 

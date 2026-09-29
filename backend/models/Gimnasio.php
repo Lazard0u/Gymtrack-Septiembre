@@ -125,6 +125,57 @@ final class Gimnasio
         }, $stmt->fetchAll());
     }
 
+    public function planesPublicosCatalogo(): array
+    {
+        $datasetActivo = (new SystemContext())->obtenerDatasetActivo();
+        $sql =
+            'SELECT g.id AS gimnasio_id, g.nombre AS gimnasio_nombre, g.slug AS gimnasio_slug,
+                    g.ciudad, g.departamento,
+                    p.id, p.nombre, p.descripcion, p.duracion_dias, p.precio, p.moneda, p.beneficios_json, p.version
+             FROM planes_membresia p
+             JOIN gimnasios g ON g.id = p.gimnasio_id
+             WHERE p.estado = "activo"
+               AND g.estado IN ("publicado", "temporalmente_cerrado")
+               AND g.verificacion_estado = "verificado"
+               AND g.archivado_en IS NULL
+               AND g.is_demo = ?';
+        $params = [$datasetActivo === null ? 0 : 1];
+        if ($datasetActivo !== null) {
+            $sql .= ' AND g.demo_dataset_id = ?';
+            $params[] = $datasetActivo['id'];
+        }
+        $sql .= ' ORDER BY g.nombre, p.precio, p.duracion_dias';
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        $byGym = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $gymId = (int) $row['gimnasio_id'];
+            if (!isset($byGym[$gymId])) {
+                $byGym[$gymId] = [
+                    'gimnasio_id' => $gymId,
+                    'gimnasio_nombre' => $row['gimnasio_nombre'],
+                    'gimnasio_slug' => $row['gimnasio_slug'],
+                    'ciudad' => $row['ciudad'],
+                    'departamento' => $row['departamento'],
+                    'planes' => [],
+                ];
+            }
+            $byGym[$gymId]['planes'][] = [
+                'id' => (int) $row['id'],
+                'nombre' => $row['nombre'],
+                'descripcion' => $row['descripcion'],
+                'duracion_dias' => (int) $row['duracion_dias'],
+                'precio' => number_format((float) $row['precio'], 2, '.', ''),
+                'moneda' => $row['moneda'],
+                'beneficios' => $this->decodeJson($row['beneficios_json'], []),
+                'version' => (int) $row['version'],
+            ];
+        }
+
+        return array_values($byGym);
+    }
+
     private function normalizar(array $gym): array
     {
         return [

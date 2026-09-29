@@ -1,7 +1,3 @@
-/**
- * Prueba automatizada de geo.spec. Prepara el escenario, ejecuta acciones públicas y verifica resultados sin alterar la lógica de producción.
- * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
- */
 import { describe, expect, it } from 'vitest'
 import { distanceInKm, formatDistance, groupByProjectedCell, isValidPosition } from '../geo'
 

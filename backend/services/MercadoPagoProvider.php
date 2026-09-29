@@ -6,7 +6,7 @@
 
 declare(strict_types=1);
 
-final class MercadoPagoProvider implements PaymentProviderInterface
+final class MercadoPagoProvider implements PagoProviderInterface
 {
     private string $token;
     private string $webhookSecret;

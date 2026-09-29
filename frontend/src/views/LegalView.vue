@@ -1,7 +1,3 @@
-<!--
-  Vista de ruta LegalView. Coordina componentes, estado reactivo y llamadas a la API para completar este flujo de usuario.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 import { computed } from 'vue'
 import PublicHeader from '../components/public/PublicHeader.vue'

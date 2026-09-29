@@ -1,7 +1,3 @@
-<!--
-  Componente raíz App. Decide la estructura global que rodea a todas las rutas de la aplicación.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 import { onMounted } from 'vue'
 import DemoDataNotice from './components/system/DemoDataNotice.vue'

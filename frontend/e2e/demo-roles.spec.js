@@ -1,7 +1,3 @@
-/**
- * Prueba automatizada de demo-roles.spec. Prepara el escenario, ejecuta acciones públicas y verifica resultados sin alterar la lógica de producción.
- * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
- */
 import { expect, test } from '@playwright/test'
 
 const password = process.env.DEMO_USER_PASSWORD

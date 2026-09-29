@@ -46,11 +46,15 @@ final class AuthController
 
         $limit = new RateLimiter();
         $limit->ensureAllowed('login', $email);
+        // esto además limita por cuenta: sin esto, alcanza con cambiar de
+        // IP para seguir probando contraseñas sin que nada te frene
+        $limit->ensureAllowed('login', $email, true);
         $user = $this->users->buscarPorEmail($email);
 
         // Se usa la misma respuesta para usuario inexistente y clave incorrecta.
         if (!$user || !password_verify($password, (string) $user['password_hash'])) {
             $limit->fail('login', $email);
+            $limit->fail('login', $email, true);
             SecurityLogger::record('auth.login', 'failed', is_array($user) ? (int) $user['id'] : null);
             usleep(random_int(80000, 160000));
             $this->respond(401, ['error' => true, 'mensaje' => 'Credenciales incorrectas.']);
@@ -58,12 +62,14 @@ final class AuthController
         }
         if (!(bool) $user['activo']) {
             $limit->fail('login', $email);
+            $limit->fail('login', $email, true);
             SecurityLogger::record('auth.login', 'disabled', (int) $user['id']);
             $this->respond(401, ['error' => true, 'mensaje' => 'Credenciales incorrectas.']);
             return;
         }
 
         $limit->clear('login', $email);
+        $limit->clear('login', $email, true);
         // El hash se actualiza de forma transparente si cambia el costo recomendado.
         if (password_needs_rehash((string) $user['password_hash'], PASSWORD_BCRYPT, ['cost' => 12])) {
             $hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);

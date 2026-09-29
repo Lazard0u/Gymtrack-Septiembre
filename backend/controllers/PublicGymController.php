@@ -59,6 +59,16 @@ final class PublicGymController
         $this->respond(200, ['error' => false, 'planes' => (new Gimnasio())->planesPublicos($id)]);
     }
 
+    public function plansCatalog(): void
+    {
+        $gimnasios = (new Gimnasio())->planesPublicosCatalogo();
+        $this->respond(200, [
+            'error' => false,
+            'gimnasios' => $gimnasios,
+            'meta' => ['total' => array_sum(array_map(fn (array $gym): int => count($gym['planes']), $gimnasios))],
+        ]);
+    }
+
     private function respond(int $status, array $body): void
     {
         http_response_code($status);

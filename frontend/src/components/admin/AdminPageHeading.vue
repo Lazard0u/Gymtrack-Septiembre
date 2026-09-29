@@ -1,7 +1,3 @@
-<!--
-  Componente administrativo AdminPageHeading. Presenta controles operativos y delega persistencia a stores o a la vista contenedora.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 defineProps({ title: { type: String, required: true }, description: { type: String, default: '' } })
 </script>

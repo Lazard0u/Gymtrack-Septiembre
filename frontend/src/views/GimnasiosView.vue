@@ -1,0 +1,14 @@
+<script setup>
+import PublicHeader from '../components/public/PublicHeader.vue'
+import PublicFooter from '../components/public/PublicFooter.vue'
+import ExploradorGimnasios from '../components/public/ExploradorGimnasios.vue'
+import AppPageHeader from '../components/ui/AppPageHeader.vue'
+</script>
+
+<template>
+  <div class="public-page"><PublicHeader /><main class="container"><AppPageHeader eyebrow="Gimnasios" title="Explorá el mapa. Elegí con contexto." description="Filtrá por ciudad o categoría y sincronizá cada sede publicada con su marcador. El modo presentación utiliza registros demo identificados en MySQL." /><ExploradorGimnasios compact-heading /></main><PublicFooter /></div>
+</template>
+
+<style scoped>
+.public-page main { padding-bottom: clamp(var(--space-16), 8vw, var(--space-20)); }
+</style>

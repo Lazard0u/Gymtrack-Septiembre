@@ -12,8 +12,10 @@ services:
       MYSQL_DATABASE: ${DB_DATABASE:-gymtrack}
       MYSQL_USER: ${DB_USERNAME:-gymtrack_user}
       MYSQL_PASSWORD: ${DB_PASSWORD:-gymtrack_pass}
-    ports:
-      - "3306:3306"
+    # ports: "3306:3306" publish deshabilitado temporalmente: otro proceso del
+    # host ya ocupa el puerto 3306. El backend igual llega a "db" por la red
+    # interna de Docker; esto no afecta la app, solo el acceso desde un
+    # cliente MySQL corriendo directo en el host.
     volumes:
       - ./database/gymtrack_database.sql:/docker-entrypoint-initdb.d/000_bootstrap.sql:ro
       - ./database/migrations/001_phase1_integrity.sql:/docker-entrypoint-initdb.d/001_phase1_integrity.sql:ro

@@ -1,15 +1,13 @@
-/**
- * Store Pinia de admin. Centraliza estado reactivo, llamadas a la API y errores para que las vistas compartan una única fuente de datos.
- * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
- */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '../services/api'
 import { useAuthStore } from './auth'
 import { resetAdminDomainStores } from './adminResources'
 import { useAdminManagementStore } from './adminManagement'
-import { useNotificationsStore } from './notifications'
-import { usePromotionsStore } from './promotions'
+import { useNotificacionesStore } from './notificaciones'
+import { usePromocionesStore } from './promociones'
+import { usePagosStore } from './pagos'
+import { useAgendaStore } from './agenda'
 
 export const useAdminStore = defineStore('administration', () => {
   const status = ref('idle')
@@ -75,8 +73,8 @@ export const useAdminStore = defineStore('administration', () => {
     }
     resetAdminDomainStores()
     useAdminManagementStore().reset()
-    useNotificationsStore().reset()
-    usePromotionsStore().reset()
+    useNotificacionesStore().reset()
+    usePromocionesStore().reset()
     summaryController?.abort()
     summary.value = { widgets: [], alerts: [] }
     const auth = useAuthStore()
@@ -115,5 +113,38 @@ export const useAdminStore = defineStore('administration', () => {
     return permissions.value.includes(permission)
   }
 
-  return { status, gyms, activeGymId, activeGym, hasContext, permissions, effectiveRole, globalRole, isGlobalAdmin, supportMode, supportReason, isDemo, error, requestId, version, summary, summaryStatus, summaryError, loadContext, selectGym, loadSummary, hasPermission }
+  function reset() {
+    contextController?.abort()
+    contextController = null
+    summaryController?.abort()
+    summaryController = null
+    status.value = 'idle'
+    gyms.value = []
+    activeGymId.value = null
+    permissions.value = []
+    effectiveRole.value = null
+    globalRole.value = null
+    supportMode.value = false
+    supportReason.value = ''
+    isDemo.value = false
+    error.value = ''
+    requestId.value = ''
+    summary.value = { widgets: [], alerts: [] }
+    summaryStatus.value = 'idle'
+    summaryError.value = ''
+  }
+
+  return { status, gyms, activeGymId, activeGym, hasContext, permissions, effectiveRole, globalRole, isGlobalAdmin, supportMode, supportReason, isDemo, error, requestId, version, summary, summaryStatus, summaryError, loadContext, selectGym, loadSummary, hasPermission, reset }
 })
+
+// se llama al hacer logout, junta el reset de todos los stores que dependen
+// del gimnasio activo (si no, queda pegado el estado del usuario anterior)
+export function resetAdminStores() {
+  useAdminStore().reset()
+  resetAdminDomainStores()
+  useAdminManagementStore().reset()
+  useNotificacionesStore().reset()
+  usePromocionesStore().reset()
+  usePagosStore().reset()
+  useAgendaStore().reset()
+}

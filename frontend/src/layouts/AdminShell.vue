@@ -1,15 +1,11 @@
-<!--
-  Layout AdminShell. Mantiene navegación y contexto compartidos mientras Vue Router cambia la vista interna.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { IconChevronRight, IconLayoutSidebarLeftCollapse, IconLogout, IconUserCircle } from '@tabler/icons-vue'
 import AdminNavigation from '../components/admin/AdminNavigation.vue'
-import NotificationBell from '../components/notifications/NotificationBell.vue'
-import NotificationCenterDrawer from '../components/notifications/NotificationCenterDrawer.vue'
-import GymContextSelector from '../components/admin/GymContextSelector.vue'
+import NotificacionBell from '../components/notifications/NotificacionBell.vue'
+import NotificacionCenterDrawer from '../components/notifications/NotificacionCenterDrawer.vue'
+import SelectorContextoGimnasio from '../components/admin/SelectorContextoGimnasio.vue'
 import AppAlert from '../components/ui/AppAlert.vue'
 import AppBadge from '../components/ui/AppBadge.vue'
 import AppButton from '../components/ui/AppButton.vue'
@@ -17,7 +13,7 @@ import AppDrawer from '../components/ui/AppDrawer.vue'
 import AppErrorState from '../components/ui/AppErrorState.vue'
 import AppIconButton from '../components/ui/AppIconButton.vue'
 import AppSkeleton from '../components/ui/AppSkeleton.vue'
-import { useAdminStore } from '../stores/admin'
+import { useAdminStore, resetAdminStores } from '../stores/admin'
 import { useAuthStore } from '../stores/auth'
 import brandMark from '../assets/gymtrack-mark.svg'
 
@@ -36,6 +32,7 @@ async function initialize() {
 
 async function logout() {
   await auth.logout()
+  resetAdminStores()
   await router.push({ name: 'home' })
 }
 
@@ -45,7 +42,7 @@ onMounted(initialize)
 <template>
   <div class="admin-shell">
     <aside class="admin-sidebar">
-      <RouterLink class="admin-brand" :to="{ name: 'dashboard' }" aria-label="GymTrack, volver a mi panel">
+      <RouterLink class="admin-brand" :to="{ name: 'admin-summary' }" aria-label="GymTrack, ir al resumen">
         <img :src="brandMark" alt="" width="34" height="34" />
         <span>Gym<span>Track</span></span>
       </RouterLink>
@@ -53,7 +50,6 @@ onMounted(initialize)
       <AdminNavigation />
       <div class="admin-sidebar__footer">
         <AppBadge v-if="admin.isDemo" tone="info">Entorno de demostración</AppBadge>
-        <RouterLink :to="{ name: 'dashboard' }">Volver a mi panel</RouterLink>
       </div>
     </aside>
 
@@ -64,11 +60,11 @@ onMounted(initialize)
           <nav class="breadcrumbs" aria-label="Migas de pan"><RouterLink :to="{ name: 'admin-summary' }">Administración</RouterLink><IconChevronRight :size="15" /><span aria-current="page">{{ title }}</span></nav>
         </div>
         <div class="admin-header__actions">
-          <GymContextSelector @changed="router.push({ name: 'admin-summary' })" />
-          <NotificationBell :key="admin.version" @open="notificationsOpen = true" />
+          <SelectorContextoGimnasio @changed="router.push({ name: 'admin-summary' })" />
+          <NotificacionBell :key="admin.version" @open="notificationsOpen = true" />
           <details class="profile-menu">
             <summary aria-label="Abrir menú de cuenta"><IconUserCircle :size="23" /><span>{{ auth.user?.nombre }}</span></summary>
-            <div class="profile-menu__panel"><strong>{{ auth.user?.nombre }} {{ auth.user?.apellido }}</strong><span>{{ auth.user?.email }}</span><RouterLink :to="{ name: 'dashboard' }">Mi panel</RouterLink><button type="button" @click="logout"><IconLogout :size="16" /> Cerrar sesión</button></div>
+            <div class="profile-menu__panel"><strong>{{ auth.user?.nombre }} {{ auth.user?.apellido }}</strong><span>{{ auth.user?.email }}</span><button type="button" @click="logout"><IconLogout :size="16" /> Cerrar sesión</button></div>
           </details>
         </div>
       </header>
@@ -77,7 +73,7 @@ onMounted(initialize)
         <div v-if="admin.status === 'loading'" class="admin-loading" aria-label="Cargando administración"><AppSkeleton height="2rem" width="16rem" /><AppSkeleton height="8rem" /><AppSkeleton height="18rem" /></div>
         <AppErrorState v-else-if="admin.status === 'error'" title="No pudimos abrir Administración" :description="admin.error" @retry="initialize" />
         <section v-else-if="!admin.hasContext && route.name !== 'admin-gym-create'" class="context-gate" aria-labelledby="context-title">
-          <h1 id="context-title">Elegí un gimnasio para continuar</h1><p>Las consultas, permisos y acciones administrativas siempre se limitan al gimnasio activo.</p><GymContextSelector @changed="router.replace({ name: 'admin-summary' })" />
+          <h1 id="context-title">Elegí un gimnasio para continuar</h1><p>Las consultas, permisos y acciones administrativas siempre se limitan al gimnasio activo.</p><SelectorContextoGimnasio @changed="router.replace({ name: 'admin-summary' })" />
           <AppAlert v-if="admin.isGlobalAdmin" tone="warning" title="Modo soporte"><p>Como administrador general, el acceso requiere un motivo y queda registrado en la auditoría.</p></AppAlert>
           <AppButton v-if="admin.hasPermission('gym.configure')" variant="secondary" @click="router.push({ name: 'admin-gym-create' })">Crear un gimnasio</AppButton>
         </section>
@@ -85,8 +81,8 @@ onMounted(initialize)
       </main>
     </div>
 
-    <AppDrawer :open="mobileOpen" title="Administración" side="left" @close="mobileOpen = false"><AdminNavigation @navigate="mobileOpen = false" /><template #footer><AppButton variant="secondary" block @click="router.push({ name: 'dashboard' }); mobileOpen = false">Volver a mi panel</AppButton></template></AppDrawer>
-    <NotificationCenterDrawer :open="notificationsOpen" @close="notificationsOpen = false" />
+    <AppDrawer :open="mobileOpen" title="Administración" side="left" @close="mobileOpen = false"><AdminNavigation @navigate="mobileOpen = false" /></AppDrawer>
+    <NotificacionCenterDrawer :open="notificationsOpen" @close="notificationsOpen = false" />
   </div>
 </template>
 
@@ -95,7 +91,7 @@ onMounted(initialize)
 .admin-sidebar { position: fixed; inset: 0 auto 0 0; z-index: var(--z-header); display: flex; width: 16rem; flex-direction: column; border-right: 1px solid var(--border-subtle); padding: var(--space-5) var(--space-3); background: var(--surface-1); }
 .admin-brand { display: flex; align-items: center; gap: var(--space-3); padding: 0 var(--space-3) var(--space-5); color: var(--text-primary); font-size: 1.05rem; font-weight: 780; letter-spacing: -.035em; text-decoration: none; }.admin-brand img { width: 2.1rem; }.admin-brand span span { color: var(--info); }
 .admin-sidebar__label { padding: var(--space-3); color: var(--text-tertiary); font-size: .65rem; font-weight: 760; letter-spacing: .12em; text-transform: uppercase; }
-.admin-sidebar__footer { display: grid; gap: var(--space-3); margin-top: auto; padding: var(--space-5) var(--space-3) 0; border-top: 1px solid var(--border-subtle); }.admin-sidebar__footer a { color: var(--text-secondary); font-size: .78rem; text-decoration: none; }.admin-sidebar__footer a:hover { color: var(--text-primary); }
+.admin-sidebar__footer { display: grid; gap: var(--space-3); margin-top: auto; padding: var(--space-5) var(--space-3) 0; border-top: 1px solid var(--border-subtle); }
 .admin-workspace { min-width: 0; margin-left: 16rem; }
 .admin-header { position: sticky; top: 0; z-index: calc(var(--z-header) - 1); display: flex; min-height: 4.25rem; align-items: center; justify-content: space-between; gap: var(--space-5); border-bottom: 1px solid var(--border-glass); padding: var(--space-2) clamp(var(--space-4), 3vw, var(--space-8)); background: var(--surface-glass); backdrop-filter: blur(16px); }
 .admin-header__start, .admin-header__actions { display: flex; align-items: center; gap: var(--space-3); }.admin-header__actions { justify-content: flex-end; }

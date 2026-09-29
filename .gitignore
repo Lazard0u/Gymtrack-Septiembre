@@ -25,6 +25,7 @@ Thumbs.db
 .idea/
 *.suo
 *.user
+documentacion/.obsidian/
 
 # ── Documentación local ─────────────────────────────────────
 # GitHub conserva únicamente el README principal del proyecto.

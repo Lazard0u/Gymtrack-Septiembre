@@ -393,12 +393,36 @@ final class DemoDatasetSeeder
     private function upsertPlans(int $datasetId,int $actorId,array $gymIds): array
     {
         $plans=[
-            'gymtrack-centro'=>['nombre'=>'Plan Centro Base','slug'=>'plan-centro-base','descripcion'=>'Acceso mensual demostrativo a la sede principal.','duracion'=>30,'precio'=>'1290.00','beneficios'=>['Acceso a sala','Evaluación inicial']],
-            'titan-training'=>['nombre'=>'Fuerza Mensual','slug'=>'fuerza-mensual','descripcion'=>'Plan mensual demostrativo orientado a fuerza.','duracion'=>30,'precio'=>'1490.00','beneficios'=>['Área de fuerza','Zona de movilidad']],
-            'arena-functional-gym'=>['nombre'=>'Funcional Flexible','slug'=>'funcional-flexible','descripcion'=>'Plan demostrativo para entrenamiento funcional.','duracion'=>30,'precio'=>'1390.00','beneficios'=>['Clases grupales','Zona exterior']],
+            'gymtrack-centro'=>[
+                ['nombre'=>'Pase Semanal','slug'=>'pase-semanal-centro','descripcion'=>'Acceso corto para probar la sede principal sin permanencia.','duracion'=>7,'precio'=>'490.00','beneficios'=>['Acceso a sala','Sin permanencia']],
+                ['nombre'=>'Plan Centro Base','slug'=>'plan-centro-base','descripcion'=>'Acceso mensual demostrativo a la sede principal.','duracion'=>30,'precio'=>'1290.00','beneficios'=>['Acceso a sala','Evaluación inicial']],
+                ['nombre'=>'Plan Centro Plus','slug'=>'plan-centro-plus','descripcion'=>'Acceso ampliado con clases grupales y seguimiento mensual.','duracion'=>30,'precio'=>'1890.00','beneficios'=>['Acceso a sala','Clases grupales ilimitadas','Evaluación mensual']],
+            ],
+            'titan-training'=>[
+                ['nombre'=>'Pase Semanal','slug'=>'pase-semanal-titan','descripcion'=>'Acceso corto al área de fuerza sin permanencia.','duracion'=>7,'precio'=>'520.00','beneficios'=>['Área de fuerza','Sin permanencia']],
+                ['nombre'=>'Fuerza Mensual','slug'=>'fuerza-mensual','descripcion'=>'Plan mensual demostrativo orientado a fuerza.','duracion'=>30,'precio'=>'1490.00','beneficios'=>['Área de fuerza','Zona de movilidad']],
+                ['nombre'=>'Fuerza Premium','slug'=>'fuerza-premium','descripcion'=>'Plan completo con acompañamiento técnico y movilidad.','duracion'=>30,'precio'=>'2190.00','beneficios'=>['Área de fuerza','Zona de movilidad','Seguimiento técnico mensual']],
+            ],
+            'arena-functional-gym'=>[
+                ['nombre'=>'Pase Semanal','slug'=>'pase-semanal-arena','descripcion'=>'Acceso corto a clases funcionales sin permanencia.','duracion'=>7,'precio'=>'470.00','beneficios'=>['Clases grupales','Sin permanencia']],
+                ['nombre'=>'Funcional Flexible','slug'=>'funcional-flexible','descripcion'=>'Plan demostrativo para entrenamiento funcional.','duracion'=>30,'precio'=>'1390.00','beneficios'=>['Clases grupales','Zona exterior']],
+                ['nombre'=>'Funcional Plus','slug'=>'funcional-plus','descripcion'=>'Plan ampliado con más clases grupales y zona exterior prioritaria.','duracion'=>30,'precio'=>'1790.00','beneficios'=>['Clases grupales ilimitadas','Zona exterior prioritaria','Evaluación inicial']],
+            ],
         ];
         $ids=[];
-        foreach($plans as $gymSlug=>$plan){$gymId=$gymIds[$gymSlug];$stmt=$this->pdo->prepare('INSERT INTO planes_membresia (gimnasio_id,nombre,slug,descripcion,duracion_dias,precio,moneda,beneficios_json,version,estado,is_demo,demo_dataset_id,creado_por) VALUES (?,?,?,?,?,?,"UYU",?,1,"activo",1,?,?) ON DUPLICATE KEY UPDATE nombre=VALUES(nombre),descripcion=VALUES(descripcion),duracion_dias=VALUES(duracion_dias),precio=VALUES(precio),beneficios_json=VALUES(beneficios_json),estado="activo",is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)');$stmt->execute([$gymId,$plan['nombre'],$plan['slug'],$plan['descripcion'],$plan['duracion'],$plan['precio'],json_encode($plan['beneficios'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$datasetId,$actorId]);$stmt=$this->pdo->prepare('SELECT id FROM planes_membresia WHERE gimnasio_id=? AND slug=? AND version=1');$stmt->execute([$gymId,$plan['slug']]);$ids[$gymSlug]=(int)$stmt->fetchColumn();}
+        foreach($plans as $gymSlug=>$gymPlans){
+            $gymId=$gymIds[$gymSlug];
+            $planIds=[];
+            foreach($gymPlans as $plan){
+                $stmt=$this->pdo->prepare('INSERT INTO planes_membresia (gimnasio_id,nombre,slug,descripcion,duracion_dias,precio,moneda,beneficios_json,version,estado,is_demo,demo_dataset_id,creado_por) VALUES (?,?,?,?,?,?,"UYU",?,1,"activo",1,?,?) ON DUPLICATE KEY UPDATE nombre=VALUES(nombre),descripcion=VALUES(descripcion),duracion_dias=VALUES(duracion_dias),precio=VALUES(precio),beneficios_json=VALUES(beneficios_json),estado="activo",is_demo=1,demo_dataset_id=VALUES(demo_dataset_id)');
+                $stmt->execute([$gymId,$plan['nombre'],$plan['slug'],$plan['descripcion'],$plan['duracion'],$plan['precio'],json_encode($plan['beneficios'],JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),$datasetId,$actorId]);
+                $stmt=$this->pdo->prepare('SELECT id FROM planes_membresia WHERE gimnasio_id=? AND slug=? AND version=1');
+                $stmt->execute([$gymId,$plan['slug']]);
+                $planIds[$plan['slug']]=(int)$stmt->fetchColumn();
+            }
+            // el plan mensual base es el segundo de la lista y es el que queda asociado a la membresía demo del socio
+            $ids[$gymSlug]=$planIds[$gymPlans[1]['slug']];
+        }
         return $ids;
     }
 

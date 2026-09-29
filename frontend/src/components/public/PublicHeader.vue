@@ -1,12 +1,9 @@
-<!--
-  Componente público PublicHeader. Forma parte de la navegación o exploración accesible sin requerir una sesión.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { IconUserCircle } from '@tabler/icons-vue'
 import { useAuthStore } from '../../stores/auth'
+import { resetAdminStores } from '../../stores/admin'
 import AppButton from '../ui/AppButton.vue'
 import AppLinkButton from '../ui/AppLinkButton.vue'
 import PublicBottomNav from './PublicBottomNav.vue'
@@ -25,6 +22,7 @@ const links = [
 
 async function logout() {
   await auth.logout()
+  resetAdminStores()
   await router.push({ name: 'home' })
 }
 </script>

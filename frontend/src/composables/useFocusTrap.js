@@ -1,7 +1,3 @@
-/**
- * Configuración o módulo useFocusTrap del frontend. Sus constantes definen cómo se inicia o comprueba la aplicación.
- * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
- */
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 const FOCUSABLE = [

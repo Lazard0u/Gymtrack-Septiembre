@@ -23,7 +23,7 @@ try {
     }
     if($command==='auth:cleanup'){$limits=(new RateLimiter())->cleanup();$tokens=(new TokenService())->cleanup();echo "Limpieza completa: {$limits} límites y {$tokens} tokens eliminados.\n";exit(0);}
     if($command==='notifications:dispatch'){
-        $limit=max(1,min(1000,(int)($option?:100)));$promotionId=isset($argv[3])?max(1,(int)$argv[3]):null;$allDatasets=strtolower((string)(getenv('APP_ENV')?:'production'))!=='production';$result=(new NotificationDispatcher(null,$allDatasets))->dispatch($limit,$promotionId);echo json_encode($result,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n";exit(0);
+        $limit=max(1,min(1000,(int)($option?:100)));$promotionId=isset($argv[3])?max(1,(int)$argv[3]):null;$allDatasets=strtolower((string)(getenv('APP_ENV')?:'production'))!=='production';$result=(new NotificacionDispatcher(null,$allDatasets))->dispatch($limit,$promotionId);echo json_encode($result,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n";exit(0);
     }
     if($command==='auth:mail:latest'){
         if((getenv('APP_ENV')?:'production')==='production')throw new RuntimeException('El buzón local no puede consultarse en producción.');

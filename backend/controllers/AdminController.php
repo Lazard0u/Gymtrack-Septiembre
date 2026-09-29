@@ -134,7 +134,7 @@ class AdminController
             return;
         }
 
-        $usuario = $this->usuarioModel->buscarPorId((int) $datos['usuario_id']);
+        $usuario = $this->usuarioModel->buscarPorIdEnDataset((int) $datos['usuario_id'], $this->demoDatasetId(), $gimnasioId);
         if (!$usuario) {
             $this->responder(404, [
                 'error'   => true,
@@ -213,7 +213,7 @@ class AdminController
             return;
         }
 
-        $instructor = $this->usuarioModel->buscarPorId((int) $datos['instructor_id']);
+        $instructor = $this->usuarioModel->buscarPorIdEnDataset((int) $datos['instructor_id'], $this->demoDatasetId(), $gimnasioId);
         if (!$instructor) {
             $this->responder(404, [
                 'error'   => true,

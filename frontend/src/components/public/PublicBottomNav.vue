@@ -1,7 +1,3 @@
-<!--
-  Componente público PublicBottomNav. Forma parte de la navegación o exploración accesible sin requerir una sesión.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 import { computed } from 'vue'
 import { IconBuildingStore, IconCalendarEvent, IconHome, IconMap2, IconUser, IconWallet } from '@tabler/icons-vue'

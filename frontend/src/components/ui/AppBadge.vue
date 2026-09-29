@@ -1,7 +1,3 @@
-<!--
-  Componente visual reutilizable AppBadge. Props y slots forman su API; emite eventos al padre sin guardar datos de negocio.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 defineProps({ tone: { type: String, default: 'neutral' } })
 </script>

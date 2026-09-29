@@ -1,7 +1,3 @@
-<!--
-  Componente público PublicFooter. Forma parte de la navegación o exploración accesible sin requerir una sesión.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 import brandMark from '../../assets/gymtrack-mark.svg'
 </script>

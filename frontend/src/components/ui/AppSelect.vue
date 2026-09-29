@@ -1,7 +1,3 @@
-<!--
-  Componente visual reutilizable AppSelect. Props y slots forman su API; emite eventos al padre sin guardar datos de negocio.
-  En <script> se declaran imports, estado y funciones; <template> describe la interfaz y <style> limita su presentación.
--->
 <script setup>
 import { computed, useId } from 'vue'
 const props = defineProps({ modelValue: { type: [String, Number], default: '' }, label: { type: String, required: true }, options: { type: Array, default: () => [] }, name: { type: String, default: '' }, hint: { type: String, default: '' }, error: { type: String, default: '' }, disabled: Boolean })

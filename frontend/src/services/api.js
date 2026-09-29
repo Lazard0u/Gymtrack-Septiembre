@@ -1,7 +1,3 @@
-/**
- * Cliente de servicios de api. Encapsula la comunicación HTTP, credenciales de sesión y respuestas de error del backend.
- * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
- */
 import axios from 'axios'
 
 // CSRF vive sólo en memoria: al recargar se solicita nuevamente junto con la sesión.

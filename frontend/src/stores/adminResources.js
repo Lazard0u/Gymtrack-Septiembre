@@ -1,11 +1,9 @@
-/**
- * Store Pinia de adminResources. Centraliza estado reactivo, llamadas a la API y errores para que las vistas compartan una única fuente de datos.
- * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
- */
 import { defineStore } from 'pinia'
 import { api } from '../services/api'
 
-const resetters = new Set()
+// guardamos un solo resetter por store en vez de sumar uno cada vez que
+// se carga, así esto no crece para siempre
+const resetters = new Map()
 
 function createResourceStore(id, endpoint) {
   return defineStore(id, {
@@ -16,7 +14,7 @@ function createResourceStore(id, endpoint) {
         this.status = 'loading'
         this.error = ''
         this.controller = new AbortController()
-        resetters.add(() => this.reset())
+        resetters.set(id, () => this.reset())
         const response = await api.get(endpoint, { params: query, signal: this.controller.signal })
         if (response.cancelled) return
         this.controller = null
@@ -57,3 +55,4 @@ export const useAdminExportsStore = createResourceStore('admin-exports', '/admin
 export function resetAdminDomainStores() {
   resetters.forEach((reset) => reset())
 }
+

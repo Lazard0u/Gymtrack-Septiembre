@@ -1,7 +1,3 @@
-/**
- * Punto de entrada del frontend. Carga estilos, Pinia y router antes de montar Vue en el elemento #app.
- * Los imports declaran dependencias; funciones y estados documentan el recorrido de los datos y sus fallos esperables.
- */
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import '@fontsource-variable/manrope'
