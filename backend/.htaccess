@@ -1,7 +1,5 @@
-# Dirige rutas virtuales al front controller index.php. Los archivos o
-# directorios reales se sirven directamente para no pasar trabajo innecesario a PHP.
+# Todo pasa por index.php: así no se sirven directamente seeds, composer.lock,
+# controladores ni listados de directorios (index.php responde 404 JSON).
 RewriteEngine On
 
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^(.*)$ index.php [QSA,L]
+RewriteRule ^(?!index\.php$)(.*)$ index.php [QSA,L]

@@ -141,6 +141,20 @@ final class AgendaRepository
         }catch(Throwable $error){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $error;}
     }
 
+    /** Reserva confirmada del socio con la ventana de asistencia abierta ahora mismo, si existe. */
+    public function findAttendableBookingForMember(int $gymId,int $userId): ?array
+    {
+        $stmt=$this->pdo->prepare('SELECT r.id,s.inicio_en,s.fin_en,s.zona_horaria,c.nombre clase_nombre,gs.nombre sede_nombre FROM reservas r JOIN sesiones_clase s ON s.id=r.sesion_clase_id JOIN clases c ON c.id=s.clase_id LEFT JOIN gimnasio_sedes gs ON gs.id=s.sede_id LEFT JOIN asistencias a ON a.reserva_id=r.id WHERE r.usuario_id=? AND s.gimnasio_id=? AND r.estado="confirmada" AND s.estado<>"cancelada" AND a.id IS NULL AND r.is_demo=? AND (r.demo_dataset_id <=> ?) ORDER BY s.inicio_en ASC');
+        $stmt->execute([$userId,$gymId,$this->demoFlag(),$this->datasetId]);
+        foreach($stmt->fetchAll() as $row){
+            $zone=new DateTimeZone((string)($row['zona_horaria']?:'America/Montevideo'));
+            if($this->attendanceOpen((string)$row['inicio_en'],$row['zona_horaria']) && new DateTimeImmutable('now',$zone)<new DateTimeImmutable($row['fin_en'],$zone)){
+                return $row;
+            }
+        }
+        return null;
+    }
+
     public function myBookings(int $gymId,int $userId): array
     {
         $stmt=$this->pdo->prepare('SELECT r.id,r.estado,r.posicion_espera,r.fecha_reserva,s.id sesion_clase_id,s.inicio_en,s.fin_en,s.zona_horaria,s.estado sesion_estado,c.nombre,c.color,gs.nombre sede_nombre,CONCAT_WS(" ",u.nombre,u.apellido) instructor_nombre,a.estado asistencia_estado FROM reservas r JOIN sesiones_clase s ON s.id=r.sesion_clase_id JOIN clases c ON c.id=s.clase_id JOIN usuarios u ON u.id=s.instructor_id LEFT JOIN gimnasio_sedes gs ON gs.id=s.sede_id LEFT JOIN asistencias a ON a.reserva_id=r.id WHERE r.usuario_id=? AND s.gimnasio_id=? AND r.is_demo=? AND (r.demo_dataset_id <=> ?) ORDER BY s.inicio_en DESC');$stmt->execute([$userId,$gymId,$this->demoFlag(),$this->datasetId]);return $stmt->fetchAll();

@@ -24,6 +24,11 @@ function date(value) {
   return new Intl.DateTimeFormat('es-UY', { dateStyle: 'medium' }).format(new Date(`${String(value).slice(0, 10)}T12:00:00`))
 }
 
+function dateTime(value) {
+  if (!value) return 'Sin fecha'
+  return new Intl.DateTimeFormat('es-UY', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(String(value).replace(' ', 'T')))
+}
+
 function reset() {
   token.value = ''
   status.value = 'idle'
@@ -80,6 +85,7 @@ watch(() => admin.version, reset)
             <div><dt>Vencimiento</dt><dd>{{ date(result.membership?.fecha_vencimiento) }}</dd></div>
           </dl>
           <AppAlert :tone="result.valid ? 'success' : 'warning'" :title="result.valid ? 'Ingreso autorizado' : 'Revisión necesaria'"><p>{{ result.valid ? 'La asociación y la membresía están vigentes en este gimnasio.' : 'El carné pertenece al socio, pero no acredita una membresía vigente para autorizar el ingreso.' }}</p></AppAlert>
+          <AppAlert v-if="result.attendance?.marked" tone="success" title="Asistencia registrada automáticamente"><p>{{ result.attendance.clase }}{{ result.attendance.sede ? ` · ${result.attendance.sede}` : '' }} · {{ dateTime(result.attendance.inicio_en) }}</p></AppAlert>
         </template>
         <AppEmptyState v-else title="Esperando un carné" description="El resultado mostrará únicamente datos obtenidos y verificados desde MySQL." />
       </AppCard>

@@ -52,7 +52,10 @@ final class AuthController
         $user = $this->users->buscarPorEmail($email);
 
         // Se usa la misma respuesta para usuario inexistente y clave incorrecta.
-        if (!$user || !password_verify($password, (string) $user['password_hash'])) {
+        // Con usuario inexistente se verifica igual contra un hash falso (bcrypt coste 12)
+        // para que el tiempo de respuesta no delate qué correos existen.
+        $hash = $user ? (string) $user['password_hash'] : '$2y$12$MRarOmFf8JSaC.w9E2jhhe25SiMVVMt6DRHYqDmWo/hFKn98XK1Bq';
+        if (!password_verify($password, $hash) || !$user) {
             $limit->fail('login', $email);
             $limit->fail('login', $email, true);
             SecurityLogger::record('auth.login', 'failed', is_array($user) ? (int) $user['id'] : null);

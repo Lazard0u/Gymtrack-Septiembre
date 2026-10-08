@@ -311,11 +311,27 @@ final class SocioController
         }
         $result = $repo->verifyCardMember($claims['user_id'],$gymId,$claims['membership_id']);
         if (!$result) ApiResponder::error(404,'member_not_found','El carné no corresponde a un socio de este gimnasio.');
+        $attendance = null;
+        // Marcar asistencia es una escritura: exige el mismo permiso que la ruta manual.
+        if ($result['valid'] && (new AuthorizationService())->hasPermission($actor,'attendance.write',$gymId)) {
+            $agenda = new AgendaRepository(AuthMiddleware::obtenerDemoDatasetId());
+            $booking = $agenda->findAttendableBookingForMember($gymId,$claims['user_id']);
+            if ($booking) {
+                $agenda->attendance($gymId,(int)$booking['id'],'presente','Registrada automáticamente al verificar el carné',$actor);
+                AdminAuditLogger::record('attendance.recorded','reserva','success',$actor,$gymId,(string)$booking['id'],'presente (carné)');
+                $attendance = [
+                    'marked' => true,
+                    'clase' => $booking['clase_nombre'],
+                    'sede' => $booking['sede_nombre'],
+                    'inicio_en' => $booking['inicio_en'],
+                ];
+            }
+        }
         AdminAuditLogger::record(
             'member.card.verified','socio',$result['valid']?'success':'denied',$actor,$gymId,(string)$claims['user_id'],
             $result['valid']?'Carné vigente':'Carné sin membresía vigente'
         );
-        ApiResponder::success([...$result,'verified_at'=>gmdate('c')]);
+        ApiResponder::success([...$result,'attendance'=>$attendance,'verified_at'=>gmdate('c')]);
     }
 
     private function memberAccess(): array
