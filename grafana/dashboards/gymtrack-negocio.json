@@ -1,0 +1,490 @@
+{
+ "uid": "gymtrack-negocio",
+ "title": "GymTrack · Negocio",
+ "tags": [
+  "gymtrack"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "refresh": "5m",
+ "time": {
+  "from": "now-180d",
+  "to": "now"
+ },
+ "templating": {
+  "list": [
+   {
+    "name": "gym",
+    "label": "Gimnasio",
+    "type": "query",
+    "datasource": {
+     "type": "mysql",
+     "uid": "gymtrack-mysql"
+    },
+    "query": "SELECT id AS __value, nombre AS __text FROM gimnasios ORDER BY nombre",
+    "refresh": 1,
+    "multi": true,
+    "includeAll": true,
+    "current": {
+     "text": "All",
+     "value": "$__all"
+    }
+   }
+  ]
+ },
+ "panels": [
+  {
+   "id": 1,
+   "title": "Socios con membresía activa",
+   "type": "stat",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COUNT(DISTINCT usuario_id) AS socios FROM membresias WHERE estado='activa' AND gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value"
+   }
+  },
+  {
+   "id": 2,
+   "title": "Ingresos aprobados (período)",
+   "type": "stat",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 0,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(monto),0) AS ingresos FROM pagos WHERE estado='aprobado' AND $__timeFilter(fecha_pago) AND gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value"
+   }
+  },
+  {
+   "id": 3,
+   "title": "Ocupación media de sesiones",
+   "type": "stat",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 0,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(cupos_reservados)/NULLIF(SUM(cupo_maximo),0),0) AS ocupacion FROM sesiones_clase WHERE estado<>'cancelada' AND $__timeFilter(inicio_en) AND gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value"
+   }
+  },
+  {
+   "id": 4,
+   "title": "Asistencia (presentes / reservas cerradas)",
+   "type": "stat",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 0,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(r.estado='asistio')/NULLIF(SUM(r.estado IN ('asistio','no_asistio')),0),0) AS asistencia FROM reservas r JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value"
+   }
+  },
+  {
+   "id": 5,
+   "title": "Ingresos por día",
+   "type": "timeseries",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 4,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE(fecha_pago) AS time, SUM(monto) AS ingresos FROM pagos WHERE estado='aprobado' AND $__timeFilter(fecha_pago) AND gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU"
+    },
+    "overrides": []
+   },
+   "options": {}
+  },
+  {
+   "id": 6,
+   "title": "Reservas por día",
+   "type": "timeseries",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 4,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE(r.fecha_reserva) AS time, COUNT(*) AS reservas FROM reservas r JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE $__timeFilter(r.fecha_reserva) AND s.gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {}
+  },
+  {
+   "id": 7,
+   "title": "Ocupación por clase",
+   "type": "barchart",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 12,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT c.nombre AS clase, SUM(s.cupos_reservados)/NULLIF(SUM(s.cupo_maximo),0) AS ocupacion FROM sesiones_clase s JOIN clases c ON c.id=s.clase_id WHERE s.estado<>'cancelada' AND $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym) GROUP BY c.id,c.nombre ORDER BY ocupacion DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "legend": {
+     "showLegend": false
+    }
+   }
+  },
+  {
+   "id": 8,
+   "title": "Membresías por estado",
+   "type": "piechart",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 12,
+    "w": 6,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT estado, COUNT(*) AS total FROM membresias WHERE gimnasio_id IN ($gym) GROUP BY estado"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": true
+    },
+    "pieType": "donut",
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "values": [
+      "value"
+     ]
+    }
+   }
+  },
+  {
+   "id": 9,
+   "title": "Reservas por estado",
+   "type": "piechart",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 12,
+    "w": 6,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT r.estado, COUNT(*) AS total FROM reservas r JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym) GROUP BY r.estado"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": true
+    },
+    "pieType": "donut",
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "values": [
+      "value"
+     ]
+    }
+   }
+  },
+  {
+   "id": 10,
+   "title": "Membresías que vencen en 14 días",
+   "type": "table",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 20,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT numero_socio AS socio, plan, fecha_vencimiento AS vence FROM membresias WHERE estado='activa' AND fecha_vencimiento BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 14 DAY) AND gimnasio_id IN ($gym) ORDER BY fecha_vencimiento"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {}
+  },
+  {
+   "id": 11,
+   "title": "Ingresos por plan",
+   "type": "barchart",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 20,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT pm.nombre AS plan, SUM(p.monto) AS ingresos FROM pagos p JOIN membresias m ON m.id=p.membresia_id LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE p.estado='aprobado' AND $__timeFilter(p.fecha_pago) AND p.gimnasio_id IN ($gym) GROUP BY pm.id,pm.nombre ORDER BY 2 DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": false
+    }
+   }
+  }
+ ]
+}

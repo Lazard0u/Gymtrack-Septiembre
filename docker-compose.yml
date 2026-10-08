@@ -126,8 +126,30 @@ services:
     networks:
       - gymtrack_net
 
+  # ── Grafana (dashboards de análisis, solo desarrollo) ───────
+  # Lee MySQL con el usuario de solo lectura que crea scripts/grafana-readonly-user.sh.
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: gymtrack_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?Definí GRAFANA_ADMIN_PASSWORD en .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GRAFANA_DB_PASSWORD: ${GRAFANA_DB_PASSWORD:-}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - db
+    networks:
+      - gymtrack_net
+
 volumes:
   db_data:
+  grafana_data:
   frontend_node_modules:
   gymtrack_uploads:
 
