@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Crea (o actualiza) el usuario MySQL de solo lectura que usa Grafana.
-# Sólo ve tablas sin contraseñas, sesiones ni datos de contacto.
+# Sólo ve tablas sin contraseñas, sesiones ni datos de contacto
+# (de calificaciones se omiten usuario_id y comentario).
 # Uso: GRAFANA_DB_PASSWORD='...' scripts/grafana-readonly-user.sh
 set -euo pipefail
 : "${GRAFANA_DB_PASSWORD:?Definí GRAFANA_DB_PASSWORD}"
@@ -17,5 +18,8 @@ GRANT SELECT ON ${DB_DATABASE:-gymtrack}.asistencias TO 'grafana_ro'@'%';
 GRANT SELECT ON ${DB_DATABASE:-gymtrack}.membresias TO 'grafana_ro'@'%';
 GRANT SELECT ON ${DB_DATABASE:-gymtrack}.planes_membresia TO 'grafana_ro'@'%';
 GRANT SELECT ON ${DB_DATABASE:-gymtrack}.pagos TO 'grafana_ro'@'%';
+GRANT SELECT ON ${DB_DATABASE:-gymtrack}.membresia_historial TO 'grafana_ro'@'%';
+GRANT SELECT ON ${DB_DATABASE:-gymtrack}.reserva_eventos TO 'grafana_ro'@'%';
+GRANT SELECT (id,clase_id,puntaje,creado_en) ON ${DB_DATABASE:-gymtrack}.calificaciones TO 'grafana_ro'@'%';
 SQL
 echo "Usuario grafana_ro listo. En Grafana: MySQL, host db:3306, usuario grafana_ro."

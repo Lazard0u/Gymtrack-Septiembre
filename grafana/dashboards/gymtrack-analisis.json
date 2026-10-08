@@ -1,0 +1,1389 @@
+{
+ "uid": "gymtrack-analisis",
+ "title": "GymTrack · Análisis a fondo",
+ "tags": [
+  "gymtrack"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 39,
+ "version": 1,
+ "refresh": "10m",
+ "time": {
+  "from": "now-1y",
+  "to": "now"
+ },
+ "templating": {
+  "list": [
+   {
+    "name": "gym",
+    "label": "Gimnasio",
+    "type": "query",
+    "datasource": {
+     "type": "mysql",
+     "uid": "gymtrack-mysql"
+    },
+    "query": "SELECT id AS __value, nombre AS __text FROM gimnasios ORDER BY nombre",
+    "refresh": 1,
+    "multi": true,
+    "includeAll": true,
+    "current": {
+     "text": "All",
+     "value": "$__all"
+    }
+   }
+  ]
+ },
+ "panels": [
+  {
+   "type": "row",
+   "title": "💰 Ingresos y salud financiera",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 0,
+    "w": 24,
+    "h": 1
+   },
+   "panels": [],
+   "id": 1
+  },
+  {
+   "type": "stat",
+   "title": "MRR (ingreso mensual recurrente)",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 1,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(m.precio_pagado/COALESCE(pm.duracion_dias, CASE m.plan WHEN 'mensual' THEN 30 WHEN 'trimestral' THEN 90 ELSE 365 END)*30),0) AS mrr FROM membresias m LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE m.estado='activa' AND m.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "description": "Cada membresía activa normalizada a 30 días: precio pagado ÷ duración del plan × 30. Es el ingreso mensual que tenés 'asegurado' hoy.",
+   "id": 2
+  },
+  {
+   "type": "stat",
+   "title": "ARPU del período",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 1,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(p.monto)/NULLIF(COUNT(DISTINCT m.usuario_id),0),0) AS arpu FROM pagos p JOIN membresias m ON m.id=p.membresia_id WHERE p.estado='aprobado' AND $__timeFilter(p.fecha_pago) AND m.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "description": "Ingreso aprobado ÷ socios que pagaron en el período.",
+   "id": 3
+  },
+  {
+   "type": "stat",
+   "title": "Reembolsos / ingreso bruto",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 1,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(CASE WHEN p.estado='reembolsado' THEN p.monto END)/NULLIF(SUM(CASE WHEN p.estado IN ('aprobado','reembolsado') THEN p.monto END),0),0) AS reembolsos FROM pagos p JOIN membresias m ON m.id=p.membresia_id WHERE $__timeFilter(p.creado_en) AND m.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "id": 4
+  },
+  {
+   "type": "stat",
+   "title": "Tasa de fallo de cobro",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 1,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(p.estado IN ('rechazado','vencido'))/NULLIF(SUM(p.estado IN ('aprobado','rechazado','vencido','reembolsado')),0),0) AS fallo FROM pagos p JOIN membresias m ON m.id=p.membresia_id WHERE $__timeFilter(p.creado_en) AND m.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "description": "Pagos rechazados o vencidos sobre el total de intentos. Si sube, estás perdiendo plata por fricción de cobro, no por falta de demanda.",
+   "id": 5
+  },
+  {
+   "type": "timeseries",
+   "title": "Ingresos brutos vs reembolsos por mes",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 5,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE(DATE_SUB(p.fecha_pago, INTERVAL DAYOFMONTH(p.fecha_pago)-1 DAY)) AS time, SUM(p.monto) AS ingresos FROM pagos p JOIN membresias m ON m.id=p.membresia_id WHERE p.estado='aprobado' AND $__timeFilter(p.fecha_pago) AND m.gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 1"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE(DATE_SUB(p.fecha_pago, INTERVAL DAYOFMONTH(p.fecha_pago)-1 DAY)) AS time, SUM(p.monto) AS reembolsos FROM pagos p JOIN membresias m ON m.id=p.membresia_id WHERE p.estado='reembolsado' AND $__timeFilter(p.fecha_pago) AND m.gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU",
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 70
+     }
+    },
+    "overrides": []
+   },
+   "options": {},
+   "id": 6
+  },
+  {
+   "type": "barchart",
+   "title": "MRR por plan",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 5,
+    "w": 6,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(pm.nombre,m.plan) AS plan, SUM(m.precio_pagado/COALESCE(pm.duracion_dias, CASE m.plan WHEN 'mensual' THEN 30 WHEN 'trimestral' THEN 90 ELSE 365 END)*30) AS mrr FROM membresias m LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE m.estado='activa' AND m.gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 2 DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU"
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "id": 7
+  },
+  {
+   "type": "piechart",
+   "title": "Ingresos por método de pago",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 5,
+    "w": 6,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT p.metodo AS metodo, SUM(p.monto) AS total FROM pagos p JOIN membresias m ON m.id=p.membresia_id WHERE p.estado='aprobado' AND $__timeFilter(p.fecha_pago) AND m.gimnasio_id IN ($gym) GROUP BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": true
+    },
+    "pieType": "donut",
+    "legend": {
+     "displayMode": "table",
+     "placement": "right",
+     "values": [
+      "value"
+     ]
+    }
+   },
+   "id": 8
+  },
+  {
+   "type": "row",
+   "title": "🔁 Retención y vida del socio",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 13,
+    "w": 24,
+    "h": 1
+   },
+   "panels": [],
+   "id": 9
+  },
+  {
+   "type": "stat",
+   "title": "Tasa de renovación",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 14,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(EXISTS(SELECT 1 FROM membresias n WHERE n.usuario_id=m.usuario_id AND n.gimnasio_id=m.gimnasio_id AND n.id<>m.id AND n.fecha_inicio BETWEEN DATE_SUB(m.fecha_vencimiento, INTERVAL 7 DAY) AND DATE_ADD(m.fecha_vencimiento, INTERVAL 30 DAY)))/NULLIF(COUNT(*),0),0) AS renovacion FROM membresias m WHERE m.fecha_vencimiento < CURDATE() AND m.estado<>'pendiente_pago' AND $__timeFilter(m.fecha_vencimiento) AND m.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "description": "De las membresías que vencieron en el período, qué % empezó otra (en la misma sede) entre 7 días antes y 30 días después del vencimiento.",
+   "id": 10
+  },
+  {
+   "type": "stat",
+   "title": "Vida media del socio (meses)",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 14,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(AVG(t.meses),0) AS meses FROM (SELECT m.usuario_id, m.gimnasio_id, DATEDIFF(MAX(m.fecha_vencimiento),MIN(m.fecha_inicio))/30 AS meses, AVG(m.precio_pagado/COALESCE(pm.duracion_dias, CASE m.plan WHEN 'mensual' THEN 30 WHEN 'trimestral' THEN 90 ELSE 365 END)*30) AS mensual FROM membresias m LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE m.estado<>'pendiente_pago' AND m.gimnasio_id IN ($gym) GROUP BY 1,2) t"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "none"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "description": "Promedio entre el primer inicio y el último vencimiento de cada socio.",
+   "id": 11
+  },
+  {
+   "type": "stat",
+   "title": "LTV estimado por socio",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 14,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(AVG(t.meses*t.mensual),0) AS ltv FROM (SELECT m.usuario_id, m.gimnasio_id, DATEDIFF(MAX(m.fecha_vencimiento),MIN(m.fecha_inicio))/30 AS meses, AVG(m.precio_pagado/COALESCE(pm.duracion_dias, CASE m.plan WHEN 'mensual' THEN 30 WHEN 'trimestral' THEN 90 ELSE 365 END)*30) AS mensual FROM membresias m LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE m.estado<>'pendiente_pago' AND m.gimnasio_id IN ($gym) GROUP BY 1,2) t"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "currencyUYU"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "description": "Vida media × ingreso mensual medio. Es lo máximo que te conviene gastar en captar a un socio.",
+   "id": 12
+  },
+  {
+   "type": "stat",
+   "title": "Socios nuevos que nunca vinieron (últimos 60 días)",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 14,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(NOT EXISTS(SELECT 1 FROM asistencias a JOIN reservas r ON r.id=a.reserva_id JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE r.usuario_id=m.usuario_id AND s.gimnasio_id=m.gimnasio_id AND a.estado IN ('presente','tarde')))/NULLIF(COUNT(*),0),0) AS sin_visita FROM membresias m WHERE m.estado='activa' AND m.fecha_inicio>=DATE_SUB(CURDATE(),INTERVAL 60 DAY) AND m.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "description": "Predictor clásico de abandono: quien no viene en el primer mes casi nunca renueva. Hay que llamarlos.",
+   "id": 13
+  },
+  {
+   "type": "timeseries",
+   "title": "Altas vs bajas por mes",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 18,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE(DATE_SUB(m.creado_en, INTERVAL DAYOFMONTH(m.creado_en)-1 DAY)) AS time, COUNT(*) AS altas FROM membresias m WHERE $__timeFilter(m.creado_en) AND m.gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 1"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE(DATE_SUB(h.creado_en, INTERVAL DAYOFMONTH(h.creado_en)-1 DAY)) AS time, COUNT(*) AS bajas FROM membresia_historial h JOIN membresias m ON m.id=h.membresia_id WHERE h.estado_nuevo IN ('vencida','suspendida') AND $__timeFilter(h.creado_en) AND m.gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 70
+     }
+    },
+    "overrides": []
+   },
+   "options": {},
+   "id": 14
+  },
+  {
+   "type": "table",
+   "title": "Cohortes de retención (% de socios aún activos N meses después de su alta)",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 18,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE_FORMAT(c.cohorte,'%Y-%m') AS cohorte, COUNT(*) AS socios,\nROUND(100*SUM(EXISTS(SELECT 1 FROM membresias x WHERE x.usuario_id=c.usuario_id AND x.gimnasio_id=c.gimnasio_id AND x.estado<>'pendiente_pago' AND x.fecha_inicio<=DATE_ADD(c.cohorte,INTERVAL 1 MONTH) AND x.fecha_vencimiento>=DATE_ADD(c.cohorte,INTERVAL 1 MONTH)) AND DATE_ADD(c.cohorte,INTERVAL 1 MONTH)<=CURDATE())/NULLIF(SUM(DATE_ADD(c.cohorte,INTERVAL 1 MONTH)<=CURDATE()),0)) AS `M1`,\nROUND(100*SUM(EXISTS(SELECT 1 FROM membresias x WHERE x.usuario_id=c.usuario_id AND x.gimnasio_id=c.gimnasio_id AND x.estado<>'pendiente_pago' AND x.fecha_inicio<=DATE_ADD(c.cohorte,INTERVAL 2 MONTH) AND x.fecha_vencimiento>=DATE_ADD(c.cohorte,INTERVAL 2 MONTH)) AND DATE_ADD(c.cohorte,INTERVAL 2 MONTH)<=CURDATE())/NULLIF(SUM(DATE_ADD(c.cohorte,INTERVAL 2 MONTH)<=CURDATE()),0)) AS `M2`,\nROUND(100*SUM(EXISTS(SELECT 1 FROM membresias x WHERE x.usuario_id=c.usuario_id AND x.gimnasio_id=c.gimnasio_id AND x.estado<>'pendiente_pago' AND x.fecha_inicio<=DATE_ADD(c.cohorte,INTERVAL 3 MONTH) AND x.fecha_vencimiento>=DATE_ADD(c.cohorte,INTERVAL 3 MONTH)) AND DATE_ADD(c.cohorte,INTERVAL 3 MONTH)<=CURDATE())/NULLIF(SUM(DATE_ADD(c.cohorte,INTERVAL 3 MONTH)<=CURDATE()),0)) AS `M3`,\nROUND(100*SUM(EXISTS(SELECT 1 FROM membresias x WHERE x.usuario_id=c.usuario_id AND x.gimnasio_id=c.gimnasio_id AND x.estado<>'pendiente_pago' AND x.fecha_inicio<=DATE_ADD(c.cohorte,INTERVAL 4 MONTH) AND x.fecha_vencimiento>=DATE_ADD(c.cohorte,INTERVAL 4 MONTH)) AND DATE_ADD(c.cohorte,INTERVAL 4 MONTH)<=CURDATE())/NULLIF(SUM(DATE_ADD(c.cohorte,INTERVAL 4 MONTH)<=CURDATE()),0)) AS `M4`,\nROUND(100*SUM(EXISTS(SELECT 1 FROM membresias x WHERE x.usuario_id=c.usuario_id AND x.gimnasio_id=c.gimnasio_id AND x.estado<>'pendiente_pago' AND x.fecha_inicio<=DATE_ADD(c.cohorte,INTERVAL 5 MONTH) AND x.fecha_vencimiento>=DATE_ADD(c.cohorte,INTERVAL 5 MONTH)) AND DATE_ADD(c.cohorte,INTERVAL 5 MONTH)<=CURDATE())/NULLIF(SUM(DATE_ADD(c.cohorte,INTERVAL 5 MONTH)<=CURDATE()),0)) AS `M5`,\nROUND(100*SUM(EXISTS(SELECT 1 FROM membresias x WHERE x.usuario_id=c.usuario_id AND x.gimnasio_id=c.gimnasio_id AND x.estado<>'pendiente_pago' AND x.fecha_inicio<=DATE_ADD(c.cohorte,INTERVAL 6 MONTH) AND x.fecha_vencimiento>=DATE_ADD(c.cohorte,INTERVAL 6 MONTH)) AND DATE_ADD(c.cohorte,INTERVAL 6 MONTH)<=CURDATE())/NULLIF(SUM(DATE_ADD(c.cohorte,INTERVAL 6 MONTH)<=CURDATE()),0)) AS `M6`,\nROUND(100*SUM(EXISTS(SELECT 1 FROM membresias x WHERE x.usuario_id=c.usuario_id AND x.gimnasio_id=c.gimnasio_id AND x.estado<>'pendiente_pago' AND x.fecha_inicio<=DATE_ADD(c.cohorte,INTERVAL 7 MONTH) AND x.fecha_vencimiento>=DATE_ADD(c.cohorte,INTERVAL 7 MONTH)) AND DATE_ADD(c.cohorte,INTERVAL 7 MONTH)<=CURDATE())/NULLIF(SUM(DATE_ADD(c.cohorte,INTERVAL 7 MONTH)<=CURDATE()),0)) AS `M7`\nFROM (SELECT m.usuario_id, m.gimnasio_id, MIN(m.fecha_inicio) AS cohorte FROM membresias m WHERE m.estado<>'pendiente_pago' AND m.gimnasio_id IN ($gym) GROUP BY 1,2) c WHERE $__timeFilter(c.cohorte) GROUP BY 1 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^M[0-9]$"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "unit",
+        "value": "percent"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "red",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 50
+          },
+          {
+           "color": "yellow",
+           "value": 70
+          },
+          {
+           "color": "green",
+           "value": 85
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {},
+   "description": "Cada fila es el mes en que empezaron. M3 = % que seguía con membresía vigente 3 meses después de su alta. Una cohorte que cae mucho en M1–M2 indica problema de onboarding.",
+   "id": 15
+  },
+  {
+   "type": "table",
+   "title": "🚨 Socios en riesgo: membresía activa pero ≥21 días sin asistir",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 26,
+    "w": 14,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT m.numero_socio AS socio, g.nombre AS sede, COALESCE(DATE(l.ultima),'nunca') AS ultima_visita, COALESCE(DATEDIFF(CURDATE(),l.ultima),DATEDIFF(CURDATE(),m.fecha_inicio)) AS dias_sin_venir, m.fecha_vencimiento AS vence, ROUND(m.precio_pagado/COALESCE(pm.duracion_dias, CASE m.plan WHEN 'mensual' THEN 30 WHEN 'trimestral' THEN 90 ELSE 365 END)*30) AS mrr_en_riesgo\nFROM membresias m LEFT JOIN planes_membresia pm ON pm.id=m.plan_id JOIN gimnasios g ON g.id=m.gimnasio_id\nLEFT JOIN (SELECT r.usuario_id, s.gimnasio_id, MAX(a.fecha_asist) AS ultima FROM asistencias a JOIN reservas r ON r.id=a.reserva_id JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE a.estado IN ('presente','tarde') GROUP BY 1,2) l ON l.usuario_id=m.usuario_id AND l.gimnasio_id=m.gimnasio_id\nWHERE m.estado='activa' AND m.gimnasio_id IN ($gym) AND COALESCE(DATEDIFF(CURDATE(),l.ultima),DATEDIFF(CURDATE(),m.fecha_inicio))>=21\nORDER BY dias_sin_venir DESC LIMIT 100"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "mrr_en_riesgo"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "currencyUYU"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^dias_sin_venir$"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "unit",
+        "value": "none"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "yellow",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 35
+          },
+          {
+           "color": "red",
+           "value": 50
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {},
+   "description": "Lista accionable: llamalos antes de que venza. Usa el número de socio; los datos de contacto no están en Grafana a propósito.",
+   "id": 16
+  },
+  {
+   "type": "table",
+   "title": "Cobranza pendiente",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 14,
+    "y": 26,
+    "w": 10,
+    "h": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT m.numero_socio AS socio, COALESCE(pm.nombre,m.plan) AS plan, m.creado_en AS desde, DATEDIFF(CURDATE(),m.creado_en) AS dias, m.precio_pagado AS importe FROM membresias m LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE m.estado='pendiente_pago' AND m.gimnasio_id IN ($gym) ORDER BY m.creado_en LIMIT 100"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "importe"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "currencyUYU"
+       }
+      ]
+     }
+    ]
+   },
+   "options": {},
+   "id": 17
+  },
+  {
+   "type": "row",
+   "title": "🏋️ Capacidad, demanda y operación",
+   "collapsed": false,
+   "gridPos": {
+    "x": 0,
+    "y": 35,
+    "w": 24,
+    "h": 1
+   },
+   "panels": [],
+   "id": 18
+  },
+  {
+   "type": "table",
+   "title": "Mapa de calor: % de ocupación por día y hora",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 36,
+    "w": 24,
+    "h": 7
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT ELT(WEEKDAY(s.inicio_en)+1,'Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo') AS dia,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=6 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=6 THEN s.cupo_maximo END),0)) AS `06h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=7 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=7 THEN s.cupo_maximo END),0)) AS `07h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=8 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=8 THEN s.cupo_maximo END),0)) AS `08h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=9 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=9 THEN s.cupo_maximo END),0)) AS `09h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=10 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=10 THEN s.cupo_maximo END),0)) AS `10h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=11 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=11 THEN s.cupo_maximo END),0)) AS `11h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=12 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=12 THEN s.cupo_maximo END),0)) AS `12h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=13 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=13 THEN s.cupo_maximo END),0)) AS `13h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=14 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=14 THEN s.cupo_maximo END),0)) AS `14h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=15 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=15 THEN s.cupo_maximo END),0)) AS `15h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=16 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=16 THEN s.cupo_maximo END),0)) AS `16h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=17 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=17 THEN s.cupo_maximo END),0)) AS `17h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=18 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=18 THEN s.cupo_maximo END),0)) AS `18h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=19 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=19 THEN s.cupo_maximo END),0)) AS `19h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=20 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=20 THEN s.cupo_maximo END),0)) AS `20h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=21 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=21 THEN s.cupo_maximo END),0)) AS `21h`,\nROUND(100*SUM(CASE WHEN HOUR(s.inicio_en)=22 THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN HOUR(s.inicio_en)=22 THEN s.cupo_maximo END),0)) AS `22h`\nFROM sesiones_clase s WHERE s.estado<>'cancelada' AND $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym) GROUP BY WEEKDAY(s.inicio_en), 1 ORDER BY WEEKDAY(s.inicio_en)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^[0-9]{2}h$"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "unit",
+        "value": "percent"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "#1f3a5f",
+           "value": null
+          },
+          {
+           "color": "red",
+           "value": 1
+          },
+          {
+           "color": "orange",
+           "value": 30
+          },
+          {
+           "color": "green",
+           "value": 60
+          },
+          {
+           "color": "purple",
+           "value": 90
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {},
+   "description": "Azul oscuro = sin clases. Rojo/naranja = horarios con cupos vacíos (candidatos a cambiar o cerrar). Violeta ≥90% = saturado: abrí otra sesión o subí el precio.",
+   "id": 19
+  },
+  {
+   "type": "timeseries",
+   "title": "Cupos regalados vs. demanda insatisfecha por semana",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 43,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE(DATE_SUB(s.inicio_en,INTERVAL WEEKDAY(s.inicio_en) DAY)) AS time, SUM(s.cupo_maximo-s.cupos_reservados) AS cupos_vacios FROM sesiones_clase s WHERE s.estado<>'cancelada' AND s.inicio_en<NOW() AND $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 1"
+    },
+    {
+     "refId": "B",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "time_series",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT DATE(DATE_SUB(e.creado_en,INTERVAL WEEKDAY(e.creado_en) DAY)) AS time, COUNT(*) AS en_lista_de_espera FROM reserva_eventos e JOIN reservas r ON r.id=e.reserva_id JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE e.tipo='espera' AND $__timeFilter(e.creado_en) AND s.gimnasio_id IN ($gym) GROUP BY 1 ORDER BY 1"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "drawStyle": "bars",
+      "fillOpacity": 70
+     }
+    },
+    "overrides": []
+   },
+   "options": {},
+   "description": "Si conviven cupos vacíos y lista de espera, el problema es de horarios/clases, no de capacidad total.",
+   "id": 20
+  },
+  {
+   "type": "table",
+   "title": "Ficha por clase",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 43,
+    "w": 12,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT c.nombre AS clase, COUNT(*) AS sesiones,\n SUM(CASE WHEN s.estado<>'cancelada' THEN s.cupos_reservados END)/NULLIF(SUM(CASE WHEN s.estado<>'cancelada' THEN s.cupo_maximo END),0) AS ocupacion,\n SUM(s.espera_total) AS en_espera, SUM(s.estado='cancelada')/COUNT(*) AS canceladas,\n (SELECT AVG(q.puntaje) FROM calificaciones q WHERE q.clase_id=c.id) AS puntaje\nFROM sesiones_clase s JOIN clases c ON c.id=s.clase_id WHERE $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym) GROUP BY c.id,c.nombre ORDER BY ocupacion DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "ocupacion"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percentunit"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "canceladas"
+      },
+      "properties": [
+       {
+        "id": "unit",
+        "value": "percentunit"
+       }
+      ]
+     },
+     {
+      "matcher": {
+       "id": "byRegexp",
+       "options": "^ocupacion$"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "basic"
+        }
+       },
+       {
+        "id": "unit",
+        "value": "percentunit"
+       },
+       {
+        "id": "decimals",
+        "value": 0
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "red",
+           "value": null
+          },
+          {
+           "color": "orange",
+           "value": 0.3
+          },
+          {
+           "color": "green",
+           "value": 0.6
+          },
+          {
+           "color": "purple",
+           "value": 0.9
+          }
+         ]
+        }
+       }
+      ]
+     }
+    ]
+   },
+   "options": {},
+   "description": "Qué clases dar de baja, duplicar o rediseñar. 'en_espera' alto + ocupación alta = duplicar la clase.",
+   "id": 21
+  },
+  {
+   "type": "barchart",
+   "title": "No-show por clase",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 51,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT c.nombre AS clase, SUM(r.estado='no_asistio')/NULLIF(SUM(r.estado IN ('asistio','no_asistio')),0) AS no_show FROM reservas r JOIN sesiones_clase s ON s.id=r.sesion_clase_id JOIN clases c ON c.id=s.clase_id WHERE $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym) GROUP BY c.id,c.nombre ORDER BY 2 DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "description": "Reservan y no van: ocupan cupo que otra persona hubiera usado.",
+   "id": 22
+  },
+  {
+   "type": "barchart",
+   "title": "Frecuencia de uso de socios activos",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 8,
+    "y": 51,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT t.bucket AS visitas_en_el_periodo, COUNT(*) AS socios FROM (SELECT CASE WHEN v=0 THEN '0' WHEN v<=3 THEN '1-3' WHEN v<=8 THEN '4-8' ELSE '9+' END AS bucket FROM (SELECT (SELECT COUNT(*) FROM asistencias a JOIN reservas r ON r.id=a.reserva_id JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE r.usuario_id=m.usuario_id AND s.gimnasio_id=m.gimnasio_id AND a.estado IN ('presente','tarde') AND $__timeFilter(a.fecha_asist)) AS v FROM membresias m WHERE m.estado='activa' AND m.gimnasio_id IN ($gym)) z) t GROUP BY t.bucket ORDER BY FIELD(t.bucket,'0','1-3','4-8','9+')"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "description": "Los de '0' y '1-3' son tu churn futuro; los de '9+' son tus embajadores.",
+   "id": 23
+  },
+  {
+   "type": "barchart",
+   "title": "Calificación media por clase",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 16,
+    "y": 51,
+    "w": 8,
+    "h": 8
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT c.nombre AS clase, AVG(q.puntaje) AS puntaje FROM calificaciones q JOIN clases c ON c.id=q.clase_id WHERE $__timeFilter(q.creado_en) AND c.gimnasio_id IN ($gym) GROUP BY c.id,c.nombre ORDER BY 2 DESC"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "orientation": "horizontal",
+    "legend": {
+     "showLegend": false
+    }
+   },
+   "id": 24
+  },
+  {
+   "type": "stat",
+   "title": "Cancelaciones tardías (<2 h antes)",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 0,
+    "y": 59,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(r.cancelada_en>=DATE_SUB(s.inicio_en,INTERVAL 2 HOUR))/NULLIF(COUNT(*),0),0) AS tardias FROM reservas r JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym) AND r.estado='cancelada' AND r.cancelada_en IS NOT NULL"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "description": "Cupos que ya no se pueden revender.",
+   "id": 25
+  },
+  {
+   "type": "stat",
+   "title": "Anticipación media de reserva",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 6,
+    "y": 59,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(AVG(TIMESTAMPDIFF(HOUR,r.fecha_reserva,s.inicio_en)),0) AS horas FROM reservas r JOIN sesiones_clase s ON s.id=r.sesion_clase_id WHERE $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym) AND r.estado<>'cancelada'"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "h"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "id": 26
+  },
+  {
+   "type": "stat",
+   "title": "Sesiones canceladas por el gimnasio",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 12,
+    "y": 59,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COALESCE(SUM(s.estado='cancelada')/NULLIF(COUNT(*),0),0) AS canceladas FROM sesiones_clase s WHERE $__timeFilter(s.inicio_en) AND s.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit"
+    },
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "id": 27
+  },
+  {
+   "type": "stat",
+   "title": "Socios por sede (activos)",
+   "datasource": {
+    "type": "mysql",
+    "uid": "gymtrack-mysql"
+   },
+   "gridPos": {
+    "x": 18,
+    "y": 59,
+    "w": 6,
+    "h": 4
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "mysql",
+      "uid": "gymtrack-mysql"
+     },
+     "format": "table",
+     "rawQuery": true,
+     "editorMode": "code",
+     "rawSql": "SELECT COUNT(DISTINCT m.usuario_id) AS socios FROM membresias m WHERE m.estado='activa' AND m.gimnasio_id IN ($gym)"
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {},
+    "overrides": []
+   },
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ],
+     "fields": "",
+     "values": false
+    },
+    "colorMode": "value",
+    "graphMode": "none"
+   },
+   "id": 28
+  }
+ ]
+}
