@@ -6,7 +6,7 @@ const password = process.env.DEMO_USER_PASSWORD
 async function login(page, email) {
   await page.goto('/login')
   await page.getByLabel('Correo electrónico').fill(email)
-  await page.getByLabel('Contraseña').fill(password)
+  await page.getByLabel(/^Contraseña/).fill(password)
   await page.getByRole('button', { name: 'Ingresar' }).click()
   await expect(page).toHaveURL(/\/dashboard/)
 }

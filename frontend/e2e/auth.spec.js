@@ -8,7 +8,7 @@ test.describe('identidad segura', () => {
   test('la sesión usa cookie HttpOnly y no localStorage', async ({ page, context }) => {
     await page.goto('/login')
     await page.getByLabel('Correo electrónico').fill('socio.demo@gymtrack.local')
-    await page.getByLabel('Contraseña').fill(password)
+    await page.getByLabel(/^Contraseña/).fill(password)
     await page.getByRole('button', { name: 'Ingresar' }).click()
     await expect(page).toHaveURL(/\/dashboard$/)
     expect(await page.evaluate(() => localStorage.getItem('token'))).toBeNull()
@@ -20,7 +20,7 @@ test.describe('identidad segura', () => {
   test('un socio no puede abrir administración', async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel('Correo electrónico').fill('socio.demo@gymtrack.local')
-    await page.getByLabel('Contraseña').fill(password)
+    await page.getByLabel(/^Contraseña/).fill(password)
     await page.getByRole('button', { name: 'Ingresar' }).click()
     await expect(page).toHaveURL(/\/dashboard$/)
     await page.goto('/admin')

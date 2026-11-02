@@ -15,7 +15,7 @@ test.describe('roles y contexto demo', () => {
     test(`${account.role} recibe únicamente su contexto`, async ({ page }) => {
       await page.goto('/login')
       await page.getByLabel('Correo electrónico').fill(account.email)
-      await page.getByLabel('Contraseña').fill(password)
+      await page.getByLabel(/^Contraseña/).fill(password)
       await page.getByRole('button', { name: 'Ingresar' }).click()
       await expect(page).toHaveURL(/\/dashboard$/)
       await expect(page.getByText(account.role, { exact: true }).first()).toBeVisible()
@@ -40,7 +40,7 @@ test.describe('roles y contexto demo', () => {
     await page.setViewportSize({ width: 390, height: 844 })
     await page.goto('/login')
     await page.getByLabel('Correo electrónico').fill('socio.demo@gymtrack.local')
-    await page.getByLabel('Contraseña').fill(password)
+    await page.getByLabel(/^Contraseña/).fill(password)
     await page.getByRole('button', { name: 'Ingresar' }).click()
     await expect(page).toHaveURL(/\/dashboard$/)
     await expect(page.getByRole('heading', { name: 'Lo importante para hoy' })).toBeVisible()
@@ -59,7 +59,7 @@ test.describe('roles y contexto demo', () => {
   test('el panel demo no mezcla cuentas reales y distingue acciones estables de funciones beta', async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel('Correo electrónico').fill('admin.demo@gymtrack.local')
-    await page.getByLabel('Contraseña').fill(password)
+    await page.getByLabel(/^Contraseña/).fill(password)
     await page.getByRole('button', { name: 'Ingresar' }).click()
     await page.getByRole('link', { name: 'Abrir administración' }).click()
     await expect(page).toHaveURL(/\/administracion\/resumen$/)

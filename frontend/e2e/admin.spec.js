@@ -13,7 +13,7 @@ test.describe('Administración', () => {
 
     await page.goto('/login')
     await page.getByLabel('Correo electrónico').fill('admin.demo@gymtrack.local')
-    await page.getByLabel('Contraseña').fill(password)
+    await page.getByLabel(/^Contraseña/).fill(password)
     await page.getByRole('button', { name: 'Ingresar' }).click()
     await page.getByRole('link', { name: 'Abrir administración' }).click()
     await page.getByLabel('Gimnasio activo').last().selectOption({ label: 'GymTrack Centro' })
