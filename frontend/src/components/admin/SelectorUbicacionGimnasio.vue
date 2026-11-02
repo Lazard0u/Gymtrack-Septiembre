@@ -12,6 +12,7 @@ const props = defineProps({
   pais: { type: String, default: '' },
   latitud: { type: [String, Number], default: '' },
   longitud: { type: [String, Number], default: '' },
+  error: { type: String, default: '' },
 })
 const emit = defineEmits(['update:latitud', 'update:longitud'])
 
@@ -93,7 +94,7 @@ async function geocode() {
   const response = await api.get('/admin/geocoding', { params: { direccion: props.direccion, ciudad: props.ciudad, pais: props.pais } })
   if (!response.ok || response.data?.error) {
     searchStatus.value = 'error'
-    message.value = response.data?.mensaje || 'No pudimos ubicar la dirección. Elegí el punto en el mapa o ingresá las coordenadas.'
+    message.value = response.data?.mensaje || 'No pudimos ubicar la dirección. Elegí el punto tocando el mapa.'
     return
   }
   results.value = response.data?.data?.items || []
@@ -136,14 +137,15 @@ onBeforeUnmount(() => {
     <div class="location-picker__canvas">
       <div ref="mapElement" class="location-picker__map" role="region" aria-label="Vista previa editable de la ubicación del gimnasio" />
       <div v-if="mapStatus === 'loading'" class="location-picker__state" role="status"><AppSpinner /><span>Cargando vista previa…</span></div>
-      <div v-else-if="mapStatus === 'error'" class="location-picker__state" role="alert"><IconAlertCircle :size="22" /><span>El mapa no está disponible. Podés continuar ingresando latitud y longitud.</span></div>
-      <div v-if="position" class="location-picker__coordinates"><IconMapPin :size="16" /><span>{{ formatted(position[0]) }}, {{ formatted(position[1]) }}</span></div>
+      <div v-else-if="mapStatus === 'error'" class="location-picker__state" role="alert"><IconAlertCircle :size="22" /><span>El mapa no está disponible. Igual podés usar «Ubicar dirección».</span></div>
+      <div v-if="position" class="location-picker__coordinates"><IconMapPin :size="16" /><span>Ubicación marcada</span></div>
     </div>
 
     <div v-if="message" :class="['location-picker__message', { 'location-picker__message--error': ['error', 'empty'].includes(searchStatus) }]" role="status" aria-live="polite">
       <component :is="['error', 'empty'].includes(searchStatus) ? IconAlertCircle : IconCheck" :size="18" />
       <span>{{ message }}</span>
     </div>
+    <div v-if="error && !position" class="location-picker__message location-picker__message--error" role="alert"><IconAlertCircle :size="18" /><span>Falta ubicar el gimnasio: tocá «Ubicar dirección» o marcá el punto en el mapa.</span></div>
     <div v-if="results.length > 1" class="location-picker__results" aria-label="Coincidencias de ubicación">
       <span>Otras coincidencias</span>
       <button v-for="result in results.slice(1)" :key="`${result.latitud}-${result.longitud}`" type="button" @click="chooseResult(result)">{{ result.nombre }}</button>
