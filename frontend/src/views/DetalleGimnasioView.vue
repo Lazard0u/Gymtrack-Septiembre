@@ -14,10 +14,11 @@ import { api } from '../services/api'
 import { useAuthStore } from '../stores/auth'
 import { usePagosStore } from '../stores/pagos'
 import { estadoOperativo, filasHorario } from '../utils/horarios'
+import { imagenGimnasio } from '../utils/imagenGimnasio'
 
 const route = useRoute(); const router = useRouter(); const auth = useAuthStore(); const payments = usePagosStore()
 const gym = ref(null); const plans = ref([]); const status = ref('loading'); const plansStatus = ref('loading')
-const selectedPlan = ref(null); const notice = ref(null); const paying = ref(false); const sedeIndex = ref(0)
+const imagenFallida = ref(false); const selectedPlan = ref(null); const notice = ref(null); const paying = ref(false); const sedeIndex = ref(0)
 
 const isClosed = computed(() => gym.value?.estado === 'temporalmente_cerrado')
 const title = computed(() => gym.value?.nombre ? `${gym.value.nombre} | GymTrack` : 'Gimnasio | GymTrack')
@@ -82,9 +83,8 @@ onMounted(load)
     <div v-if="status === 'loading'" class="gym__loading" role="status" aria-label="Cargando el gimnasio"><AppSkeleton height="22rem" /><AppSkeleton height="14rem" /></div>
     <AppErrorState v-else-if="status === 'error'" title="No encontramos este gimnasio" description="Puede que no esté publicado o que el enlace haya cambiado." @retry="load" />
     <template v-else>
-      <header class="hero" :class="{ 'hero--empty': !gym.imagen_path }">
-        <img v-if="gym.imagen_path" class="hero__img" :src="gym.imagen_path" :alt="`Vista de ${gym.nombre}`" width="1200" height="700" />
-        <IconBarbell v-else class="hero__icon" :size="96" stroke-width="1" aria-hidden="true" />
+      <header class="hero">
+        <img class="hero__img" :src="imagenGimnasio(gym, imagenFallida)" :alt="gym.imagen_path && !imagenFallida ? `Vista de ${gym.nombre}` : ''" width="1200" height="700" @error="imagenFallida = true" />
         <div class="hero__body">
           <p class="hero__status">
             <span v-if="estado" class="state" :class="`state--${estado.tone}`"><i aria-hidden="true"></i>{{ estado.label }}</span>
@@ -173,7 +173,6 @@ onMounted(load)
 .hero { position: relative; display: flex; align-items: flex-end; min-height: 23rem; margin-top: var(--space-2); overflow: hidden; border-radius: var(--radius-dialog); background: linear-gradient(135deg, var(--surface-2), var(--surface-1)); isolation: isolate; }
 .hero__img { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; object-fit: cover; outline: 1px solid rgba(255, 255, 255, .1); outline-offset: -1px; }
 .hero::after { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to top, rgba(8, 11, 15, .95) 0%, rgba(8, 11, 15, .6) 36%, rgba(8, 11, 15, .08) 74%); }
-.hero__icon { position: absolute; top: var(--space-8); right: var(--space-10); z-index: -1; color: var(--text-tertiary); opacity: .35; }
 .hero__body { width: 100%; padding: clamp(var(--space-5), 3vw, var(--space-10)); }
 .hero__status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); margin: 0; font-size: .85rem; font-weight: 650; color: rgba(255, 255, 255, .86); }
 .state { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 800; }

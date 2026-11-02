@@ -18,6 +18,7 @@ import {
 } from '@tabler/icons-vue'
 import 'leaflet/dist/leaflet.css'
 import { estadoOperativo as operationalState } from '../../utils/horarios'
+import { imagenGimnasio } from '../../utils/imagenGimnasio'
 import { useAuthStore } from '../../stores/auth'
 import { useSocioStore } from '../../stores/socio'
 import { useGimnasiosPublicosStore } from '../../stores/gimnasiosPublicos'
@@ -525,7 +526,7 @@ onBeforeUnmount(() => {
           <button v-if="['denied', 'unavailable'].includes(locationStatus)" type="button" @click="useFallbackLocation">Continuar con vista general</button>
         </div>
         <article v-if="isHero && catalogStatus === 'ready' && selectedGym" class="hero-gym-card" aria-live="polite">
-          <span class="hero-gym-card__visual"><img v-if="selectedGym.imagen_path && !failedImages.has(selectedGym.imagen_path)" :src="selectedGym.imagen_path" alt="" width="160" height="120" @error="imageFailed(selectedGym.imagen_path)" /><IconMapPin v-else :size="24" aria-hidden="true" /></span>
+          <span class="hero-gym-card__visual"><img :src="imagenGimnasio(selectedGym, failedImages.has(selectedGym.imagen_path))" alt="" width="160" height="120" @error="selectedGym.imagen_path && imageFailed(selectedGym.imagen_path)" /></span>
           <div class="hero-gym-card__title">
             <div><strong>{{ selectedGym.nombre }}</strong><span>{{ selectedGym.direccion }} · {{ selectedGym.ciudad }}</span></div>
             <span class="hero-gym-card__badges"><AppBadge v-if="selectedGym.is_demo" tone="info">Demostración</AppBadge><AppBadge :tone="operationalState(selectedGym).tone">{{ operationalState(selectedGym).label }}</AppBadge></span>
@@ -600,7 +601,7 @@ onBeforeUnmount(() => {
           <div v-else class="gym-list">
             <article v-for="gym in visibleGyms" :key="gym.id" :ref="(element) => setCardElement(element, gym.id)" :class="['gym-card', { 'gym-card--selected': selectedGymId === gym.id }]">
               <button class="gym-card__select" type="button" :aria-pressed="selectedGymId === gym.id" :aria-label="`Ubicar ${gym.nombre} en el mapa`" @click="selectGym(gym)">
-                <span class="gym-card__visual"><img v-if="gym.imagen_path && !failedImages.has(gym.imagen_path)" :src="gym.imagen_path" alt="" width="800" height="500" loading="lazy" @error="imageFailed(gym.imagen_path)" /><IconMapPin v-else :size="28" aria-hidden="true" /></span>
+                <span class="gym-card__visual"><img :src="imagenGimnasio(gym, failedImages.has(gym.imagen_path))" alt="" width="800" height="500" loading="lazy" @error="gym.imagen_path && imageFailed(gym.imagen_path)" /></span>
                 <span class="gym-card__content">
                   <span class="gym-card__title"><strong>{{ gym.nombre }}</strong><span class="gym-card__badges"><AppBadge v-if="gym.is_demo" tone="info">Demostración</AppBadge><AppBadge :tone="operationalState(gym).tone">{{ operationalState(gym).label }}</AppBadge></span></span>
                   <span class="gym-card__location">{{ gym.direccion }} · {{ gym.ciudad }}, {{ gym.departamento }}</span>
