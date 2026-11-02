@@ -14,7 +14,6 @@ const auth = useAuthStore()
 const hasSession = computed(() => auth.estaAutenticado)
 
 const links = [
-  { label: 'Funciones', to: { name: 'home', hash: '#funciones' } },
   { label: 'Gimnasios', to: { name: 'gyms' } },
   { label: 'Planes', to: { name: 'plans' } },
   { label: 'Para gimnasios', to: { name: 'for-gyms' } },
