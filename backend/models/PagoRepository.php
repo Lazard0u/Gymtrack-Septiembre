@@ -73,7 +73,7 @@ final class PagoRepository
     {
         $this->expirePending($gymId);$stmt=$this->pdo->prepare('SELECT p.id,p.monto,p.moneda,p.metodo,p.estado,p.proveedor,p.referencia_externa,p.concepto,p.fecha_pago,p.fecha_vencimiento,p.creado_en,m.id membresia_id,m.estado membresia_estado,COALESCE(pm.nombre,m.plan) plan FROM pagos p JOIN membresias m ON m.id=p.membresia_id LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE p.gimnasio_id=? AND m.usuario_id=? AND p.is_demo=? AND (p.demo_dataset_id <=> ?) ORDER BY p.creado_en DESC');$stmt->execute([$gymId,$userId,$this->demoFlag(),$this->datasetId]);
         $plans=$this->pdo->prepare('SELECT id,nombre,descripcion,duracion_dias,precio,moneda,beneficios_json FROM planes_membresia WHERE gimnasio_id=? AND estado="activo" AND is_demo=? AND (demo_dataset_id <=> ?) ORDER BY precio');$plans->execute([$gymId,$this->demoFlag(),$this->datasetId]);$available=$plans->fetchAll();foreach($available as &$plan){$plan['beneficios']=json_decode((string)$plan['beneficios_json'],true)?:[];unset($plan['beneficios_json']);}
-        $provider=PagoProviderFactory::configured();return ['items'=>$stmt->fetchAll(),'plans'=>$available,'provider'=>['name'=>'mercado_pago','configured'=>$provider->isConfigured(),'simulated'=>$provider instanceof MercadoPagoSimulado,'mode'=>$this->mode()]];
+        $provider=PagoProviderFactory::configured();$gymName=$this->pdo->prepare('SELECT nombre FROM gimnasios WHERE id=?');$gymName->execute([$gymId]);return ['gimnasio_nombre'=>$gymName->fetchColumn()?:null,'items'=>$stmt->fetchAll(),'plans'=>$available,'provider'=>['name'=>'mercado_pago','configured'=>$provider->isConfigured(),'simulated'=>$provider instanceof MercadoPagoSimulado,'mode'=>$this->mode()]];
     }
 
     public function createCheckout(int $gymId,int $userId,int $planId,string $key,PagoProviderInterface $provider): array
@@ -83,7 +83,7 @@ final class PagoRepository
         try{
             $existing=$this->paymentByKey($gymId,$key,true);if($existing){$this->pdo->commit();return $this->checkoutPayload($existing);}
             $lock=$this->pdo->prepare('SELECT id,email FROM usuarios WHERE id=? AND is_demo=? AND (demo_dataset_id <=> ?) FOR UPDATE');$lock->execute([$userId,$this->demoFlag(),$this->datasetId]);$user=$lock->fetch();if(!$user)ApiResponder::error(403,'dataset_scope_mismatch','La cuenta no pertenece al conjunto de datos activo.');
-            $assigned=$this->pdo->prepare('SELECT COUNT(*) FROM usuario_gimnasio_roles ugr JOIN roles r ON r.id=ugr.rol_id WHERE ugr.usuario_id=? AND ugr.gimnasio_id=? AND ugr.activo=1 AND r.nombre="socio"');$assigned->execute([$userId,$gymId]);if((int)$assigned->fetchColumn()!==1)ApiResponder::error(403,'gym_scope_mismatch','No tenés una asociación de socio con este gimnasio.');
+            $assigned=$this->pdo->prepare('SELECT COUNT(*) FROM usuario_gimnasio_roles ugr JOIN roles r ON r.id=ugr.rol_id WHERE ugr.usuario_id=? AND ugr.gimnasio_id=? AND ugr.activo=1 AND r.nombre="socio"');$assigned->execute([$userId,$gymId]);if((int)$assigned->fetchColumn()!==1)$this->assertJoinable($gymId,$userId);
             $pending=$this->pdo->prepare('SELECT p.* FROM pagos p JOIN membresias m ON m.id=p.membresia_id WHERE p.gimnasio_id=? AND m.usuario_id=? AND m.plan_id=? AND p.estado="pendiente" AND p.fecha_vencimiento>NOW() ORDER BY p.id DESC LIMIT 1');$pending->execute([$gymId,$userId,$planId]);if($row=$pending->fetch()){$this->pdo->commit();return $this->checkoutPayload($row);}
             $planStmt=$this->pdo->prepare('SELECT * FROM planes_membresia WHERE id=? AND gimnasio_id=? AND estado="activo" AND is_demo=? AND (demo_dataset_id <=> ?)');$planStmt->execute([$planId,$gymId,$this->demoFlag(),$this->datasetId]);$plan=$planStmt->fetch();if(!$plan)ApiResponder::error(422,'plan_not_available','El plan seleccionado no está disponible.',['plan_id'=>'Elegí un plan activo del gimnasio.']);
             $start=new DateTimeImmutable('today');$end=$start->modify('+'.(int)$plan['duracion_dias'].' days');$legacy=(int)$plan['duracion_dias']>=300?'anual':((int)$plan['duracion_dias']>=80?'trimestral':'mensual');
@@ -122,7 +122,10 @@ final class PagoRepository
             $map=['approved'=>'aprobado','pending'=>'pendiente','in_process'=>'pendiente','rejected'=>'rechazado','cancelled'=>'cancelado','refunded'=>'reembolsado','charged_back'=>'reembolsado'];$new=$map[$providerData['status']]??'pendiente';$old=(string)$payment['estado'];$new=$this->providerState($old,$new);
             $approved=$new==='aprobado'?($providerData['approved_at']?:date('Y-m-d H:i:s')):null;$rejected=$new==='rechazado'?date('Y-m-d H:i:s'):null;$refunded=$new==='reembolsado'?date('Y-m-d H:i:s'):null;$metadata=json_encode(['provider_payment_id'=>$providerData['provider_payment_id'],'status_detail'=>$providerData['status_detail'],'live_mode'=>$providerData['live_mode']],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
             $update=$this->pdo->prepare('UPDATE pagos SET estado=?,metodo=?,modo=?,fecha_pago=IF(?="aprobado",COALESCE(fecha_pago,?),fecha_pago),aprobado_en=COALESCE(?,aprobado_en),rechazado_en=COALESCE(?,rechazado_en),reembolsado_en=COALESCE(?,reembolsado_en),metadata_json=? WHERE id=?');$update->execute([$new,$providerData['method'],$providerData['live_mode']?'produccion':'prueba',$new,$approved,$approved,$rejected,$refunded,$metadata,(int)$payment['id']]);
-            if($new==='aprobado')$this->activateMembership($payment,$approved??date('Y-m-d H:i:s'),null,'Pago de Mercado Pago confirmado');
+            if($new==='aprobado'){
+                $this->activateMembership($payment,$approved??date('Y-m-d H:i:s'),null,'Pago de Mercado Pago confirmado');
+                (new AdminManagementRepository($this->datasetId))->joinAsMember((int)$payment['gimnasio_id'],(int)$payment['usuario_id']); // pagar te hace socio del gimnasio
+            }
             $this->event((int)$payment['id'],'mercado_pago',$eventId,'payment.'.$providerData['status'],$old,$new,$payload);
             $this->pdo->commit();return ['duplicate'=>false,'payment_id'=>(int)$payment['id'],'state'=>$new];
         }catch(Throwable $error){if($this->pdo->inTransaction())$this->pdo->rollBack();throw $error;}
@@ -283,6 +286,14 @@ final class PagoRepository
     {
         $date=static fn(string $key):string=>preg_match('/^\d{4}-\d{2}-\d{2}$/',(string)($input[$key]??''))?(string)$input[$key]:'';$statuses=['pendiente','aprobado','rechazado','vencido','reembolsado','cancelado'];
         return ['page'=>max(1,(int)($input['page']??1)),'per_page'=>max(10,min(50,(int)($input['per_page']??20))),'q'=>mb_substr(trim((string)($input['q']??'')),0,100),'status'=>in_array((string)($input['status']??''),$statuses,true)?(string)$input['status']:'','method'=>mb_substr(trim((string)($input['method']??'')),0,40),'from'=>$date('from'),'to'=>$date('to'),'sort'=>mb_substr((string)($input['sort']??''),0,30),'direction'=>(string)($input['direction']??'desc')==='asc'?'asc':'desc'];
+    }
+
+    /** Quien todavía no es socio puede pagar si el gimnasio está publicado: al aprobarse el pago queda asociado como socio. */
+    private function assertJoinable(int $gymId,int $userId): void
+    {
+        if((new AuthorizationService())->globalRole($userId)!=='socio')ApiResponder::error(403,'member_account_required','Para pagar una membresía necesitás una cuenta de socio.');
+        $stmt=$this->pdo->prepare('SELECT COUNT(*) FROM gimnasios WHERE id=? AND estado="publicado" AND archivado_en IS NULL AND is_demo=? AND (demo_dataset_id <=> ?)');$stmt->execute([$gymId,$this->demoFlag(),$this->datasetId]);
+        if((int)$stmt->fetchColumn()!==1)ApiResponder::error(403,'gym_not_joinable','Este gimnasio no acepta nuevos socios en este momento.');
     }
 
     private function activateMembership(array $membership,string $paidAt,?int $actor,string $reason): void

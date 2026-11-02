@@ -8,7 +8,7 @@ export const usePagosStore = defineStore('payments', {
   state: () => ({
     items: [], pagination: { page: 1, per_page: 20, total: 0, total_pages: 1 }, options: { memberships: [], provider: {} },
     finance: null, exports: [], exportPagination: { page: 1, per_page: 20, total: 0, total_pages: 1 },
-    memberItems: [], memberPlans: [], memberProvider: {},
+    memberItems: [], memberPlans: [], memberProvider: {}, memberGymName: '',
     paymentsStatus: 'idle', financeStatus: 'idle', exportsStatus: 'idle', memberStatus: 'idle',
     paymentsError: '', financeError: '', exportsError: '', memberError: '', working: '', controller: null,
   }),
@@ -57,22 +57,22 @@ export const usePagosStore = defineStore('payments', {
       if (!response.ok) throw new Error(message(response, 'No se pudo generar el reporte.'))
       await this.loadExports(); return response.data.data
     },
-    async loadMember() {
+    async loadMember(gymId = null) {
       this.memberStatus = 'loading'; this.memberError = ''
-      const response = await api.get('/payments/mine')
+      const response = await api.get('/payments/mine', { params: gymId ? { gimnasio_id: gymId } : {} })
       if (!response.ok) { this.memberStatus = 'error'; this.memberError = message(response, 'No se pudieron cargar tus pagos.'); return false }
-      const data = response.data.data || {}; this.memberItems = data.items || []; this.memberPlans = data.plans || []; this.memberProvider = data.provider || {}; this.memberStatus = 'ready'; return true
+      const data = response.data.data || {}; this.memberItems = data.items || []; this.memberPlans = data.plans || []; this.memberProvider = data.provider || {}; this.memberGymName = data.gimnasio_nombre || ''; this.memberStatus = 'ready'; return true
     },
-    async checkout(planId) {
+    async checkout(planId, gymId = null) {
       this.working = `checkout-${planId}`
-      const response = await api.post('/payments/checkout', { plan_id: planId }, { headers: { 'Idempotency-Key': key() } })
+      const response = await api.post('/payments/checkout', { plan_id: planId, ...(gymId ? { gimnasio_id: gymId } : {}) }, { headers: { 'Idempotency-Key': key() } })
       this.working = ''
       if (!response.ok) throw new Error(message(response, 'No se pudo iniciar el pago.'))
       return response.data.data
     },
-    async simulate(reference, outcome, method) {
+    async simulate(reference, outcome, method, gymId = null) {
       this.working = `simulate-${reference}`
-      const response = await api.post('/payments/simulate', { reference, outcome, method })
+      const response = await api.post('/payments/simulate', { reference, outcome, method, ...(gymId ? { gimnasio_id: gymId } : {}) })
       this.working = ''
       if (!response.ok) throw new Error(message(response, 'No se pudo procesar el pago simulado.'))
       return response.data.data.payment

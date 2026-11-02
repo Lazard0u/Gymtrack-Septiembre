@@ -27,7 +27,6 @@ const hoy = computed(() => horario.value.find((fila) => fila.hoy && !fila.cerrad
 const sedes = computed(() => (gym.value?.sedes?.length ? gym.value.sedes : [{ id: 0, nombre: 'Sede principal', direccion: gym.value?.direccion, ciudad: gym.value?.ciudad, departamento: gym.value?.departamento, latitud: gym.value?.latitud, longitud: gym.value?.longitud }]))
 const sede = computed(() => sedes.value[sedeIndex.value] || sedes.value[0])
 const chosen = computed(() => plans.value.find((plan) => plan.id === selectedPlan.value) || null)
-const isMember = computed(() => (auth.user?.gimnasios || []).some((item) => Number(item.gimnasio_id) === Number(gym.value?.id) && item.rol_nombre === 'socio'))
 const loginTarget = computed(() => ({ name: 'login', query: { redirect: router.resolve({ name: 'gym-detail', params: { slug: route.params.slug }, query: chosen.value ? { plan: chosen.value.id } : {} }).fullPath } }))
 const hechos = computed(() => [[gym.value?.clases_activas, 'clases activas'], [plans.value.length, 'planes'], [sedes.value.length, sedes.value.length === 1 ? 'sede' : 'sedes']].filter(([count]) => Number(count) > 0))
 
@@ -56,21 +55,19 @@ async function loadPlans() {
   plansStatus.value = 'ready'
 }
 
-// Solo un socio del gimnasio puede pagar: el alta la hace hoy el propio gimnasio, por eso los demás reciben una explicación y no un error.
+// Pagar te hace socio: el backend asocia al comprador al gimnasio cuando el pago queda aprobado.
 async function startCheckout() {
   if (!chosen.value || isClosed.value) return
   notice.value = null
   if (!auth.initialized) await auth.probe()
   if (!auth.estaAutenticado) { router.push(loginTarget.value); return }
   if (auth.user.role !== 'socio') { notice.value = { tone: 'info', title: 'Los planes se pagan con una cuenta de socio', text: 'Iniciaste sesión con otro rol. Ingresá con tu cuenta de socio para pagar una membresía.' }; return }
-  if (!isMember.value) { notice.value = { tone: 'info', title: 'Todavía no sos socio de este gimnasio', text: 'Hoy el alta como socio la hace el gimnasio. Escribile para que te asocie y después vas a poder pagar el plan desde acá.' }; return }
   paying.value = true
   try {
-    if (Number(auth.user.active_gym_id) !== Number(gym.value.id)) await auth.cambiarGimnasio(gym.value.id)
-    const result = await payments.checkout(chosen.value.id)
+    const result = await payments.checkout(chosen.value.id, gym.value.id)
     const url = result.checkout_url
     if (!url) notice.value = { tone: 'warning', title: 'Checkout todavía no disponible', text: 'El pago se registró, pero el proveedor no devolvió una dirección de pago.' }
-    else if (url.startsWith('/')) router.push(url)
+    else if (url.startsWith('/')) router.push({ path: url, query: { gym: gym.value.id } })
     else window.location.assign(url)
   } catch (error) {
     notice.value = { tone: 'danger', title: 'No se pudo iniciar el pago', text: error.message }
@@ -157,7 +154,7 @@ onMounted(load)
                 <ul v-if="chosen.beneficios?.length"><li v-for="benefit in chosen.beneficios" :key="benefit"><IconCheck :size="16" />{{ benefit }}</li></ul>
               </div>
               <AppButton block :disabled="isClosed || !chosen" :loading="paying" @click="startCheckout">{{ chosen && !isClosed ? `Pagar ${money(chosen.precio, chosen.moneda)}` : 'Elegí un plan' }}</AppButton>
-              <p class="plans__foot">Pagás con Mercado Pago. La membresía se activa cuando el pago queda aprobado.</p>
+              <p class="plans__foot">Pagás con Mercado Pago. Cuando el pago se aprueba, tu membresía se activa y quedás como socio del gimnasio.</p>
               <p v-if="!auth.estaAutenticado" class="plans__foot">¿Ya sos socio? <RouterLink :to="loginTarget">Iniciá sesión</RouterLink> para pagar.</p>
             </template>
           </div>

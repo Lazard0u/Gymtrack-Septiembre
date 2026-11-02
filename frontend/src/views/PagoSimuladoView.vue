@@ -17,7 +17,8 @@ const METHODS = [
   { id: 'account_money', title: 'Dinero disponible en Mercado Pago', hint: 'Pagás con el saldo de tu cuenta', icon: IconWallet, card: false },
 ]
 const current = computed(() => METHODS.find((item) => item.id === method.value))
-const gymName = computed(() => (auth.user?.gimnasios || []).find((gym) => Number(gym.gimnasio_id) === Number(auth.user?.active_gym_id))?.nombre || 'tu gimnasio')
+const gymId = computed(() => Number(route.query.gym) || Number(auth.user?.active_gym_id) || null)
+const gymName = computed(() => payments.memberGymName || 'tu gimnasio')
 const total = computed(() => money(payment.value?.monto, payment.value?.moneda))
 const duration = computed(() => payments.memberPlans.find((plan) => plan.nombre === payment.value?.plan)?.duracion_dias || null)
 const brand = computed(() => { const n = card.number.replace(/\s/g, ''); if (/^4/.test(n)) return 'Visa'; if (/^(5[1-5]|2[2-7])/.test(n)) return 'Mastercard'; if (/^3[47]/.test(n)) return 'American Express'; return '' })
@@ -53,7 +54,7 @@ function outcome() {
 
 async function load() {
   phase.value = 'loading'
-  const ok = await payments.loadMember()
+  const ok = await payments.loadMember(gymId.value)
   const found = payments.memberItems.find((item) => item.referencia_externa === route.params.referencia)
   if (!ok || !found) { phase.value = 'error'; return }
   payment.value = found
@@ -68,9 +69,13 @@ async function pay() {
   paidWith.value = current.value.card ? `${brand.value || 'Tarjeta'} terminada en ${card.number.replace(/\s/g, '').slice(-4)}` : 'Dinero en cuenta'
   try {
     // Solo viaja la referencia, el medio y el resultado: los datos de la tarjeta nunca salen del navegador.
-    const [result] = await Promise.all([payments.simulate(payment.value.referencia_externa, decision.ok ? 'approved' : 'rejected', method.value), new Promise((resolve) => { timer = setTimeout(resolve, 1900) })])
+    const [result] = await Promise.all([payments.simulate(payment.value.referencia_externa, decision.ok ? 'approved' : 'rejected', method.value, gymId.value), new Promise((resolve) => { timer = setTimeout(resolve, 1900) })])
     payment.value = { ...payment.value, ...result }
-    if (result.estado === 'aprobado') phase.value = 'approved'
+    if (result.estado === 'aprobado') {
+      phase.value = 'approved'
+      // El pago te hizo socio: se pasa a ese gimnasio para que el panel y Mis pagos ya lo muestren.
+      if (gymId.value && Number(auth.user?.active_gym_id) !== gymId.value) await auth.cambiarGimnasio(gymId.value).catch(() => {})
+    }
     else { problem.value = decision.reason || 'No pudimos procesar el pago. Probá con otro medio.'; phase.value = 'rejected' }
   } catch (failure) {
     problem.value = failure.message; phase.value = 'ready'
