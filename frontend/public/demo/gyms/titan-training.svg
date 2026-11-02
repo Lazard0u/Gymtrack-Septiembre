@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
-  <title id="title">Placeholder de Titan Training</title><desc id="desc">Imagen abstracta índigo identificada como demostración.</desc>
-  <rect width="800" height="500" fill="#11131b"/><path d="M0 410 205 170l145 110L530 85l270 240v175H0Z" fill="#24263b"/><circle cx="642" cy="134" r="82" fill="#635bce"/>
+  <title id="title">Placeholder de Titan Training</title><desc id="desc">Ilustración abstracta de entrenamiento identificada como demostración.</desc>
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0c1319"/><stop offset="1" stop-color="#121e27"/></linearGradient>
+    <radialGradient id="luz" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#e59a3c" stop-opacity=".30"/><stop offset="1" stop-color="#e59a3c" stop-opacity="0"/></radialGradient>
+    <pattern id="rayas" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(32)"><rect width="2" height="28" fill="#fff" fill-opacity=".035"/></pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#fondo)"/><rect width="800" height="500" fill="url(#rayas)"/>
+  <circle cx="610" cy="170" r="260" fill="url(#luz)"/>
+  <g transform="translate(610 170)" fill="#e59a3c" stroke="#e59a3c"><circle r="168" fill-opacity=".9" stroke="none"/><circle r="140" fill="none" stroke="#0c1319" stroke-opacity=".45" stroke-width="6"/><circle r="104" fill="none" stroke="#0c1319" stroke-opacity=".3" stroke-width="4"/><circle r="40" fill="#0c1319" fill-opacity=".75" stroke="none"/></g>
 </svg>

@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
-  <title id="title">Placeholder de GymTrack Centro</title><desc id="desc">Imagen abstracta azul identificada como demostración.</desc>
-  <rect width="800" height="500" fill="#10151b"/><path d="M0 390 260 130l130 130L580 70l220 220v210H0Z" fill="#192a3d"/><circle cx="625" cy="125" r="78" fill="#0969da"/>
+  <title id="title">Placeholder de GymTrack Centro</title><desc id="desc">Ilustración abstracta de entrenamiento identificada como demostración.</desc>
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0c1319"/><stop offset="1" stop-color="#121e27"/></linearGradient>
+    <radialGradient id="luz" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#35b37e" stop-opacity=".30"/><stop offset="1" stop-color="#35b37e" stop-opacity="0"/></radialGradient>
+    <pattern id="rayas" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(32)"><rect width="2" height="28" fill="#fff" fill-opacity=".035"/></pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#fondo)"/><rect width="800" height="500" fill="url(#rayas)"/>
+  <circle cx="610" cy="170" r="260" fill="url(#luz)"/>
+  <g transform="translate(610 170)" fill="#35b37e" stroke="#35b37e"><g transform="rotate(-24)"><rect x="-190" y="-13" width="380" height="26" rx="13" fill-opacity=".55" stroke="none"/><rect x="-250" y="-88" width="42" height="176" rx="12" fill-opacity=".92" stroke="none"/><rect x="-208" y="-64" width="26" height="128" rx="9" fill-opacity=".7" stroke="none"/><rect x="208" y="-88" width="42" height="176" rx="12" fill-opacity=".92" stroke="none"/><rect x="182" y="-64" width="26" height="128" rx="9" fill-opacity=".7" stroke="none"/></g></g>
 </svg>

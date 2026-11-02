@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title desc">
-  <title id="title">Placeholder de Punto Activo</title><desc id="desc">Imagen abstracta ámbar identificada como demostración.</desc>
-  <rect width="800" height="500" fill="#15120d"/><path d="M0 380 220 145l140 120L550 90l250 245v165H0Z" fill="#34291b"/><rect x="585" y="72" width="145" height="145" rx="72" fill="#b77a21"/>
+  <title id="title">Placeholder de Punto Activo</title><desc id="desc">Ilustración abstracta de entrenamiento identificada como demostración.</desc>
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0c1319"/><stop offset="1" stop-color="#121e27"/></linearGradient>
+    <radialGradient id="luz" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#2bb8c6" stop-opacity=".30"/><stop offset="1" stop-color="#2bb8c6" stop-opacity="0"/></radialGradient>
+    <pattern id="rayas" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(32)"><rect width="2" height="28" fill="#fff" fill-opacity=".035"/></pattern>
+  </defs>
+  <rect width="800" height="500" fill="url(#fondo)"/><rect width="800" height="500" fill="url(#rayas)"/>
+  <circle cx="610" cy="170" r="260" fill="url(#luz)"/>
+  <g transform="translate(610 170)" fill="#2bb8c6" stroke="#2bb8c6"><path d="M-300 20H-130L-88 -92L-22 126L34 -66L66 20H300" fill="none" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".9"/><path d="M-300 20H-130L-88 -92L-22 126L34 -66L66 20H300" fill="none" stroke-width="58" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".12"/></g>
 </svg>

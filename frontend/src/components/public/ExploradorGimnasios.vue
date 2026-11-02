@@ -17,6 +17,7 @@ import {
   IconStar,
 } from '@tabler/icons-vue'
 import 'leaflet/dist/leaflet.css'
+import { estadoOperativo as operationalState } from '../../utils/horarios'
 import { useAuthStore } from '../../stores/auth'
 import { useSocioStore } from '../../stores/socio'
 import { useGimnasiosPublicosStore } from '../../stores/gimnasiosPublicos'
@@ -342,32 +343,6 @@ function primarySchedule(gym) {
   return 'Horario no publicado'
 }
 
-function operationalState(gym) {
-  if (gym?.estado === 'temporalmente_cerrado') return { label: 'Cerrado temporalmente', tone: 'warning' }
-  const schedules = gym?.horarios
-  if (!schedules || Array.isArray(schedules)) return { label: 'Consultar horario', tone: 'neutral' }
-  try {
-    const now = new Date()
-    const weekday = new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: gym.zona_horaria || 'America/Montevideo' }).format(now).toLowerCase()
-    const dayNames = { monday: 'lunes', tuesday: 'martes', wednesday: 'miercoles', thursday: 'jueves', friday: 'viernes', saturday: 'sabado', sunday: 'domingo' }
-    const day = dayNames[weekday]
-    const workday = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes'].includes(day)
-    const entry = Object.entries(schedules).find(([key]) => key === day || (workday && key === 'lunes_viernes') || (day !== 'domingo' && key === 'lunes_sabado'))
-    if (!entry) return { label: 'Horario no publicado', tone: 'neutral' }
-    const hours = String(entry[1])
-    if (hours.toLocaleLowerCase('es').includes('cerrado')) return { label: 'Cerrado ahora', tone: 'neutral' }
-    const range = hours.match(/(\d{1,2}):(\d{2})\D+(\d{1,2}):(\d{2})/)
-    if (!range) return { label: hours, tone: 'neutral' }
-    const parts = new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: gym.zona_horaria || 'America/Montevideo' }).formatToParts(now)
-    const minutes = Number(parts.find((part) => part.type === 'hour')?.value) * 60 + Number(parts.find((part) => part.type === 'minute')?.value)
-    const opens = Number(range[1]) * 60 + Number(range[2])
-    const closes = Number(range[3]) * 60 + Number(range[4])
-    return minutes >= opens && minutes < closes ? { label: 'Abierto ahora', tone: 'success' } : { label: 'Cerrado ahora', tone: 'neutral' }
-  } catch {
-    return { label: 'Consultar horario', tone: 'neutral' }
-  }
-}
-
 function imageFailed(path) {
   failedImages.value = new Set([...failedImages.value, path])
 }
@@ -660,7 +635,7 @@ onBeforeUnmount(() => {
 .hero-map-search :deep(.field) { gap: 0; }
 .hero-map-search :deep(.field__label) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .hero-map-search :deep(.field__control) { min-height: 3rem; padding-inline: var(--space-4); background: var(--surface-glass); box-shadow: var(--shadow-md); backdrop-filter: blur(12px); }
-.explorer--hero .map-tools { top: 4.5rem; }
+.explorer--hero .map-tools { top: var(--space-4); min-height: 3rem; }
 .explorer--hero :deep(.leaflet-top.leaflet-left) { top: 3.75rem; }
 .hero-location-status { position: absolute; top: 8rem; left: var(--space-4); z-index: 3; display: grid; width: min(24rem, calc(100% - var(--space-8))); grid-template-columns: auto minmax(0, 1fr); gap: var(--space-2) var(--space-3); border: 1px solid var(--border-strong); border-radius: var(--radius-card); padding: var(--space-3); background: var(--surface-glass); box-shadow: var(--shadow-md); backdrop-filter: blur(12px); }
 .hero-location-status > svg { color: var(--warning); }
