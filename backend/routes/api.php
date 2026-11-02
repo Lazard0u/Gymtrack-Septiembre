@@ -85,6 +85,7 @@ $rutas = [
     'DELETE /api/bookings/(\d+)'                  => ['AgendaController', 'memberCancel'],
     'GET /api/payments/mine'                        => ['PagoController', 'memberList'],
     'POST /api/payments/checkout'                   => ['PagoController', 'checkout'],
+    'POST /api/payments/simulate'                   => ['PagoController', 'simulate'],
     'GET /api/membresia/mia'         => ['MembresiaController', 'mia'],
     'POST /api/membresia/activar'    => ['MembresiaController', 'activar'],
     'POST /api/membresia/suspender'  => ['MembresiaController', 'suspender'],

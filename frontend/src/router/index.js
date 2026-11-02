@@ -11,6 +11,7 @@ import HomeView from '../views/InicioView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const LoginView = () => import('../views/IniciarSesionView.vue')
+const PagoSimuladoView = () => import('../views/PagoSimuladoView.vue')
 const RegisterView = () => import('../views/RegistroView.vue')
 const OwnerRegisterView = () => import('../views/RegistroDuenoView.vue')
 const ForgotPasswordView = () => import('../views/RecuperarContrasenaView.vue')
@@ -162,6 +163,12 @@ const routes = [
     name: 'member-payments',
     component: MemberPaymentsView,
     meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], requiredPermission: 'payments.read', title: 'Mis pagos | GymTrack' },
+  },
+  {
+    path: '/pago-simulado/:referencia',
+    name: 'pago-simulado',
+    component: PagoSimuladoView,
+    meta: { requiresAuth: true, requiresVerifiedEmail: true, allowedRoles: ['socio'], requiredPermission: 'payments.read', title: 'Pagar membresía | GymTrack' },
   },
   {
     path: '/perfil',

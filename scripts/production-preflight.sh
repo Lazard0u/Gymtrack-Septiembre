@@ -206,6 +206,10 @@ case "$session_idle:$session_absolute" in
         ;;
 esac
 
+payment_provider=$(read_value PAYMENT_PROVIDER)
+if [ "${payment_provider:-mercado_pago}" != 'mercado_pago' ]; then
+    fail 'PAYMENT_PROVIDER debe ser mercado_pago en producción. El pago simulado es solo para desarrollo.'
+fi
 payment_mode=$(read_value PAYMENT_MODE)
 payment_mode=${payment_mode:-test}
 access_token=$(read_value MERCADO_PAGO_ACCESS_TOKEN)

@@ -24,6 +24,15 @@ final class PagoController
     }
     public function memberList(): void{AuthMiddleware::verificarRol('socio');AuthMiddleware::verificarPermiso('payments.read');$gym=AuthMiddleware::requerirContextoGimnasio();ApiResponder::success((new PagoRepository(AuthMiddleware::obtenerDemoDatasetId()))->memberPayments($gym,AuthMiddleware::obtenerUsuarioId()));}
     public function checkout(): void{AuthMiddleware::verificarRol('socio');AuthMiddleware::verificarPermiso('payments.read');$gym=AuthMiddleware::requerirContextoGimnasio();$plan=(int)($this->body()['plan_id']??0);if($plan<1)ApiResponder::error(422,'validation_error','Seleccioná un plan.',['plan_id'=>'El plan es obligatorio.']);$result=(new PagoRepository(AuthMiddleware::obtenerDemoDatasetId()))->createCheckout($gym,AuthMiddleware::obtenerUsuarioId(),$plan,$this->key(),PagoProviderFactory::configured());ApiResponder::success($result,201);}
+    public function simulate(): void
+    {
+        AuthMiddleware::verificarRol('socio');AuthMiddleware::verificarPermiso('payments.read');$gym=AuthMiddleware::requerirContextoGimnasio();
+        if(!(PagoProviderFactory::configured() instanceof MercadoPagoSimulado))ApiResponder::error(404,'simulation_disabled','El pago simulado no está habilitado.');
+        $body=$this->body();$reference=trim((string)($body['reference']??''));$outcome=(string)($body['outcome']??'');$method=(string)($body['method']??'');
+        if(!preg_match('/^GT-[A-F0-9]{32}$/',$reference)||!in_array($outcome,['approved','rejected'],true)||!in_array($method,['credit_card','debit_card','account_money'],true))ApiResponder::error(422,'validation_error','Los datos del pago no son válidos.');
+        $payment=(new PagoRepository(AuthMiddleware::obtenerDemoDatasetId()))->simulate($gym,AuthMiddleware::obtenerUsuarioId(),$reference,$outcome==='approved',$method);
+        ApiResponder::success(['payment'=>array_intersect_key($payment,array_flip(['id','estado','monto','moneda','metodo','concepto','plan','referencia_externa','fecha_pago','fecha_vencimiento','duracion_dias']))]);
+    }
     public function mercadoPagoWebhook(): void
     {
         $body=$this->body(false);$dataId=trim((string)($body['data']['id']??$_GET['data_id']??$_GET['id']??''));$type=(string)($body['type']??$_GET['type']??'');if($type!=='payment'||$dataId==='')ApiResponder::success(['ignored'=>true]);$provider=new MercadoPagoProvider();$signature=(string)($_SERVER['HTTP_X_SIGNATURE']??'');$providerRequestId=(string)($_SERVER['HTTP_X_REQUEST_ID']??'');if(!$provider->verifyWebhook($dataId,$providerRequestId,$signature))ApiResponder::error(401,'invalid_webhook_signature','La firma del webhook no es válida.');$providerData=$provider->fetchPayment($dataId);$eventId=trim((string)($body['id']??''));if($eventId==='')$eventId=$dataId.'-'.($body['action']??'payment.updated');$result=(new PagoRepository(null))->applyProviderUpdate($providerData,$eventId,$body);ApiResponder::success($result);

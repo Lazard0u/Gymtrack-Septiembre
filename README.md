@@ -193,7 +193,9 @@ La implementación usa un proxy PHP con caché, limita las consultas externas a 
 
 ## Configurar pagos
 
-Sin credenciales la aplicación permite consultar planes, pagos y finanzas, pero no muestra un checkout funcional. Para habilitar Mercado Pago agregá en `.env`:
+En desarrollo el valor por defecto es `PAYMENT_PROVIDER=mercado_pago_simulado`: el socio elige un plan en la ficha del gimnasio y paga en un checkout de prueba dentro de la propia app. Ahí se puede aprobar o rechazar un pago con tarjetas de prueba (`APRO` aprueba, `FUND` y `OTHE` rechazan) sin credenciales ni dinero real, y los datos de la tarjeta nunca salen del navegador. El proveedor simulado se rechaza si `APP_ENV=production` y `scripts/production-preflight.sh` bloquea el despliegue.
+
+Para usar Mercado Pago de verdad agregá en `.env`:
 
 ```dotenv
 APP_URL=https://api.tu-dominio.com

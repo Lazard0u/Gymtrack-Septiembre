@@ -70,6 +70,13 @@ export const usePagosStore = defineStore('payments', {
       if (!response.ok) throw new Error(message(response, 'No se pudo iniciar el pago.'))
       return response.data.data
     },
+    async simulate(reference, outcome, method) {
+      this.working = `simulate-${reference}`
+      const response = await api.post('/payments/simulate', { reference, outcome, method })
+      this.working = ''
+      if (!response.ok) throw new Error(message(response, 'No se pudo procesar el pago simulado.'))
+      return response.data.data.payment
+    },
     reset() { this.$reset() },
   },
 })

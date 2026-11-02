@@ -73,7 +73,7 @@ final class PagoRepository
     {
         $this->expirePending($gymId);$stmt=$this->pdo->prepare('SELECT p.id,p.monto,p.moneda,p.metodo,p.estado,p.proveedor,p.referencia_externa,p.concepto,p.fecha_pago,p.fecha_vencimiento,p.creado_en,m.id membresia_id,m.estado membresia_estado,COALESCE(pm.nombre,m.plan) plan FROM pagos p JOIN membresias m ON m.id=p.membresia_id LEFT JOIN planes_membresia pm ON pm.id=m.plan_id WHERE p.gimnasio_id=? AND m.usuario_id=? AND p.is_demo=? AND (p.demo_dataset_id <=> ?) ORDER BY p.creado_en DESC');$stmt->execute([$gymId,$userId,$this->demoFlag(),$this->datasetId]);
         $plans=$this->pdo->prepare('SELECT id,nombre,descripcion,duracion_dias,precio,moneda,beneficios_json FROM planes_membresia WHERE gimnasio_id=? AND estado="activo" AND is_demo=? AND (demo_dataset_id <=> ?) ORDER BY precio');$plans->execute([$gymId,$this->demoFlag(),$this->datasetId]);$available=$plans->fetchAll();foreach($available as &$plan){$plan['beneficios']=json_decode((string)$plan['beneficios_json'],true)?:[];unset($plan['beneficios_json']);}
-        return ['items'=>$stmt->fetchAll(),'plans'=>$available,'provider'=>['name'=>'mercado_pago','configured'=>(new MercadoPagoProvider())->isConfigured(),'mode'=>$this->mode()]];
+        $provider=PagoProviderFactory::configured();return ['items'=>$stmt->fetchAll(),'plans'=>$available,'provider'=>['name'=>'mercado_pago','configured'=>$provider->isConfigured(),'simulated'=>$provider instanceof MercadoPagoSimulado,'mode'=>$this->mode()]];
     }
 
     public function createCheckout(int $gymId,int $userId,int $planId,string $key,PagoProviderInterface $provider): array
@@ -95,6 +95,20 @@ final class PagoRepository
             $metadata=json_encode(['checkout_url'=>$checkout['checkout_url'],'production_url'=>$checkout['production_url']],JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);$stmt=$this->pdo->prepare('UPDATE pagos SET preferencia_externa=?,metadata_json=? WHERE id=?');$stmt->execute([$checkout['preference_id'],$metadata,$paymentId]);
             return ['payment'=>$this->payment($gymId,$paymentId),'checkout_url'=>$checkout['checkout_url']];
         }catch(Throwable $error){if($this->pdo->inTransaction())$this->pdo->rollBack();if(isset($paymentId)){$this->pdo->prepare('UPDATE pagos SET estado="rechazado",rechazado_en=NOW() WHERE id=? AND estado="pendiente"')->execute([$paymentId]);}throw $error;}
+    }
+
+    /** Aprueba o rechaza un pago simulado del propio socio usando el mismo camino que el webhook real. */
+    public function simulate(int $gymId,int $userId,string $reference,bool $approve,string $method): array
+    {
+        $stmt=$this->pdo->prepare('SELECT p.id,p.estado,p.monto,p.moneda,p.fecha_vencimiento FROM pagos p JOIN membresias m ON m.id=p.membresia_id WHERE p.referencia_externa=? AND p.gimnasio_id=? AND m.usuario_id=? AND p.is_demo=? AND (p.demo_dataset_id <=> ?)');
+        $stmt->execute([$reference,$gymId,$userId,$this->demoFlag(),$this->datasetId]);$row=$stmt->fetch();
+        if(!$row)ApiResponder::error(404,'payment_not_found','No encontramos ese pago.');
+        $vigente=new DateTimeImmutable((string)$row['fecha_vencimiento'])>new DateTimeImmutable('now');
+        if($row['estado']==='pendiente'||($row['estado']==='rechazado'&&$vigente)){ // como en un checkout real, un pago rechazado puede reintentarse hasta que venza la solicitud
+            $id='SIM-'.$row['id'];$status=$approve?'approved':'rejected';
+            $this->applyProviderUpdate(['external_reference'=>$reference,'status'=>$status,'status_detail'=>$approve?'accredited':'cc_rejected_insufficient_amount','amount'=>(float)$row['monto'],'currency'=>$row['moneda'],'method'=>$method,'approved_at'=>null,'live_mode'=>false,'provider_payment_id'=>$id],'sim-'.bin2hex(random_bytes(8)),['provider_payment_id'=>$id,'status'=>$status]);
+        }
+        return $this->payment($gymId,(int)$row['id']);
     }
 
     public function applyProviderUpdate(array $providerData,string $eventId,array $payload): array
