@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?><project name="GymTrack - Cronograma" company="" webLink="http://" view-date="2026-04-06" view-index="0" gantt-divider-location="300" resource-divider-location="300" version="3.3.3316" locale="es_ES">
+    <description>Cronograma de GymTrack (Tecnología Web Aplicada, 2026). Las fechas y duraciones de abril a octubre se tomaron del Gantt de otro equipo, con autorización de los docentes, y las tareas se adaptaron al contenido de GymTrack. Es una reconstrucción supuesta del trabajo. Las tareas desde el 08/10 coinciden con commits y archivos reales del repositorio.</description>
+    <view zooming-state="default:8" id="gantt-chart">
+        <field id="tpd3" name="Nombre" width="169" order="0"/>
+        <field id="tpd4" name="Fecha de inicio" width="65" order="1"/>
+        <field id="tpd5" name="Fecha de fin" width="65" order="2"/>
+        <field id="tpd15" name="Notas" width="20" order="3"/>
+        <option id="filter.completedTasks" value="false"/>
+        <option id="filter.dueTodayTasks" value="false"/>
+        <option id="filter.overdueTasks" value="false"/>
+        <option id="filter.inProgressTodayTasks" value="false"/>
+        <option id="color.recent"><![CDATA[#000000 #00cc00 #66ff00 #ff6600 #00ff00 #00a2d9 #999999 #33ff00 #e1e1e1]]></option>
+    </view>
+    <view id="resource-table">
+        <field id="0" name="Nombre" width="210" order="0"/>
+        <field id="1" name="Función" width="86" order="1"/>
+    </view>
+    <!-- -->
+    <calendars>
+        <day-types>
+            <day-type id="0"/>
+            <day-type id="1"/>
+            <default-week id="1" name="default" sun="1" mon="0" tue="0" wed="0" thu="0" fri="0" sat="1"/>
+            <only-show-weekends value="false"/>
+            <overriden-day-types/>
+            <days/>
+        </day-types>
+    </calendars>
+    <tasks empty-milestones="true">
+        <taskproperties>
+            <taskproperty id="tpd0" name="type" type="default" valuetype="icon"/>
+            <taskproperty id="tpd1" name="priority" type="default" valuetype="icon"/>
+            <taskproperty id="tpd2" name="info" type="default" valuetype="icon"/>
+            <taskproperty id="tpd3" name="name" type="default" valuetype="text"/>
+            <taskproperty id="tpd4" name="begindate" type="default" valuetype="date"/>
+            <taskproperty id="tpd5" name="enddate" type="default" valuetype="date"/>
+            <taskproperty id="tpd6" name="duration" type="default" valuetype="int"/>
+            <taskproperty id="tpd7" name="completion" type="default" valuetype="int"/>
+            <taskproperty id="tpd8" name="coordinator" type="default" valuetype="text"/>
+            <taskproperty id="tpd9" name="predecessorsr" type="default" valuetype="text"/>
+        </taskproperties>
+        <task id="0" uid="001a5126f2175f4d898271af9408dfe6" name="Sorteo de grupos y asignación de roles" color="#000000" meeting="false" start="2026-04-09" duration="155" complete="100" expand="false">
+            <task id="1" uid="4982745797ef572995f1fa6142828ae6" name="Proyecto GymTrack" color="#00cc00" meeting="false" start="2026-04-09" duration="155" complete="100" expand="true">
+                <notes><![CDATA[Plataforma web para descubrir gimnasios y gestionar su operación diaria.]]></notes>
+            </task>
+            <task id="2" uid="78af103b812e57a1a6b88235b481b891" name="Elección del tema del proyecto" color="#00cc00" meeting="false" start="2026-04-23" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Elección del tema (descubrimiento y gestión de gimnasios) y organización inicial del proyecto.]]></notes>
+            </task>
+        </task>
+        <task id="3" uid="0f65282e27e955d6b63ad8b79a6aac22" name="Primera ETAPA" color="#00a2d9" meeting="false" start="2026-04-23" duration="22" complete="100" expand="false">
+            <task id="4" uid="ed3fb06e66e95b75bb3697dbec1a6dbd" name="Diseño del MER" color="#ff6600" meeting="false" start="2026-04-23" duration="2" complete="100" expand="true">
+                <notes><![CDATA[Elaboración del modelo entidad-relación y organización inicial de la base de datos.]]></notes>
+            </task>
+            <task id="5" uid="588c36ea0c1b5a7abfbcc0456ce6b226" name="Requisitos funcionales y no funcionales" color="#00cc00" meeting="false" start="2026-05-20" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Funcionales: registro y login, catálogo con mapa, membresías, reservas de clases, pagos y reportes. No funcionales: seguridad, rendimiento, disponibilidad, usabilidad y mantenibilidad.]]></notes>
+            </task>
+            <task id="6" uid="0f94fb57bbc956baaf408172fcac0aae" name="Presentación de requisitos" color="#00cc00" meeting="false" start="2026-05-21" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Exposición de los requisitos para su validación.]]></notes>
+            </task>
+            <task id="7" uid="7f905a74732e559291594fa585f25caf" name="Documentación y bitácora" color="#66ff00" meeting="false" start="2026-05-06" duration="13" complete="100" expand="true">
+                <notes><![CDATA[Registro de avances, decisiones y documentación técnica.]]></notes>
+            </task>
+            <task id="8" uid="be8d8719bea6548cbe2374d6f5ff9a16" name="Presentación de idea al profesor" color="#00cc00" meeting="false" start="2026-05-07" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Exposición de la propuesta y recepción de sugerencias.]]></notes>
+            </task>
+            <task id="9" uid="11208f2ce081584088ba35b6703fb758" name="Desarrollo de aplicación" color="#ff6600" meeting="false" start="2026-05-06" duration="13" complete="100" expand="true">
+                <notes><![CDATA[Integración del frontend con la lógica del backend y la base de datos.]]></notes>
+            </task>
+            <task id="10" uid="c658906629fb568596fb8dd1922767c4" name="Presentación inicial" color="#00cc00" meeting="false" start="2026-05-05" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Preparación de diapositivas para mostrar el avance al profesor.]]></notes>
+            </task>
+            <task id="11" uid="a3a44506e9f757b4b289687ce7eb2bd7" name="Desarrollo Frontend" color="#ff6600" meeting="false" start="2026-04-24" duration="21" complete="100" expand="true">
+                <notes><![CDATA[Diseño e implementación de las interfaces de usuario con Vue 3.]]></notes>
+            </task>
+            <task id="12" uid="09917acb85c25ccc8e0cc843e5865c10" name="Diseño de Base de Datos" color="#ff6600" meeting="false" start="2026-04-24" duration="9" complete="100" expand="true">
+                <notes><![CDATA[Creación de las tablas, relaciones y estructuras de almacenamiento en MySQL.]]></notes>
+            </task>
+            <task id="13" uid="30fe92f19aad5eb7a7b5367f42d12d8b" name="Diseño de logo y nombre (GymTrack)" color="#00cc00" meeting="false" start="2026-04-24" duration="8" complete="100" expand="true">
+                <notes><![CDATA[Creación de la identidad visual del proyecto.]]></notes>
+            </task>
+            <task id="14" uid="8ee75c3ace9b54a69b8f67e6afb9689b" name="Ajustes finales para la primera presentación" color="#66ff00" meeting="false" start="2026-05-04" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Corrección de errores y mejoras antes de la primera presentación.]]></notes>
+            </task>
+        </task>
+        <task id="15" uid="a53d3637c3d851fdb9234c50f0202b8e" name="Segunda ETAPA" color="#000000" meeting="false" start="2026-06-26" duration="49" complete="100" expand="false">
+            <task id="16" uid="9b0c29ff1ade517cb954b867707bc48b" name="Mejorar el Frontend" color="#ff6600" meeting="false" start="2026-07-23" duration="4" complete="100" expand="true">
+                <notes><![CDATA[Se siguió mejorando la interfaz: colores, tipografía, botones y componentes del sistema de diseño.]]></notes>
+            </task>
+            <task id="17" uid="bb5511bcbd5e51aea61a544df55cbafe" name="Ajustes de interfaz" color="#ff6600" meeting="false" start="2026-06-29" duration="30" complete="100" expand="true">
+                <notes><![CDATA[Ajuste de la interfaz en distintos dispositivos y tamaños de pantalla, desde 360 px, para que se vea igual en iOS y en Android.]]></notes>
+            </task>
+            <task id="18" uid="30b19ff6610d5873829fffd0a461d9e9" name="Modificación de credenciales" color="#66ff00" meeting="false" start="2026-07-23" duration="10" complete="100" expand="true">
+                <notes><![CDATA[Se cambió el sistema de credenciales para que el usuario pueda cambiar su contraseña, recuperarla y verificar su correo electrónico.]]></notes>
+            </task>
+            <task id="19" uid="188b8700d7a35e6b89321d2f94eee549" name="Panel de administración" meeting="false" start="2026-07-30" duration="5" complete="100" expand="true">
+                <notes><![CDATA[Se agregó el panel de administración para que dueños y empleados gestionen socios, clases, membresías y pagos con más comodidad.]]></notes>
+            </task>
+            <task id="20" uid="ebcdee2b75c95f54849be9d48521a98a" name="Comentar el código" color="#ff6600" meeting="false" start="2026-07-24" duration="12" complete="100" expand="true">
+                <notes><![CDATA[Se comentó el código para facilitar su comprensión, explicar las partes más importantes y simplificar el mantenimiento.]]></notes>
+            </task>
+            <task id="21" uid="e04dda6b2328573bb7ca8b44818b2308" name="Docker" color="#00cc00" meeting="false" start="2026-07-13" duration="14" complete="100" expand="true">
+                <notes><![CDATA[Se agregó Docker Compose para crear, ejecutar y administrar la aplicación en contenedores, y que funcione igual en distintos equipos.]]></notes>
+            </task>
+            <task id="22" uid="346d70220c395442b9e0d23e7bf5ed70" name="Agregamos funcionalidades" color="#66ff00" meeting="false" start="2026-07-10" duration="19" complete="100" expand="true">
+                <notes><![CDATA[Más funcionalidades para facilitar el uso: buscar gimnasios, registrarse, iniciar sesión y reservar clases.]]></notes>
+            </task>
+            <task id="23" uid="f129c0903b2250d59ce9aa5d4eb3c530" name="Completar el backend" color="#66ff00" meeting="false" start="2026-07-27" duration="6" complete="100" expand="true">
+                <notes><![CDATA[Se completó el backend en PHP: funciones necesarias y rutas para guardar, consultar y manejar los datos.]]></notes>
+            </task>
+            <task id="24" uid="ec99491160495fc6a96b51ec441e8d08" name="Migraciones de la base de datos" color="#ff6600" meeting="false" start="2026-07-27" duration="7" complete="100" expand="true">
+                <notes><![CDATA[Se pasó del esquema inicial a migraciones versionadas de MySQL, aplicadas en orden.]]></notes>
+            </task>
+            <task id="25" uid="0ee5e54e1eb953d8b6fc7a25c687dac9" name="Agregamos el footer en la aplicación" color="#00cc00" meeting="false" start="2026-08-27" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Pie de página con enlaces útiles y datos de contacto (PublicFooter).]]></notes>
+            </task>
+            <task id="26" uid="65a98cee4b7d517689fdb5b80902e926" name="Tema oscuro y colores base" color="#00cc00" meeting="false" start="2026-06-26" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Se definió el tema oscuro de la aplicación y los tokens de color del sistema de diseño.]]></notes>
+            </task>
+            <task id="27" uid="7eac03dc41995a3c8cb298fb5a4d30ee" name="Arreglo de componentes del panel" color="#00cc00" meeting="false" start="2026-08-31" duration="3" complete="100" expand="true">
+                <notes><![CDATA[Se arreglaron los cuadros de información de la página del panel.]]></notes>
+            </task>
+            <task id="28" uid="df9d443c7f2c5efd8fd42a0d4b1bbfae" name="Varios cambios" color="#00cc00" meeting="false" start="2026-08-24" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Arreglos en componentes de la página de inicio, comienzo del frontend del panel y corrección de dependencias en node_modules.]]></notes>
+            </task>
+            <task id="29" uid="e407220387935cbc9561bfbcad9e950c" name="Barra superior de botones" color="#00cc00" meeting="false" start="2026-07-01" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Se modificaron los botones de Iniciar sesión y Registro.]]></notes>
+            </task>
+            <task id="30" uid="d819e3f5cc015b1180aab1e7978ec0f5" name="Ajustes en la vista de pagos del socio" color="#00cc00" meeting="false" start="2026-08-19" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Ajuste de la vista de pagos dentro del área del socio.]]></notes>
+            </task>
+            <task id="31" uid="dd0fb9cf98085bee9fda4e5cf1b325a9" name="Arreglo del carné con QR" color="#00cc00" meeting="false" start="2026-08-17" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Arreglos en el carné digital del socio y en su código QR.]]></notes>
+            </task>
+        </task>
+        <task id="32" uid="8d8651b4626e50a49f6d941bc48efa11" name="Tercera ETAPA" color="#000000" meeting="false" start="2026-09-03" duration="21" complete="100" expand="false">
+            <task id="33" uid="5a20093f9e375a6bab2c110f5b07b0aa" name="Comentación del código" color="#00cc00" meeting="false" start="2026-09-03" duration="6" complete="100" expand="true">
+                <notes><![CDATA[Documentación y estructuración del código para mejorar la comprensión y el mantenimiento a futuro.]]></notes>
+            </task>
+            <task id="34" uid="99bceb84082054e78c8a8f038255a723" name="Módulo de perfil y corrección del modelo de datos" color="#66ff00" meeting="false" start="2026-09-03" duration="4" complete="100" expand="true">
+                <notes><![CDATA[Inicio del desarrollo y la maquetación de la sección del perfil del socio.]]></notes>
+            </task>
+            <task id="35" uid="889f813c24b85163900cbabea53a870f" name="Integración backend del panel de administración" color="#66ff00" meeting="false" start="2026-09-08" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Refactorización y conexión del panel de administración con el backend.]]></notes>
+            </task>
+            <task id="36" uid="148baebb6eee59e2b4cc2fe9ed2cd3de" name="Mejoras en la fluidez y la interacción del usuario" color="#66ff00" meeting="false" start="2026-09-07" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Mejoras generales en la navegación y la interfaz para que el uso sea más fluido.]]></notes>
+            </task>
+            <task id="37" uid="3366e2aff505599fa49152e112f4c779" name="Automatización de navegación y reencuadre dinámico" color="#00cc00" meeting="false" start="2026-09-07" duration="2" complete="100" expand="true">
+                <notes><![CDATA[Desplazamiento automático hacia las acciones o botones clave.]]></notes>
+            </task>
+            <task id="38" uid="e1cff857cdbd53c5af588756d4781abe" name="Reestructuración visual de la agenda de clases" color="#00cc00" meeting="false" start="2026-09-04" duration="2" complete="100" expand="true">
+                <notes><![CDATA[Ajuste de la distribución de la agenda de clases y de los cupos.]]></notes>
+            </task>
+            <task id="39" uid="858b370737835f4b8896c367a97505a9" name="Arreglos en la página de reserva" color="#00cc00" meeting="false" start="2026-09-09" duration="2" complete="100" expand="true">
+                <notes><![CDATA[Arreglos al reservar una clase y mejoras visuales de la página.]]></notes>
+                <task id="40" uid="5b6d1d38357b590cb3904d8574db1dc8" name="Comentarios en las vistas de administración" color="#00cc00" meeting="false" start="2026-09-09" duration="2" complete="100" expand="true">
+                    <notes><![CDATA[Se agregaron comentarios en las vistas del panel de administración para entenderlas mejor al modificarlas.]]></notes>
+                </task>
+            </task>
+            <task id="41" uid="d86ba2bbdc5151d781de962007b61916" name="Arreglo estético de la página" color="#00cc00" meeting="false" start="2026-09-10" duration="3" complete="100" expand="true">
+                <notes><![CDATA[Se corrigieron errores estéticos de las páginas principales y se reestructuró parte de la base de datos.]]></notes>
+            </task>
+            <task id="42" uid="ba0a68bae5d55d979a4ec1c722c14053" name="Funcionalidad de la página de perfil (con sesión)" color="#00cc00" meeting="false" start="2026-09-14" duration="4" complete="100" expand="true">
+                <notes><![CDATA[Se agregó el historial de membresías y de pagos en el perfil del socio.]]></notes>
+            </task>
+            <task id="43" uid="00fc9070ca66590792cf30bb6b12c6db" name="Arreglo de errores y endurecimiento de seguridad" color="#00cc00" meeting="false" start="2026-09-29" duration="3" complete="100" expand="true">
+                <notes><![CDATA[Revisión de errores y auditoría de seguridad. Quedó en el commit 37f0de8 (29/09): rate limiting por cuenta, aislamiento de tenant, memory leak de stores y renombrado del código a español.]]></notes>
+            </task>
+        </task>
+        <task id="44" uid="c1be75df80af515c932c3e7f891fba2f" name="Última ETAPA" color="#000000" meeting="false" start="2026-10-05" duration="14" complete="100" expand="false">
+            <task id="45" uid="03cd7cb6385050ebb1d1570fb07a5e80" name="Modificación de la página de login" color="#00cc00" meeting="false" start="2026-10-05" duration="2" complete="100" expand="true">
+                <notes><![CDATA[Se separaron el login y el registro en dos páginas y se probó la verificación de correo al iniciar sesión o registrarse.]]></notes>
+            </task>
+            <task id="46" uid="1354e23d0754585ba0ccc3ac95f38d55" name="Ajustes en la página de reserva" color="#00cc00" meeting="false" start="2026-10-07" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Arreglos en la página de reserva de clases.]]></notes>
+            </task>
+            <task id="47" uid="5b984c8b51565adaad07aa350b1fdc78" name="Refuerzo de carné, login y backend" color="#ff6600" meeting="false" start="2026-10-08" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Commit 73bd47e (08/10): asistencia automática con permiso attendance.write, login con tiempo parejo, .htaccess hacia index.php y dependencias actualizadas.]]></notes>
+            </task>
+            <task id="48" uid="0fb5f6f3b0085add9a98e7fb3159b3c4" name="Grafana y tablero de negocio" color="#00cc00" meeting="false" start="2026-10-08" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Commit 3b5cca6 (08/10): Grafana con datasource MySQL de solo lectura y tablero de negocio de 11 paneles.]]></notes>
+            </task>
+            <task id="49" uid="2517ecc834785e85b2429efbc051fff7" name="Tablero de análisis y ajuste de drawers" color="#66ff00" meeting="false" start="2026-10-08" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Commit 6a6f0d3 (08/10): tablero de análisis de 28 paneles y corrección del desborde horizontal en los formularios de los drawers.]]></notes>
+            </task>
+            <task id="50" uid="bbd6df43253b5b12a99329ee725a37a1" name="Documentación completa en Word (versión 1.1)" color="#66ff00" meeting="false" start="2026-10-12" duration="3" complete="100" expand="true">
+                <notes><![CDATA[Documento GymTrack_Documentacion_Completa.docx, versión 1.1 del 14/10/2026: manual de usuario, guía rápida, ayuda en línea y documentación del código.]]></notes>
+            </task>
+            <task id="51" uid="1612c95d485c500f81efb8ad274af392" name="Análisis del estado de las pruebas" color="#00cc00" meeting="false" start="2026-10-14" duration="1" complete="100" expand="true">
+                <notes><![CDATA[Se detectó que varios specs de Playwright buscan textos que ya no existen en la interfaz. Quedó anotado en la nota Estrategia de Testing.]]></notes>
+            </task>
+            <task id="52" uid="a51d6080afb45d87a109c3f0fe3c96ff" name="Revisión y humanización del vault de Obsidian" color="#00cc00" meeting="false" start="2026-10-20" duration="3" complete="100" expand="true">
+                <notes><![CDATA[22/10/2026: se contrastaron las cifras con el código del commit 6a6f0d3, se completaron los cambios de octubre y se reescribieron las notas con un tono más natural.]]></notes>
+            </task>
+        </task>
+    </tasks>
+    <resources/>
+    <allocations/>
+    <vacations/>
+    <previous/>
+    <roles roleset-name="Default"/>
+</project>
