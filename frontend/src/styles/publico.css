@@ -1,0 +1,46 @@
+/*
+ * Capa visual de las páginas públicas (propuesta de rediseño).
+ * Reutiliza los tokens de GymTrack: carbón mate, Manrope, azul solo para acciones y verde para estados.
+ * Es una propuesta revocable: vive en la rama rediseno-publico y volver a gymtrack-main la descarta.
+ */
+
+/* Sección con una línea fina arriba y un ritmo vertical más ajustado que el anterior. */
+.pb-section { padding-block: clamp(3rem, 6vw, 5rem); border-top: 1px solid var(--border-subtle); }
+
+/* Cabecera de sección: número + rótulo discreto, título y bajada. */
+.pb-head { display: grid; gap: var(--space-4); max-width: 46rem; margin-bottom: clamp(var(--space-8), 4vw, var(--space-12)); }
+.pb-index { display: flex; align-items: center; gap: var(--space-3); margin: 0; color: var(--text-tertiary); font-size: .85rem; font-weight: 650; }
+.pb-index b { color: var(--status-info-strong); font-weight: 800; font-variant-numeric: tabular-nums; }
+.pb-index::after { content: ''; width: 2.5rem; height: 1px; background: var(--border-strong); }
+.pb-title { margin: 0; max-width: 20ch; font-size: clamp(1.9rem, 3.6vw, 3rem); line-height: 1.05; letter-spacing: -.035em; text-wrap: balance; }
+.pb-lead { margin: 0; max-width: 56ch; color: var(--text-secondary); font-size: 1.02rem; line-height: 1.65; text-wrap: pretty; }
+
+/* Dos columnas: la cabecera queda fija a la izquierda mientras se lee la lista. */
+.pb-split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(var(--space-8), 5vw, var(--space-16)); align-items: start; }
+.pb-split > .pb-head { position: sticky; top: calc(var(--header-height) + var(--space-6)); margin-bottom: 0; }
+
+/* Listas con líneas finas en lugar de tarjetas. */
+.pb-rows { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--border-subtle); }
+.pb-rows > li { border-bottom: 1px solid var(--border-subtle); }
+.pb-num { font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+
+/* Línea de tiempo: una raya con un punto por paso. */
+.pb-steps { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); margin: 0; padding: 0; list-style: none; }
+.pb-steps > li { position: relative; display: grid; align-content: start; gap: var(--space-3); padding: var(--space-6) var(--space-6) 0 0; border-top: 1px solid var(--border-strong); }
+.pb-steps > li::before { content: ''; position: absolute; top: -4px; left: 0; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.pb-steps__n { color: var(--status-info-strong); font-size: .82rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.pb-steps svg { color: var(--text-secondary); }
+.pb-steps h3 { margin: 0; font-size: 1.15rem; letter-spacing: -.02em; }
+.pb-steps p { margin: 0; max-width: 32ch; color: var(--text-secondary); font-size: .9rem; line-height: 1.6; text-wrap: pretty; }
+
+@media (max-width: 63.99rem) {
+  .pb-split { grid-template-columns: 1fr; }
+  .pb-split > .pb-head { position: static; margin-bottom: var(--space-4); }
+  .pb-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-8); }
+}
+@media (max-width: 47.99rem) {
+  /* En el celular la línea de tiempo pasa a ser vertical. */
+  .pb-steps { grid-template-columns: 1fr; row-gap: 0; }
+  .pb-steps > li { padding: 0 0 var(--space-8) var(--space-6); border-top: 0; border-left: 1px solid var(--border-strong); }
+  .pb-steps > li::before { top: 4px; left: -4px; }
+}

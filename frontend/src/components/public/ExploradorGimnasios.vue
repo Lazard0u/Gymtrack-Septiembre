@@ -706,4 +706,8 @@ onBeforeUnmount(() => {
 @media (hover: hover) and (pointer: fine) {
   .hero-gym-card > a:hover { color: var(--text-primary); text-decoration: underline; text-underline-offset: .22em; }
 }
+/* El nombre ocupa su propia línea y las etiquetas van debajo, para que no se corte con puntos suspensivos. */
+.gym-card__title { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-2); }
+.gym-card__title strong { flex: 1 1 100%; overflow: visible; text-overflow: clip; white-space: normal; line-height: 1.2; }
+.gym-card__badges { justify-content: flex-start; }
 </style>
