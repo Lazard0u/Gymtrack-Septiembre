@@ -48,6 +48,7 @@ $rutas = [
     'GET /api/me/sessions' => ['MeController', 'sessions'],
     'DELETE /api/me/sessions/([a-fA-F0-9-]{36})' => ['MeController', 'revokeSession'],
     'POST /api/me/gym-context' => ['MeController', 'switchGym'],
+    'POST /api/me/owner-request' => ['MeController', 'ownerRequest'],
     'DELETE /api/me/gym-context' => ['MeController', 'clearGym'],
 
     // Contexto público de aplicación y catálogo de solo lectura.

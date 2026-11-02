@@ -120,7 +120,7 @@ const routes = [
   },
   {
     path: '/registro-gimnasio', name: 'owner-register', component: OwnerRegisterView,
-    meta: { publicOnly: true, title: 'Solicitar cuenta de gimnasio | GymTrack' },
+    meta: { allowAuthenticated: true, title: 'Solicitar cuenta de gimnasio | GymTrack' },
   },
   {
     path: '/recuperar', name: 'forgot-password', component: ForgotPasswordView,

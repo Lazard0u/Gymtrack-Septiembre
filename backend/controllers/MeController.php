@@ -62,5 +62,24 @@ final class MeController
         $this->respond(200,['error'=>false,'mensaje'=>'Contexto de gimnasio desactivado.','usuario'=>$payload,'csrf_token'=>$csrf]);
     }
 
+    /** Un socio con sesión iniciada pide acceso como dueño sin crear otra cuenta: queda una solicitud pendiente que revisa un administrador. */
+    public function ownerRequest(): void
+    {
+        AuthMiddleware::verificarRol(AuthorizationService::SOCIO);
+        $userId=AuthMiddleware::obtenerUsuarioId();
+        $limit=new RateLimiter();$limit->ensureAllowed('owner_request',(string)$userId);
+        $data=json_decode((string)file_get_contents('php://input'),true);$data=is_array($data)?$data:[];
+        $gym=trim((string)($data['gym_name']??''));$message=mb_substr(trim((string)($data['message']??'')),0,500);
+        if(mb_strlen($gym)<2||mb_strlen($gym)>120){$limit->fail('owner_request',(string)$userId);$this->respond(422,['error'=>true,'mensaje'=>'Revisá los campos marcados.','fields'=>['gym_name'=>'Ingresá el nombre del gimnasio (2 a 120 caracteres).']]);return;}
+        try{
+            Database::conectar()->prepare('INSERT INTO owner_registration_requests(usuario_id,gimnasio_nombre,mensaje) VALUES(?,?,?)')->execute([$userId,$gym,$message]);
+        }catch(PDOException $error){
+            if($error->getCode()!=='23000')throw $error;
+            $limit->fail('owner_request',(string)$userId);$this->respond(409,['error'=>true,'mensaje'=>'Ya tenés una solicitud pendiente. Un administrador la va a revisar.']);return;
+        }
+        SecurityLogger::record('auth.owner_requested','success',$userId);
+        $this->respond(201,['error'=>false,'mensaje'=>'Recibimos tu solicitud. Un administrador la va a revisar y vincular el gimnasio a tu cuenta.']);
+    }
+
     private function respond(int $status,array $data): void { http_response_code($status);echo json_encode($data,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); }
 }
