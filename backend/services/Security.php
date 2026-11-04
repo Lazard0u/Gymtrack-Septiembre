@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio Security. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Utilidades de seguridad: clave de la aplicación (APP_KEY, obligatoria en producción), hash HMAC-SHA256 de
+ * correos e IPs, tokens aleatorios, UUID y validación de contraseñas.
  */
 
 declare(strict_types=1);

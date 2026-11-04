@@ -1,7 +1,6 @@
 <?php
 /**
- * Acceso a datos PromocionRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Promociones y sus transiciones de estado, con el armado de la cola de destinatarios.
  */
 
 declare(strict_types=1);

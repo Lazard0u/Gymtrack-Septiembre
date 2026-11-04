@@ -1,7 +1,7 @@
 <?php
 /**
- * Controlador HTTP AdminManagementController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Rutas de administración del gimnasio activo: gimnasio, sedes, socios, empleados e invitaciones. Valida la
+ * entrada y delega en AdminManagementRepository.
  */
 
 declare(strict_types=1);

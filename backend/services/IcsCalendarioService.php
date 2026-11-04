@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio IcsCalendarioService. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Arma el archivo .ics (iCalendar) de una reserva de clase para agregarla al calendario del socio. Escapa el
+ * texto y pliega las líneas como pide el estándar.
  */
 
 declare(strict_types=1);

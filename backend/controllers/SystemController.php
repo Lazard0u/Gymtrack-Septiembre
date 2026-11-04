@@ -1,7 +1,7 @@
 <?php
 /**
- * Controlador HTTP SystemController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * GET /api/system/context: indica si hay datos demo activos, si Turnstile está habilitado y qué funciones beta
+ * están encendidas.
  */
 
 declare(strict_types=1);

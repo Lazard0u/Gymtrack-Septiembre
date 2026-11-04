@@ -1,7 +1,6 @@
 <?php
 /**
- * Acceso a datos AdminRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Consultas de lectura del panel administrativo, filtradas por gimnasio y por alcance demo o real.
  */
 
 declare(strict_types=1);

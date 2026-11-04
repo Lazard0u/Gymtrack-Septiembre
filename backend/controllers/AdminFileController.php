@@ -1,7 +1,7 @@
 <?php
 /**
- * Controlador HTTP AdminFileController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Subida y entrega de archivos del gimnasio (imagen, foto de entrenador, imagen de promoción, documento).
+ * Verifica el tipo real con finfo, el tamaño (5 MB) y las dimensiones, y guarda con nombre aleatorio.
  */
 
 declare(strict_types=1);

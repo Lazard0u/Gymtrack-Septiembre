@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio LocalFileStorage. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Guarda los archivos subidos en disco (UPLOAD_STORAGE_PATH) con permisos 0600 y rechaza claves con ".." o con
+ * caracteres fuera de lo permitido.
  */
 
 declare(strict_types=1);

@@ -1,7 +1,7 @@
 <?php
 /**
- * Controlador HTTP ReporteController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Genera exportaciones .xlsx o .pdf de un módulo y permite descargarlas. Exige rol de empleado, dueño o
+ * administrador general y el permiso reports.export.
  */
 
 declare(strict_types=1);

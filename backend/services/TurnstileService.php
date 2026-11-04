@@ -1,7 +1,6 @@
 <?php
 /**
- * Servicio TurnstileService. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Verifica el token de Cloudflare Turnstile en el registro. Solo se exige con APP_ENV=production.
  */
 
 declare(strict_types=1);

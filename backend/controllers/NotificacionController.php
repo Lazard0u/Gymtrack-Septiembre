@@ -1,7 +1,6 @@
 <?php
 /**
- * Controlador HTTP NotificacionController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Rutas de notificaciones del usuario: bandeja, marcar como leídas, preferencias y baja de publicidad.
  */
 
 declare(strict_types=1);

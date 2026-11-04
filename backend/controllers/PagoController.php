@@ -1,7 +1,7 @@
 <?php
 /**
- * Controlador HTTP PagoController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Rutas de pagos: administración (listado, finanzas, pago manual y reembolso), socio (mis pagos, checkout y
+ * simulación en desarrollo) y webhook de Mercado Pago. La lógica está en PagoRepository.
  */
 
 declare(strict_types=1);

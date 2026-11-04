@@ -96,7 +96,7 @@ if (!str_contains($frontendDockerfile, 'FROM node:20-alpine@sha256:')
     $failures[] = 'El frontend no usa un build multi-stage reproducible.';
 }
 
-foreach (['proxy_pass http://backend;', 'try_files $uri $uri/ /index.html;', 'Content-Security-Policy', 'Strict-Transport-Security', 'X-Content-Type-Options', 'client_max_body_size 6m'] as $nginxContract) {
+foreach (['resolver 127.0.0.11', 'set $backend_upstream http://backend;', 'proxy_pass $backend_upstream;', 'try_files $uri $uri/ /index.html;', 'Content-Security-Policy', 'Strict-Transport-Security', 'X-Content-Type-Options', 'client_max_body_size 6m'] as $nginxContract) {
     if (!str_contains($nginx, $nginxContract)) {
         $failures[] = "nginx.prod.conf omite {$nginxContract}.";
     }

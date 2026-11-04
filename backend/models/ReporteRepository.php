@@ -1,7 +1,7 @@
 <?php
 /**
- * Acceso a datos ReporteRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Registro de exportaciones en la tabla exports: crea la solicitud, la marca como completada o fallida y la
+ * busca por gimnasio.
  */
 
 declare(strict_types=1);

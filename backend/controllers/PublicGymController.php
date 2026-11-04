@@ -1,7 +1,6 @@
 <?php
 /**
- * Controlador HTTP PublicGymController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Rutas públicas, sin sesión: listado y ficha de los gimnasios publicados y sus planes.
  */
 
 declare(strict_types=1);

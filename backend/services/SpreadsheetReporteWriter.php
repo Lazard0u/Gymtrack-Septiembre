@@ -1,7 +1,6 @@
 <?php
 /**
- * Servicio SpreadsheetReporteWriter. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Escribe un reporte tabular como .xlsx armando el paquete OOXML a mano, sin librerías.
  */
 
 declare(strict_types=1);

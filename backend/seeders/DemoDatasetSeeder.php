@@ -1,7 +1,7 @@
 <?php
 /**
- * Seeder DemoDatasetSeeder. Crea datos de presentación idempotentes, identificados y separables de los datos reales.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Crea, reinicia, elimina y consulta el conjunto de datos de demostración (gimnasios, usuarios, clases, pagos).
+ * Se niega a correr en producción si no se permite de forma explícita.
  */
 
 declare(strict_types=1);

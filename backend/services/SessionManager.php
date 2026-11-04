@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio SessionManager. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Sesión y CSRF: cookie segura, token CSRF, nuevo ID de sesión al iniciar sesión y al cambiar de gimnasio
+ * (rotateContext), revocación y listado de dispositivos.
  */
 
 declare(strict_types=1);

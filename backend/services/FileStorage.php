@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio FileStorage. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Contrato de almacenamiento de archivos subidos (guardar, ubicar y borrar), para poder cambiar el disco local
+ * por otro.
  */
 
 declare(strict_types=1);

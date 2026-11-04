@@ -1,7 +1,7 @@
 <?php
 /**
- * Acceso a datos AdminManagementRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Escrituras de administración de un gimnasio: gimnasio, sedes, socios, empleados e invitaciones. joinAsMember()
+ * asocia a un usuario como socio y se usa al aprobarse un pago.
  */
 
 declare(strict_types=1);

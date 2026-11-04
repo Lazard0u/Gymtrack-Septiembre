@@ -1,7 +1,7 @@
 <?php
 /**
- * Acceso a datos AgendaRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Clases, sesiones y reservas: alta y edición, cancelación, lista de asistentes, reservas del socio y registro
+ * de asistencia.
  */
 
 declare(strict_types=1);

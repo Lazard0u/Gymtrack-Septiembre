@@ -46,9 +46,9 @@ if (!preg_match('/public function fail\(.*?\n    }/s', $rateLimiter, $failMethod
     }
 }
 
-$payments = file_get_contents($root . '/backend/models/PaymentRepository.php');
+$payments = file_get_contents($root . '/backend/models/PagoRepository.php');
 if (!preg_match('/public function refund\(.*?\n    }\n\n    public function reportRows/s', $payments, $refundMethod)) {
-    $failures[] = 'No se pudo inspeccionar PaymentRepository::refund().';
+    $failures[] = 'No se pudo inspeccionar PagoRepository::refund().';
 } else {
     $source = $refundMethod[0];
     $reservationPosition = strpos($source, 'VALUES (?, ?,"pendiente",?,?,?)');

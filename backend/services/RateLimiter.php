@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio RateLimiter. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Límite de intentos por acción, por cuenta y por IP a la vez, con espera creciente. Guarda solo hashes en
+ * rate_limit_attempts.
  */
 
 declare(strict_types=1);

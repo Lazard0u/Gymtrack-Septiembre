@@ -1,7 +1,7 @@
 <?php
 /**
- * Acceso a datos NotificacionRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Notificaciones: bandeja, preferencias, consentimiento y cola de envíos (claimNext y los estados enviado,
+ * omitido y fallido).
  */
 
 declare(strict_types=1);

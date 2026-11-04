@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio EmailNotificacionChannel. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Canal de correo del despachador de notificaciones. Valida el destinatario, limpia los saltos de línea del
+ * asunto y agrega el enlace para darse de baja en los mensajes de marketing.
  */
 
 declare(strict_types=1);

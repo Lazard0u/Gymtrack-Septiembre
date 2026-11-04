@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio AdminInputValidator. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Validaciones de los datos que llegan al panel de administración: textos, correo, enteros, decimales,
+ * coordenadas, fechas, listas y booleanos.
  */
 
 declare(strict_types=1);

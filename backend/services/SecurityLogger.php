@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio SecurityLogger. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Registra eventos de seguridad en security_events con la IP hasheada. Si el registro falla, escribe en el log
+ * del servidor y no interrumpe la solicitud.
  */
 
 declare(strict_types=1);

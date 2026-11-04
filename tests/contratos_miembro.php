@@ -9,22 +9,22 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $failures = [];
 
-require_once $root . '/backend/services/MemberCardService.php';
-require_once $root . '/backend/models/MemberRepository.php';
-require_once $root . '/backend/controllers/MemberController.php';
+require_once $root . '/backend/services/CarnetSocioService.php';
+require_once $root . '/backend/models/SocioRepository.php';
+require_once $root . '/backend/controllers/SocioController.php';
 
 $methods = [
-    MemberController::class => [
+    SocioController::class => [
         'summary','profile','updateProfile','uploadPhoto','avatar','preferences','updatePreferences',
         'favorites','addFavorite','removeFavorite','attendance','memberships','measurements','createMeasurement',
         'card','verifyCard',
     ],
-    MemberRepository::class => [
+    SocioRepository::class => [
         'memberContext','gymInScope','summary','profile','updateProfile','saveAvatar','avatarFile','preferences',
         'updatePreferences','favorites','addFavoriteGym','addFavoriteActivity','removeFavorite','attendanceHistory',
         'memberships','measurements','createMeasurement','cardRecord','verifyCardMember',
     ],
-    MemberCardService::class => ['issue','verify'],
+    CarnetSocioService::class => ['issue','verify'],
 ];
 foreach ($methods as $class => $required) {
     foreach ($required as $method) {
@@ -46,12 +46,12 @@ foreach (['DROP TABLE IF EXISTS socio_mediciones','DROP TABLE IF EXISTS socio_pr
     if (!str_contains($rollback,$needle)) $failures[] = "El rollback 009 no contempla {$needle}.";
 }
 
-$repository = file_get_contents($root . '/backend/models/MemberRepository.php');
+$repository = file_get_contents($root . '/backend/models/SocioRepository.php');
 if (substr_count($repository,'(demo_dataset_id <=> ?)') < 12 || substr_count($repository,'gimnasio_id=?') < 12) {
-    $failures[] = 'MemberRepository no aplica scope de gimnasio y dataset de forma sistemática.';
+    $failures[] = 'SocioRepository no aplica scope de gimnasio y dataset de forma sistemática.';
 }
 if (preg_match('/\$this->pdo->query\s*\(/',$repository)) {
-    $failures[] = 'MemberRepository contiene una consulta sin prepared statement.';
+    $failures[] = 'SocioRepository contiene una consulta sin prepared statement.';
 }
 foreach (['bajo peso','sobrepeso','obesidad','peso normal','diagnóstico de'] as $diagnosis) {
     if (stripos($repository,$diagnosis) !== false) $failures[] = "Las mediciones incluyen una clasificación clínica no permitida: {$diagnosis}.";
@@ -60,7 +60,7 @@ if (!str_contains($repository,'no constituye un diagnostico medico')) {
     $failures[] = 'Las respuestas de IMC no incluyen el aviso orientativo.';
 }
 
-$controller = file_get_contents($root . '/backend/controllers/MemberController.php');
+$controller = file_get_contents($root . '/backend/controllers/SocioController.php');
 foreach ([
     'GET   /api/member/summary','PATCH /api/member/profile','POST  /api/member/profile/photo',
     'GET   /api/member/favorites','GET   /api/member/attendance','GET   /api/member/measurements',
@@ -79,7 +79,7 @@ if (!str_contains($controller,"['morning','afternoon','evening']")
     $failures[] = 'Los horarios preferidos no tienen validación cerrada y persistencia JSON.';
 }
 
-$cards = new MemberCardService(str_repeat('secreto-prueba-miembro-',3),120);
+$cards = new CarnetSocioService(str_repeat('secreto-prueba-miembro-',3),120);
 $issued = $cards->issue(17,4,91,true,3);
 $verified = $cards->verify($issued['token']);
 if ($verified['user_id'] !== 17 || $verified['gym_id'] !== 4 || $verified['membership_id'] !== 91
@@ -98,10 +98,10 @@ try {
     // Correcto: la firma alterada se rechaza.
 }
 
-// api.php pertenece al integrador. Cuando incorpore MemberController, el contrato
+// api.php pertenece al integrador. Cuando incorpore SocioController, el contrato
 // pasa a exigir todas las rutas; antes de eso informa el bloqueo sin fallar este módulo aislado.
 $routes = file_get_contents($root . '/backend/routes/api.php');
-if (str_contains($routes,'MemberController')) {
+if (str_contains($routes,'SocioController')) {
     foreach ([
         "'GET /api/member/summary'","'GET /api/member/profile'","'PATCH /api/member/profile'",
         "'POST /api/member/profile/photo'","'GET /api/member/avatar'","'GET /api/member/preferences'",
@@ -112,7 +112,7 @@ if (str_contains($routes,'MemberController')) {
         if (!str_contains($routes,$route)) $failures[] = "La integración de rutas omite {$route}.";
     }
 } else {
-    echo "Falta integrar MemberController en api.php.\n";
+    echo "Falta integrar SocioController en api.php.\n";
 }
 
 $compose = file_get_contents($root . '/docker-compose.yml');

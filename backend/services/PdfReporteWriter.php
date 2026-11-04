@@ -1,7 +1,6 @@
 <?php
 /**
- * Servicio PdfReporteWriter. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Escribe un reporte tabular como PDF de una sola página, armado a mano sin librerías.
  */
 
 declare(strict_types=1);

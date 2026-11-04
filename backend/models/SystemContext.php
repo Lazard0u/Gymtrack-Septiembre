@@ -1,7 +1,6 @@
 <?php
 /**
- * Acceso a datos SystemContext. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Contexto del sistema para el frontend: dataset demo activo, Turnstile y funciones beta encendidas.
  */
 
 declare(strict_types=1);

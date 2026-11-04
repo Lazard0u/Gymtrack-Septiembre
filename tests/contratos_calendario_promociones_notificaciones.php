@@ -9,29 +9,29 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $failures = [];
 
-require_once $root . '/backend/services/IcsCalendarService.php';
-require_once $root . '/backend/services/NotificationChannelInterface.php';
-require_once $root . '/backend/services/InternalNotificationChannel.php';
-require_once $root . '/backend/services/EmailNotificationChannel.php';
-require_once $root . '/backend/services/WhatsAppNotificationChannel.php';
-require_once $root . '/backend/models/NotificationRepository.php';
-require_once $root . '/backend/models/PromotionRepository.php';
-require_once $root . '/backend/services/NotificationDispatcher.php';
-require_once $root . '/backend/controllers/CalendarController.php';
-require_once $root . '/backend/controllers/NotificationController.php';
-require_once $root . '/backend/controllers/PromotionController.php';
+require_once $root . '/backend/services/IcsCalendarioService.php';
+require_once $root . '/backend/services/NotificacionChannelInterface.php';
+require_once $root . '/backend/services/InternalNotificacionChannel.php';
+require_once $root . '/backend/services/EmailNotificacionChannel.php';
+require_once $root . '/backend/services/WhatsAppNotificacionChannel.php';
+require_once $root . '/backend/models/NotificacionRepository.php';
+require_once $root . '/backend/models/PromocionRepository.php';
+require_once $root . '/backend/services/NotificacionDispatcher.php';
+require_once $root . '/backend/controllers/CalendarioController.php';
+require_once $root . '/backend/controllers/NotificacionController.php';
+require_once $root . '/backend/controllers/PromocionController.php';
 
 $methods = [
-    CalendarController::class => ['show', 'download'],
-    NotificationController::class => ['index', 'read', 'readAll', 'preferences', 'updatePreferences', 'unsubscribe'],
-    PromotionController::class => ['index', 'show', 'create', 'update', 'delete', 'schedule', 'pause', 'finish', 'results'],
-    NotificationRepository::class => [
+    CalendarioController::class => ['show', 'download'],
+    NotificacionController::class => ['index', 'read', 'readAll', 'preferences', 'updatePreferences', 'unsubscribe'],
+    PromocionController::class => ['index', 'show', 'create', 'update', 'delete', 'schedule', 'pause', 'finish', 'results'],
+    NotificacionRepository::class => [
         'inbox', 'markRead', 'markAllRead', 'preferences', 'updatePreferences', 'unsubscribe',
         'claimNext', 'refreshPromotionStates', 'consentAllows', 'createInternal', 'unsubscribeUrl',
         'delivered', 'skipped', 'failed', 'recoverStale',
     ],
-    PromotionRepository::class => ['list', 'find', 'create', 'update', 'delete', 'schedule', 'pause', 'finish', 'results'],
-    NotificationDispatcher::class => ['dispatch'],
+    PromocionRepository::class => ['list', 'find', 'create', 'update', 'delete', 'schedule', 'pause', 'finish', 'results'],
+    NotificacionDispatcher::class => ['dispatch'],
 ];
 foreach ($methods as $class => $required) {
     foreach ($required as $method) {
@@ -86,12 +86,12 @@ foreach ([
     }
 }
 
-$promotionSource = file_get_contents($root . '/backend/models/PromotionRepository.php');
-$notificationSource = file_get_contents($root . '/backend/models/NotificationRepository.php');
-$calendarSource = file_get_contents($root . '/backend/controllers/CalendarController.php');
+$promotionSource = file_get_contents($root . '/backend/models/PromocionRepository.php');
+$notificationSource = file_get_contents($root . '/backend/models/NotificacionRepository.php');
+$calendarSource = file_get_contents($root . '/backend/controllers/CalendarioController.php');
 foreach (['(p.demo_dataset_id <=> ?)', '(pg.demo_dataset_id <=> ?)', 'idempotency_key LIKE ?', 'INSERT IGNORE INTO notificacion_envios'] as $needle) {
     if (!str_contains($promotionSource, $needle)) {
-        $failures[] = "PromotionRepository no conserva el contrato {$needle}.";
+        $failures[] = "PromocionRepository no conserva el contrato {$needle}.";
     }
 }
 if (str_contains($promotionSource, "'recipient_email'=>") || str_contains($promotionSource, "'recipient_name'=>")) {
@@ -99,23 +99,23 @@ if (str_contains($promotionSource, "'recipient_email'=>") || str_contains($promo
 }
 foreach (['FOR UPDATE SKIP LOCKED', '(demo_dataset_id <=> ?)', 'marketing_consent', 'recoverStale', 'token_hash'] as $needle) {
     if (!str_contains($notificationSource, $needle)) {
-        $failures[] = "NotificationRepository no conserva el contrato {$needle}.";
+        $failures[] = "NotificacionRepository no conserva el contrato {$needle}.";
     }
 }
 foreach (['r.usuario_id=?', 's.gimnasio_id=?', 'r.demo_dataset_id <=> ?', 's.demo_dataset_id <=> ?', 'g.demo_dataset_id <=> ?'] as $needle) {
     if (!str_contains($calendarSource, $needle)) {
-        $failures[] = "CalendarController no cierra el alcance {$needle}.";
+        $failures[] = "CalendarioController no cierra el alcance {$needle}.";
     }
 }
 if (preg_match('/\$this->pdo->query\s*\(/', $promotionSource . $notificationSource)) {
     $failures[] = 'Los repositorios de promociones y notificaciones contienen una consulta sin prepared statement.';
 }
-if (!str_contains(file_get_contents($root . '/backend/services/WhatsAppNotificationChannel.php'), 'whatsapp_adapter_unavailable')) {
+if (!str_contains(file_get_contents($root . '/backend/services/WhatsAppNotificacionChannel.php'), 'whatsapp_adapter_unavailable')) {
     $failures[] = 'WhatsApp no falla cerrado cuando falta el adaptador.';
 }
 $console = file_get_contents($root . '/backend/console.php');
 if (!str_contains($console, "strtolower((string)(getenv('APP_ENV')?:'production'))!=='production'")
-    || !str_contains($console, 'new NotificationDispatcher(null,$allDatasets)')) {
+    || !str_contains($console, 'new NotificacionDispatcher(null,$allDatasets)')) {
     $failures[] = 'El worker podría procesar datos demo automáticamente en producción.';
 }
 
@@ -135,7 +135,7 @@ $booking = [
     'ciudad' => 'Montevideo',
     'departamento' => 'Montevideo',
 ];
-$calendar = new IcsCalendarService();
+$calendar = new IcsCalendarioService();
 $payload = $calendar->payload($booking);
 $ics = $calendar->render($booking);
 if ($payload['uid'] !== 'gymtrack-booking-41-session-73@gymtrack.local') {

@@ -1,7 +1,6 @@
 <?php
 /**
- * Servicio PagoProviderFactory. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Elige el proveedor de pagos según PAYMENT_PROVIDER. Rechaza el simulado cuando APP_ENV=production.
  */
 
 declare(strict_types=1);

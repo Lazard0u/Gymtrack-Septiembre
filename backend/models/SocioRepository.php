@@ -1,7 +1,7 @@
 <?php
 /**
- * Acceso a datos SocioRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Datos del socio dentro de su gimnasio: contexto de membresía, resumen, perfil, avatar, preferencias, favoritos
+ * e historial de asistencia.
  */
 
 declare(strict_types=1);

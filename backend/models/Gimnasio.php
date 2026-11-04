@@ -1,7 +1,7 @@
 <?php
 /**
- * Acceso a datos Gimnasio. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Consultas públicas de gimnasios publicados y de sus planes, para el explorador, la ficha y la página de
+ * planes.
  */
 
 declare(strict_types=1);

@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio MercadoPagoProvider. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Proveedor real de Mercado Pago: crea el checkout, consulta el estado de un pago, reembolsa y verifica la firma
+ * HMAC del webhook.
  */
 
 declare(strict_types=1);

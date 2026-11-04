@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio NotificacionDispatcher. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Despacha las notificaciones pendientes por canal (interno, correo, WhatsApp), respetando consentimiento y
+ * preferencias, y cuenta las enviadas, fallidas y omitidas.
  */
 
 declare(strict_types=1);

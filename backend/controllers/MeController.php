@@ -1,7 +1,7 @@
 <?php
 /**
- * Controlador HTTP MeController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Rutas de la cuenta propia: sesiones activas y su revocación, cambio de gimnasio activo y solicitud de cuenta
+ * de dueño.
  */
 
 declare(strict_types=1);

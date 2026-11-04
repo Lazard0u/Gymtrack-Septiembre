@@ -1,7 +1,7 @@
 <?php
 /**
- * Consola de mantenimiento de GymTrack. Despacha comandos explícitos para datos demo, correo local, limpieza y roles.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Comandos de consola (php console.php ...): datos de demostración (seed:demo), limpieza de límites y tokens,
+ * despacho de notificaciones y último correo de desarrollo. Solo corre por CLI.
  */
 
 declare(strict_types=1);

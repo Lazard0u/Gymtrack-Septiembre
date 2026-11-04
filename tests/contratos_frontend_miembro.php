@@ -15,7 +15,7 @@ function requireStrings(string $source, array $needles, string $subject, array &
     }
 }
 
-$memberStore = file_get_contents($root . '/frontend/src/stores/member.js');
+$memberStore = file_get_contents($root . '/frontend/src/stores/socio.js');
 requireStrings($memberStore, [
     "api.get('/member/summary')",
     "api.get('/member/preferences')",
@@ -58,7 +58,7 @@ requireStrings($router, [
     "path: 'verificar-carne', name: 'admin-member-card-verify', component: AdminMemberCardVerifyView, meta: { adminLabel: 'Verificar carné', requiredPermission: 'members.read'",
 ], 'El router', $failures);
 
-$verifier = file_get_contents($root . '/frontend/src/views/admin/AdminMemberCardVerifyView.vue');
+$verifier = file_get_contents($root . '/frontend/src/views/admin/AdminVerificarCarnetView.vue');
 requireStrings($verifier, [
     "api.post('/admin/member-card/verify', { token: value })",
     'v-if="!admin.hasContext"',
@@ -69,9 +69,9 @@ requireStrings($verifier, [
     'datos obtenidos y verificados desde MySQL',
 ], 'El verificador administrativo', $failures);
 
-$explorer = file_get_contents($root . '/frontend/src/components/public/GymExplorer.vue');
+$explorer = file_get_contents($root . '/frontend/src/components/public/ExploradorGimnasios.vue');
 requireStrings($explorer, [
-    "import { useMemberStore } from '../../stores/member'",
+    "import { useSocioStore } from '../../stores/socio'",
     "auth.user?.role === 'socio' && Boolean(auth.user?.active_gym_id)",
     'await member.loadFavorites()',
     "await member.setFavorite('gym', gym.id, !wasFavorite)",
@@ -90,7 +90,7 @@ if ($favoriteFunctionStart === false || $favoriteFunctionEnd === false) {
 }
 
 $apiRoutes = file_get_contents($root . '/backend/routes/api.php');
-$repository = file_get_contents($root . '/backend/models/MemberRepository.php');
+$repository = file_get_contents($root . '/backend/models/SocioRepository.php');
 $migration = file_get_contents($root . '/database/migrations/009_phase10_member_experience.sql');
 requireStrings($apiRoutes, [
     "'GET /api/member/favorites'",
@@ -102,7 +102,7 @@ requireStrings($repository, [
     'INSERT IGNORE INTO socio_gimnasios_favoritos',
     'DELETE FROM socio_gimnasios_favoritos',
     'WHERE usuario_id=? AND gimnasio_id=? AND is_demo=? AND (demo_dataset_id <=> ?)',
-], 'MemberRepository', $failures);
+], 'SocioRepository', $failures);
 requireStrings($migration, [
     'CREATE TABLE IF NOT EXISTS socio_gimnasios_favoritos',
     'UNIQUE KEY uq_socio_gimnasio_favorito (usuario_id,gimnasio_id)',

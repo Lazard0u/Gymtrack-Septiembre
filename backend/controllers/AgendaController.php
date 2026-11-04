@@ -1,7 +1,7 @@
 <?php
 /**
- * Controlador HTTP AgendaController. Recibe la ruta, valida entrada y autorización, llama modelos o servicios y devuelve JSON sin exponer detalles internos.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Rutas de agenda: clases y sesiones (administración) y reservas del socio, con lista de asistentes y
+ * asistencia.
  */
 
 declare(strict_types=1);

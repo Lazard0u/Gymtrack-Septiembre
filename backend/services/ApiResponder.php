@@ -1,7 +1,6 @@
 <?php
 /**
- * Servicio ApiResponder. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Formato de respuesta de los controladores nuevos: {ok, error, data, meta, request_id}.
  */
 
 declare(strict_types=1);

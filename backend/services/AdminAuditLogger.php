@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio AdminAuditLogger. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Registra acciones administrativas en audit_logs: quién, qué, resultado, motivo y estado antes y después. Un
+ * fallo al registrar no interrumpe la acción.
  */
 
 declare(strict_types=1);

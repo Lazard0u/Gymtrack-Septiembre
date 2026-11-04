@@ -1,7 +1,7 @@
 <?php
 /**
- * Acceso a datos PagoRepository. Sus consultas preparadas leen o modifican MySQL y devuelven estructuras que consumen los controladores.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Pagos y finanzas. applyProviderUpdate() aplica el cambio de estado que reportan el webhook y la simulación, y
+ * al aprobarse activa la membresía y asocia al comprador como socio.
  */
 
 declare(strict_types=1);

@@ -1,7 +1,7 @@
 <?php
 /**
- * Servicio GeocodificacionService. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Busca direcciones en el proveedor de geocodificación (Nominatim por defecto) con caché en
+ * geocodificacion_cache y un límite de una consulta externa por segundo.
  */
 
 declare(strict_types=1);

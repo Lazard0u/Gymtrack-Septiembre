@@ -1,7 +1,6 @@
 <?php
 /**
- * Servicio WhatsAppNotificacionChannel. Encapsula una responsabilidad transversal para que controladores y modelos no dupliquen reglas.
- * Los parámetros se validan antes de usarse; los errores esperables se transforman en respuestas seguras o códigos de salida.
+ * Canal de WhatsApp, todavía sin proveedor: lanza whatsapp_feature_disabled o whatsapp_adapter_unavailable.
  */
 
 declare(strict_types=1);
