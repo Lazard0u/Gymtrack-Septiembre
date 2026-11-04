@@ -4,7 +4,7 @@ GymTrack es una plataforma web para descubrir gimnasios y gestionar su operació
 
 El proyecto mantiene el stack original: **Vue 3, PHP, MySQL, Docker, Leaflet y OpenStreetMap**.
 
-La documentación académica y técnica completa, junto con el diagrama de arquitectura y el sistema de identidad visual, está en [`Gymtrack_Documentacion.md`](Gymtrack_Documentacion.md).
+La documentación escrita se está rehaciendo en PDF y se agregará al repositorio cuando esté lista. Mientras tanto, el diagrama de arquitectura y el sistema de identidad visual están en [`documentacion/`](documentacion/).
 
 ## Qué permite hacer
 
